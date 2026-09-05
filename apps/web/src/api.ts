@@ -2,8 +2,9 @@ export type ImportResponse = { text: string; source_type: string; source_url?: s
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string };
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
-  const developmentHeaders = import.meta.env.DEV ? { "X-Rezzie-User-Id": import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user" } : {};
-  const response = await fetch(path, { ...options, headers: { ...developmentHeaders, ...options.headers } });
+  const headers = new Headers(options.headers);
+  if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
+  const response = await fetch(path, { ...options, headers });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "Request failed."); }
   return response.json() as Promise<T>;
 }
