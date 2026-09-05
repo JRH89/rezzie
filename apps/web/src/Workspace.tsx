@@ -14,14 +14,30 @@ function errorMessage(reason: unknown, fallback: string) {
   return reason instanceof Error ? reason.message : fallback;
 }
 
-function downloadResume(text: string) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+function saveResume(blob: Blob) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "rezzie-tailored-resume.txt";
+  anchor.download = "rezzie-tailored-resume.docx";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function isResumeHeading(line: string) {
+  return ["SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING"].includes(line.replace(":", "").trim().toUpperCase());
+}
+
+function ResumePreview({ text }: { text: string }) {
+  const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
+  return <article className="resume-document" aria-label="Tailored resume">
+    {lines.map((line, index) => {
+      if (index === 0) return <h2 key={`${index}-${line}`}>{line}</h2>;
+      if (index === 1) return <p className="resume-contact" key={`${index}-${line}`}>{line}</p>;
+      if (isResumeHeading(line)) return <h3 key={`${index}-${line}`}>{line.replace(/:$/, "")}</h3>;
+      if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return <p className="resume-bullet" key={`${index}-${line}`}>{line.slice(2)}</p>;
+      return <p key={`${index}-${line}`}>{line}</p>;
+    })}
+  </article>;
 }
 
 export function Workspace({ accessToken, onHome }: { accessToken?: string; onHome: () => void }) {
@@ -122,6 +138,14 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
     setCopied(true);
   }
 
+  async function downloadResult() {
+    if (!result) return;
+    setLoading(true); setError(undefined);
+    try { saveResume(await api.exportResume(result.tailored_resume)); }
+    catch (reason) { setError(errorMessage(reason, "We could not create the DOCX file.")); }
+    finally { setLoading(false); }
+  }
+
   const creditPackPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID;
   const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
   async function checkout(kind: "credits" | "subscription", priceId: string) {
@@ -163,8 +187,8 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
 
           {step === 4 && result && <>
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
-            <div className="result-toolbar"><p>Read every line before submitting.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-primary" onClick={() => downloadResume(result.tailored_resume)} type="button">Download .txt ↓</button></div></div>
-            <textarea className="result-document" aria-label="Tailored resume" value={result.tailored_resume} readOnly />
+            <div className="result-toolbar"><p>Read every line before submitting.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult()} type="button">Download DOCX ↓</button></div></div>
+            <ResumePreview text={result.tailored_resume} />
             <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
             <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>
             <div className="step-actions"><button className="back-link" onClick={() => setStep(3)} type="button">← Adjust setup</button><button className="button button-dark" onClick={() => { setJob(""); setResult(undefined); setStep(2); }} type="button">Tailor for another job <span>→</span></button></div>

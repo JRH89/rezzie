@@ -211,7 +211,13 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .result-toolbar p { color: #657169; font-size: .67rem; margin: 0; }
 .result-toolbar > div { display: flex; gap: .4rem; }
 .result-toolbar .button { border-radius: .4rem; min-height: 2.2rem; padding: .5rem .7rem; }
-.result-document { border-radius: 0 0 .7rem .7rem; min-height: 620px; padding: 2rem; }
+.resume-document { background: white; border: 1px solid #d9ded8; border-radius: 0 0 .7rem .7rem; box-sizing: border-box; min-height: 620px; padding: clamp(1.5rem, 5vw, 3.5rem); }
+.resume-document h2 { font: 700 1.9rem/1.1 Arial, sans-serif; letter-spacing: -.03em; margin: 0; text-align: center; }
+.resume-document .resume-contact { color: #59655e; font-size: .73rem; margin: .45rem 0 1.65rem; text-align: center; }
+.resume-document h3 { border-bottom: 1px solid #10201c; font: 750 .72rem/1 Arial, sans-serif; letter-spacing: .08em; margin: 1.5rem 0 .65rem; padding-bottom: .35rem; }
+.resume-document p { color: #24332d; font: 400 .84rem/1.55 Arial, sans-serif; margin: .25rem 0; white-space: pre-wrap; }
+.resume-document .resume-bullet { padding-left: 1.05rem; position: relative; }
+.resume-document .resume-bullet::before { content: "•"; left: .25rem; position: absolute; }
 .result-insights { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-top: 1rem; }
 .result-insights section { border: 1px solid #d9ded8; border-radius: .65rem; padding: 1rem; }
 .result-insights .eyebrow { color: #174a3b; margin-top: 0; }
@@ -289,7 +295,7 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
   .result-heading { display: block; }
   .complete-badge { display: inline-block; margin-top: 1rem; }
   .result-toolbar > div { display: grid; grid-template-columns: 1fr 1fr; }
-  .result-document { min-height: 500px; padding: 1rem; }
+  .resume-document { min-height: 500px; padding: 1.25rem; }
   .result-insights { grid-template-columns: 1fr; }
 }
 

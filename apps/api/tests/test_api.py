@@ -35,6 +35,18 @@ def test_resume_file_imports_plain_text() -> None:
     assert response.json()["source_type"] == "file"
 
 
+def test_resume_export_returns_an_editable_docx() -> None:
+    response = client.post(
+        "/api/v1/resumes/export",
+        headers=LOCAL_IDENTITY,
+        json={"resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    assert response.headers["cache-control"] == "no-store"
+    assert response.content[:2] == b"PK"
+
+
 def test_billing_balance_requires_identity() -> None:
     assert client.get("/api/v1/billing/me").status_code == 401
 

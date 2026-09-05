@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, and numeric-claim safety guard; job-description terminology is allowed |
-| Latest local verification | done | 31 API tests and 4 web interaction tests passed; Ruff, ESLint, production build, live health/favicon checks, and desktop/mobile visual QA passed 2026-09-05 |
+| Latest local verification | done | 34 API tests and 4 web interaction tests passed; Ruff, ESLint, and production build passed 2026-09-05 |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 6 passed 2026-09-05 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
@@ -18,3 +18,4 @@
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
+| Resume document fidelity | done | Structured PDF/DOCX extraction, formatted review preview, and transient editable DOCX export |

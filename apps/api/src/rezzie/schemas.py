@@ -42,6 +42,12 @@ class TailoringResult(BaseModel):
     truth_statement: str
 
 
+class ResumeExportRequest(BaseModel):
+    """Transient content used only to create a downloadable document."""
+
+    resume_text: str = Field(min_length=50, max_length=100_000)
+
+
 class CreditBalance(BaseModel):
     subscription_status: str
     subscription_remaining: int

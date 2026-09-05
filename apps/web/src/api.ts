@@ -16,11 +16,20 @@ function requestFor(accessToken?: string) {
 }
 export function createApi(accessToken?: string) {
   const request = requestFor(accessToken);
+  async function exportResume(resumeText: string): Promise<Blob> {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    const response = await fetch("/api/v1/resumes/export", { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText }) });
+    if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "We could not create the DOCX file."); }
+    return response.blob();
+  }
   return {
     importText: (text: string) => request<ImportResponse>("/api/v1/job-descriptions/text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }),
     importUrl: (url: string) => request<ImportResponse>("/api/v1/job-descriptions/url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }),
     importFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/job-descriptions/file", { method: "POST", body: form }); },
     importResumeFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/resumes/file", { method: "POST", body: form }); },
+    exportResume,
     createCareerRecord: (body: { label: string; source_text: string }) => request<CareerRecord>("/api/v1/career-records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     listCareerRecords: () => request<CareerRecord[]>("/api/v1/career-records", { method: "GET" }),
     addCareerFact: (recordId: string, body: { fact_type: "claim" | "skill"; text: string; evidence_note?: string }) => request<CareerFact>(`/api/v1/career-records/${recordId}/facts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),

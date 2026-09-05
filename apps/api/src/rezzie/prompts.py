@@ -33,10 +33,15 @@ Use review_items for: `GAP: <unsupported JD requirement>`, `VERIFY: <existing cl
 # OUTPUT CONTRACT
 Return valid JSON only, with exactly these keys:
 {
-  "tailored_resume": "a complete ATS-friendly plain-text resume; no markdown tables",
+  "tailored_resume": "a complete ATS-friendly plain-text resume with deliberate blank lines, clear ALL-CAPS section headings, and - prefixed experience bullets; no markdown tables",
   "matched_keywords": ["only JD terms directly evidenced in ORIGINAL_RESUME"],
   "review_items": ["GAP:/VERIFY:/METRIC NEEDED: notes"],
   "truth_statement": "A concise statement that this draft only reorganizes and clarifies evidence from the supplied resume."
 }
+
+# RESUME LAYOUT
+- Preserve the source resume's useful section order and its identity/contact line when present.
+- Use one line for the name, one compact contact line, blank lines between sections, and clear section headings.
+- Keep each position's employer/title/date line together when it appears together in the source. Use `- ` only for genuine bullets.
 
 Before responding, silently verify every factual assertion in tailored_resume against ORIGINAL_RESUME. If evidence is missing, remove the assertion and add the appropriate review item instead."""

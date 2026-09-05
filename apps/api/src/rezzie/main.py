@@ -1,11 +1,12 @@
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .auth import verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
-from .documents import DocumentService
+from .documents import DocumentService, ResumeExportService
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .records import CareerRecord, CareerRecordRepository
@@ -17,6 +18,7 @@ from .schemas import (
     CareerRecordResponse,
     CreditBalance,
     ImportResponse,
+    ResumeExportRequest,
     TailorCareerRecordRequest,
     TailoringResult,
     TailorRequest,
@@ -35,6 +37,7 @@ career_records = CareerRecordRepository(billing_repository.sessions)
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(settings.anthropic_model), settings, billing_repository)
 document_service = DocumentService(settings)
+resume_export_service = ResumeExportService()
 
 
 def require_user(authorization: str | None, development_user_id: str | None) -> str:
@@ -94,6 +97,20 @@ async def import_file(file: UploadFile = File(...), authorization: str | None = 
 async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     return ImportResponse(text=await document_service.extract(file), source_type="file")
+
+
+@app.post("/api/v1/resumes/export")
+def export_resume(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
+    """Create an editable DOCX without persisting the candidate's document."""
+    require_user(authorization, x_rezzie_user_id)
+    return Response(
+        content=resume_export_service.render_docx(request.resume_text),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": 'attachment; filename="rezzie-tailored-resume.docx"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.post("/api/v1/career-records", response_model=CareerRecordResponse)
