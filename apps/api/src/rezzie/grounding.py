@@ -17,7 +17,7 @@ def assert_grounded(source_resume: str, tailored_resume: str) -> None:
     invented_numbers = set(NUMBER.findall(tailored_resume)) - source_numbers
     if invented_numbers:
         raise HTTPException(status_code=422, detail="The generated draft introduced an unsupported quantitative claim.")
-    normalized_source = " ".join(source_resume.casefold().split())
+    normalized_source = " ".join(re.sub(r"[^a-z0-9]+", " ", source_resume.casefold()).split())
     for phrase in PROPER_PHRASE.findall(tailored_resume):
         clean_phrase = " ".join(phrase.split())
         if clean_phrase in SAFE_HEADINGS: continue
