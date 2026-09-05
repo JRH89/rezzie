@@ -33,7 +33,7 @@ app.add_middleware(SecurityHeadersMiddleware, production=settings.environment ==
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 career_records = CareerRecordRepository(billing_repository.sessions)
 billing_service = StripeBillingService(settings, billing_repository)
-importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(), settings, billing_repository)
+importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(settings.anthropic_model), settings, billing_repository)
 document_service = DocumentService(settings)
 
 

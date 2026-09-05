@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     environment: str = "development"
     anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-haiku-4-5"
     allowed_origins: str = "http://localhost:5173"
     allowed_hosts: str = "localhost,127.0.0.1,testserver"
     max_import_bytes: int = 200_000
