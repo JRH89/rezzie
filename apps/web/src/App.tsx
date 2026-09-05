@@ -1,10 +1,11 @@
 import { ChangeEvent, useState } from "react";
-import { api, TailoringResult } from "./api";
+import { createApi, TailoringResult } from "./api";
 
 type ImportMode = "paste" | "url" | "file";
 const minLength = 50;
 
-export function App() {
+export function App({ accessToken }: { accessToken?: string }) {
+  const api = createApi(accessToken);
   const [resume, setResume] = useState(""); const [job, setJob] = useState(""); const [key, setKey] = useState("");
   const [url, setUrl] = useState(""); const [mode, setMode] = useState<ImportMode>("paste");
   const [loading, setLoading] = useState(false); const [error, setError] = useState<string>(); const [result, setResult] = useState<TailoringResult>();
