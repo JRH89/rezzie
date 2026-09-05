@@ -2,7 +2,8 @@ export type ImportResponse = { text: string; source_type: string; source_url?: s
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string };
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
-  const response = await fetch(path, options);
+  const developmentHeaders = import.meta.env.DEV ? { "X-Rezzie-User-Id": import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user" } : {};
+  const response = await fetch(path, { ...options, headers: { ...developmentHeaders, ...options.headers } });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "Request failed."); }
   return response.json() as Promise<T>;
 }

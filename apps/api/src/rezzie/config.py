@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     anthropic_api_key: str | None = None
     allowed_origins: str = "http://localhost:5173"
+    allowed_hosts: str = "localhost,127.0.0.1,testserver"
     max_import_bytes: int = 200_000
     database_url: str = "sqlite:///./rezzie.db"
     app_url: str = "http://localhost:5173"
@@ -23,3 +24,7 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def trusted_hosts(self) -> list[str]:
+        return [host.strip() for host in self.allowed_hosts.split(",") if host.strip()]

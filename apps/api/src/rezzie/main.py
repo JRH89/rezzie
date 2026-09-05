@@ -1,10 +1,12 @@
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .auth import verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
 from .documents import DocumentService
+from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .schemas import (
     CreditBalance,
@@ -18,7 +20,9 @@ from .services import JobDescriptionImporter, TailoringService
 
 settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["POST", "GET"], allow_headers=["Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["POST", "GET"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(), settings, billing_repository)
@@ -42,20 +46,24 @@ async def readiness() -> dict[str, str]:
     return {"status": "ready"}
 
 @app.post("/api/v1/job-descriptions/text", response_model=ImportResponse)
-async def import_text(request: TextImportRequest) -> ImportResponse:
+async def import_text(request: TextImportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:
+    require_user(authorization, x_rezzie_user_id)
     return ImportResponse(text=request.text, source_type="text")
 
 @app.post("/api/v1/job-descriptions/url", response_model=ImportResponse)
-async def import_url(request: UrlImportRequest) -> ImportResponse:
+async def import_url(request: UrlImportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:
+    require_user(authorization, x_rezzie_user_id)
     return await importer.from_url(str(request.url))
 
 @app.post("/api/v1/job-descriptions/file", response_model=ImportResponse)
-async def import_file(file: UploadFile = File(...)) -> ImportResponse:  # noqa: B008
+async def import_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
+    require_user(authorization, x_rezzie_user_id)
     return ImportResponse(text=await document_service.extract(file), source_type="file")
 
 
 @app.post("/api/v1/resumes/file", response_model=ImportResponse)
-async def import_resume_file(file: UploadFile = File(...)) -> ImportResponse:  # noqa: B008
+async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
+    require_user(authorization, x_rezzie_user_id)
     return ImportResponse(text=await document_service.extract(file), source_type="file")
 
 @app.post("/api/v1/tailor", response_model=TailoringResult)
