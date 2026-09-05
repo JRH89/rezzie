@@ -1,6 +1,8 @@
 export type ImportResponse = { text: string; source_type: string; source_url?: string };
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string };
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number };
+export type CareerFact = { id: string; fact_type: "claim" | "skill"; text: string; source_excerpt: string; status: "needs_review" | "confirmed" | "rejected"; evidence_note?: string | null };
+export type CareerRecord = { id: string; label: string; created_at: string; updated_at: string; facts: CareerFact[] };
 
 function requestFor(accessToken?: string) {
   return async function request<T>(path: string, options: RequestInit): Promise<T> {
@@ -19,6 +21,9 @@ export function createApi(accessToken?: string) {
     importUrl: (url: string) => request<ImportResponse>("/api/v1/job-descriptions/url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }),
     importFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/job-descriptions/file", { method: "POST", body: form }); },
     importResumeFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/resumes/file", { method: "POST", body: form }); },
+    createCareerRecord: (body: { label: string; source_text: string }) => request<CareerRecord>("/api/v1/career-records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    updateCareerFact: (recordId: string, factId: string, body: Pick<CareerFact, "text" | "status" | "evidence_note">) => request<CareerFact>(`/api/v1/career-records/${recordId}/facts/${factId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    tailorCareerRecord: (body: { record_id: string; job_description: string; credential_mode: "byok" | "subscription"; api_key?: string }) => request<TailoringResult>("/api/v1/tailor/career-record", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     tailor: (body: { resume_text: string; job_description: string; credential_mode: "byok" | "subscription"; api_key?: string }) => request<TailoringResult>("/api/v1/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     balance: () => request<CreditBalance>("/api/v1/billing/me", { method: "GET" }),
     checkout: (kind: "credits" | "subscription", priceId: string) => request<{ url: string }>("/api/v1/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, price_id: priceId }) }),

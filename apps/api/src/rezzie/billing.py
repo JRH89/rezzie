@@ -51,6 +51,10 @@ class BillingRepository:
             connection.execute(text("SELECT 1"))
         return True
 
+    @property
+    def sessions(self) -> sessionmaker:
+        return self._sessions
+
     @staticmethod
     def _new_account(user_id: str) -> BillingAccount:
         return BillingAccount(user_id=user_id, stripe_customer_id=None, subscription_status="none", subscription_credits=0, subscription_used=0, purchased_credits=0)
