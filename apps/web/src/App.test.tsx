@@ -55,7 +55,7 @@ describe("guided tailoring workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /review setup/i }));
     fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
     fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
-    expect(await screen.findByRole("button", { name: /download docx/i })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /docx/i })).toBeTruthy();
     expect(screen.getByLabelText("Tailored resume")).toBeTruthy();
   });
 });

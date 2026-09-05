@@ -1,12 +1,17 @@
 """Bounded document extraction with production fail-closed malware scanning."""
 import io
 import socket
+from html.parser import HTMLParser
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt
 from fastapi import HTTPException, UploadFile
 from pypdf import PdfReader
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from .config import Settings
 
@@ -51,6 +56,44 @@ def pdf_text(reader: PdfReader) -> str:
         if extracted:
             pages.append(extracted.strip())
     return "\n\n".join(pages)
+
+
+class ResumeHtmlParser(HTMLParser):
+    """Allow only text and structural editor tags when preparing an export."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._parts: list[str] = []
+        self._heading_level: int | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"p", "div", "br", "li", "h1", "h2", "h3"}:
+            self._parts.append("\n")
+        if tag == "li":
+            self._parts.append("- ")
+        if tag in {"h1", "h2", "h3"}:
+            self._heading_level = int(tag[1])
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"p", "div", "li", "h1", "h2", "h3"}:
+            self._parts.append("\n")
+        if tag in {"h1", "h2", "h3"}:
+            self._heading_level = None
+
+    def handle_data(self, data: str) -> None:
+        self._parts.append(data.upper() if self._heading_level else data)
+
+    def text(self) -> str:
+        lines = [" ".join(line.split()) for line in "".join(self._parts).splitlines()]
+        return "\n".join(line for line in lines if line).strip()
+
+
+def editor_html_to_text(resume_html: str | None, fallback: str) -> str:
+    if not resume_html:
+        return fallback
+    parser = ResumeHtmlParser()
+    parser.feed(resume_html)
+    return parser.text() or fallback
 
 
 class DocumentService:
@@ -136,4 +179,30 @@ class ResumeExportService:
 
         output = io.BytesIO()
         document.save(output)
+        return output.getvalue()
+
+    def render_pdf(self, resume_text: str) -> bytes:
+        output = io.BytesIO()
+        document = SimpleDocTemplate(output, pagesize=letter, leftMargin=0.7 * inch, rightMargin=0.7 * inch, topMargin=0.65 * inch, bottomMargin=0.65 * inch)
+        styles = getSampleStyleSheet()
+        name_style = ParagraphStyle("ResumeName", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=18, leading=21, alignment=1, spaceAfter=4)
+        contact_style = ParagraphStyle("ResumeContact", parent=styles["Normal"], fontSize=9, leading=11, alignment=1, spaceAfter=10)
+        heading_style = ParagraphStyle("ResumeHeading", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10.5, leading=13, spaceBefore=9, spaceAfter=4)
+        body_style = ParagraphStyle("ResumeBody", parent=styles["Normal"], fontSize=10, leading=13, spaceAfter=3)
+        story = []
+        lines = [line.strip() for line in resume_text.splitlines() if line.strip()]
+        for index, line in enumerate(lines):
+            escaped = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            if index == 0:
+                story.append(Paragraph(escaped, name_style))
+            elif index == 1:
+                story.append(Paragraph(escaped, contact_style))
+            elif is_section_heading(line):
+                story.append(Paragraph(escaped.upper(), heading_style))
+            elif line.startswith(("- ", "* ", "• ")):
+                story.append(Paragraph(f"• {escaped[2:]}", body_style))
+            else:
+                story.append(Paragraph(escaped, body_style))
+        story.append(Spacer(1, 1))
+        document.build(story)
         return output.getvalue()

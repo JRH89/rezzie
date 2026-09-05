@@ -16,12 +16,13 @@ function requestFor(accessToken?: string) {
 }
 export function createApi(accessToken?: string) {
   const request = requestFor(accessToken);
-  async function exportResume(resumeText: string): Promise<Blob> {
+  async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf"): Promise<Blob> {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-    const response = await fetch("/api/v1/resumes/export", { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText }) });
-    if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "We could not create the DOCX file."); }
+    const path = format === "pdf" ? "/api/v1/resumes/export/pdf" : "/api/v1/resumes/export";
+    const response = await fetch(path, { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml }) });
+    if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `We could not create the ${format.toUpperCase()} file.`); }
     return response.blob();
   }
   return {

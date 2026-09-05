@@ -46,6 +46,7 @@ class ResumeExportRequest(BaseModel):
     """Transient content used only to create a downloadable document."""
 
     resume_text: str = Field(min_length=50, max_length=100_000)
+    resume_html: str | None = Field(default=None, max_length=200_000)
 
 
 class CreditBalance(BaseModel):

@@ -6,7 +6,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .auth import verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
-from .documents import DocumentService, ResumeExportService
+from .documents import DocumentService, ResumeExportService, editor_html_to_text
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .records import CareerRecord, CareerRecordRepository
@@ -103,14 +103,23 @@ async def import_resume_file(file: UploadFile = File(...), authorization: str | 
 def export_resume(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     """Create an editable DOCX without persisting the candidate's document."""
     require_user(authorization, x_rezzie_user_id)
+    content = resume_export_service.render_docx(editor_html_to_text(request.resume_html, request.resume_text))
     return Response(
-        content=resume_export_service.render_docx(request.resume_text),
+        content=content,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={
             "Content-Disposition": 'attachment; filename="rezzie-tailored-resume.docx"',
             "Cache-Control": "no-store",
         },
     )
+
+
+@app.post("/api/v1/resumes/export/pdf")
+def export_resume_pdf(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
+    """Create a printable PDF without persisting the candidate's document."""
+    require_user(authorization, x_rezzie_user_id)
+    content = resume_export_service.render_pdf(editor_html_to_text(request.resume_html, request.resume_text))
+    return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="rezzie-tailored-resume.pdf"', "Cache-Control": "no-store"})
 
 
 @app.post("/api/v1/career-records", response_model=CareerRecordResponse)

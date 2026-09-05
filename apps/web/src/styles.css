@@ -212,6 +212,12 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .result-toolbar > div { display: flex; gap: .4rem; }
 .result-toolbar .button { border-radius: .4rem; min-height: 2.2rem; padding: .5rem .7rem; }
 .resume-document { background: white; border: 1px solid #d9ded8; border-radius: 0 0 .7rem .7rem; box-sizing: border-box; min-height: 620px; padding: clamp(1.5rem, 5vw, 3.5rem); }
+.rich-editor-shell { border: 1px solid #d9ded8; border-radius: 0 0 .7rem .7rem; overflow: hidden; }
+.rich-editor-toolbar { align-items: center; background: #f2f3ef; border-bottom: 1px solid #d9ded8; display: flex; flex-wrap: wrap; gap: .25rem; padding: .5rem; }
+.rich-editor-toolbar button { background: white; border: 1px solid #cbd0ca; border-radius: .28rem; color: #25352e; font-size: .67rem; min-width: 2rem; padding: .4rem .5rem; }
+.rich-editor-toolbar button:hover { background: #e6f0e9; border-color: #174a3b; }
+.rich-editor { border: 0; border-radius: 0; outline: none; }
+.rich-editor:focus { box-shadow: inset 0 0 0 3px #b8dfc566; }
 .resume-document h2 { font: 700 1.9rem/1.1 Arial, sans-serif; letter-spacing: -.03em; margin: 0; text-align: center; }
 .resume-document .resume-contact { color: #59655e; font-size: .73rem; margin: .45rem 0 1.65rem; text-align: center; }
 .resume-document h3 { border-bottom: 1px solid #10201c; font: 750 .72rem/1 Arial, sans-serif; letter-spacing: .08em; margin: 1.5rem 0 .65rem; padding-bottom: .35rem; }

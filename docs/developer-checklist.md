@@ -8,7 +8,7 @@
 | Platform | Configure OIDC identity + verified subscription webhooks | pending | Set issuer, audience, JWKS URL, client ID, and web redirect origin |
 | Platform | Create Stripe Prices + production webhook | pending | Follow `docs/stripe-setup.md`; store only server-side secrets |
 | Platform | Provision Postgres/object storage/secrets/Cloudflare | pending | Required before deployment |
-| QA | Run local API/web checks | complete | 2026-09-05: 34 API tests, 4 web interaction tests, Ruff, ESLint, and production build passed |
+| QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 4 web interaction tests, Ruff, ESLint, and production build passed |
 | Engineering | Preserve usable resume document structure | complete | DOCX/PDF import preserves paragraph/table or layout text; DOCX export is transient and no-store |
 | QA | Run hosted smoke tests in provisioned environment | pending | Requires deployment credentials |
 | QA | Validate grounding and Stripe lifecycle behavior | complete | API tests cover claim guard, credit idempotency, and monthly renewal grant |

@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, ClipboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
 import { CareerFact, CareerRecord, createApi, CreditBalance, TailoringResult } from "./api";
 
@@ -14,11 +14,11 @@ function errorMessage(reason: unknown, fallback: string) {
   return reason instanceof Error ? reason.message : fallback;
 }
 
-function saveResume(blob: Blob) {
+function saveResume(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "rezzie-tailored-resume.docx";
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -27,17 +27,34 @@ function isResumeHeading(line: string) {
   return ["SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING"].includes(line.replace(":", "").trim().toUpperCase());
 }
 
-function ResumePreview({ text }: { text: string }) {
-  const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
-  return <article className="resume-document" aria-label="Tailored resume">
-    {lines.map((line, index) => {
-      if (index === 0) return <h2 key={`${index}-${line}`}>{line}</h2>;
-      if (index === 1) return <p className="resume-contact" key={`${index}-${line}`}>{line}</p>;
-      if (isResumeHeading(line)) return <h3 key={`${index}-${line}`}>{line.replace(/:$/, "")}</h3>;
-      if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return <p className="resume-bullet" key={`${index}-${line}`}>{line.slice(2)}</p>;
-      return <p key={`${index}-${line}`}>{line}</p>;
-    })}
-  </article>;
+function editorHtml(text: string) {
+  return text.split("\n").map((rawLine, index) => {
+    const line = rawLine.trim();
+    const escaped = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (!line) return "<div><br></div>";
+    if (index === 0) return `<h1>${escaped}</h1>`;
+    if (index === 1) return `<p>${escaped}</p>`;
+    if (isResumeHeading(line)) return `<h3>${escaped.replace(/:$/, "")}</h3>`;
+    if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return `<div>${escaped.slice(2)}</div>`;
+    return `<p>${escaped}</p>`;
+  }).join("");
+}
+
+function RichResumeEditor({ text, onChange }: { text: string; onChange: (html: string, plainText: string) => void }) {
+  const editor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (editor.current) editor.current.innerHTML = editorHtml(text);
+  }, [text]);
+  function update() {
+    if (editor.current) onChange(editor.current.innerHTML, editor.current.innerText);
+  }
+  function command(name: string, value?: string) {
+    editor.current?.focus(); document.execCommand(name, false, value); update();
+  }
+  function pastePlainText(event: ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault(); document.execCommand("insertText", false, event.clipboardData.getData("text/plain")); update();
+  }
+  return <div className="rich-editor-shell"><div className="rich-editor-toolbar" role="toolbar" aria-label="Resume formatting"><button aria-label="Bold" onClick={() => command("bold")} type="button"><b>B</b></button><button aria-label="Italic" onClick={() => command("italic")} type="button"><i>I</i></button><button aria-label="Underline" onClick={() => command("underline")} type="button"><u>U</u></button><button aria-label="Heading" onClick={() => command("formatBlock", "h3")} type="button">Heading</button><button aria-label="Bulleted list" onClick={() => command("insertUnorderedList")} type="button">• List</button><button aria-label="Align left" onClick={() => command("justifyLeft")} type="button">Left</button><button aria-label="Align center" onClick={() => command("justifyCenter")} type="button">Center</button><button aria-label="Undo" onClick={() => command("undo")} type="button">Undo</button><button aria-label="Redo" onClick={() => command("redo")} type="button">Redo</button></div><div className="resume-document rich-editor" aria-label="Tailored resume" contentEditable onInput={update} onPaste={pastePlainText} ref={editor} role="textbox" suppressContentEditableWarning /></div>;
 }
 
 export function Workspace({ accessToken, onHome }: { accessToken?: string; onHome: () => void }) {
@@ -57,6 +74,7 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TailoringResult>();
+  const [editorState, setEditorState] = useState({ html: "", text: "" });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -126,7 +144,7 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
     const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
-      setResult(tailored); setStep(4);
+      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume), text: tailored.tailored_resume }); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
     finally { setLoading(false); }
@@ -134,16 +152,21 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
 
   async function copyResult() {
     if (!result) return;
-    await navigator.clipboard.writeText(result.tailored_resume);
+    await navigator.clipboard.writeText(editorState.text || result.tailored_resume);
     setCopied(true);
   }
 
-  async function downloadResult() {
+  async function downloadResult(format: "docx" | "pdf") {
     if (!result) return;
     setLoading(true); setError(undefined);
-    try { saveResume(await api.exportResume(result.tailored_resume)); }
-    catch (reason) { setError(errorMessage(reason, "We could not create the DOCX file.")); }
+    try { saveResume(await api.exportResume(editorState.text || result.tailored_resume, editorState.html, format), `rezzie-tailored-resume.${format}`); }
+    catch (reason) { setError(errorMessage(reason, `We could not create the ${format.toUpperCase()} file.`)); }
     finally { setLoading(false); }
+  }
+
+  function downloadText() {
+    if (!result) return;
+    saveResume(new Blob([editorState.text || result.tailored_resume], { type: "text/plain;charset=utf-8" }), "rezzie-tailored-resume.txt");
   }
 
   const creditPackPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID;
@@ -187,8 +210,8 @@ export function Workspace({ accessToken, onHome }: { accessToken?: string; onHom
 
           {step === 4 && result && <>
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
-            <div className="result-toolbar"><p>Read every line before submitting.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult()} type="button">Download DOCX ↓</button></div></div>
-            <ResumePreview text={result.tailored_resume} />
+            <div className="result-toolbar"><p>Make any final edits, then download.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-outline" onClick={downloadText} type="button">TXT ↓</button><button className="button button-outline" disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button></div></div>
+            <RichResumeEditor text={result.tailored_resume} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
             <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
             <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>
             <div className="step-actions"><button className="back-link" onClick={() => setStep(3)} type="button">← Adjust setup</button><button className="button button-dark" onClick={() => { setJob(""); setResult(undefined); setStep(2); }} type="button">Tailor for another job <span>→</span></button></div>
