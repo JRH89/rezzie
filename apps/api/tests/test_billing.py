@@ -1,7 +1,8 @@
 import pytest
 from fastapi import HTTPException
 
-from rezzie.billing import BillingRepository
+from rezzie.billing import BillingRepository, StripeBillingService
+from rezzie.config import Settings
 
 
 def test_purchased_credit_grant_is_idempotent(tmp_path: object) -> None:
@@ -26,3 +27,23 @@ def test_balance_keeps_credit_types_separate(tmp_path: object) -> None:
     repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
     repository.grant_purchase_once("user-1", "checkout-1", 3)
     assert repository.balance("user-1") == ("none", 0, 3)
+
+
+def test_webhook_grants_a_credit_pack_once(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = StripeBillingService(Settings(stripe_webhook_secret="whsec_test"), repository)
+    event = {"id": "evt_purchase", "type": "checkout.session.completed", "data": {"object": {"id": "cs_1", "mode": "payment", "payment_status": "paid", "client_reference_id": "user-1", "metadata": {"credits": "5"}}}}
+    monkeypatch.setattr("rezzie.billing.stripe.Webhook.construct_event", lambda *_: event)
+    service.webhook(b"{}", "signature")
+    service.webhook(b"{}", "signature")
+    assert repository.balance("user-1") == ("none", 0, 5)
+
+
+def test_paid_invoice_resets_monthly_credit_allowance(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    repository.save_customer("user-1", "cus_1")
+    service = StripeBillingService(Settings(stripe_webhook_secret="whsec_test", stripe_subscription_monthly_credits=20), repository)
+    event = {"id": "evt_invoice", "type": "invoice.paid", "data": {"object": {"subscription": "sub_1", "customer": "cus_1"}}}
+    monkeypatch.setattr("rezzie.billing.stripe.Webhook.construct_event", lambda *_: event)
+    service.webhook(b"{}", "signature")
+    assert repository.balance("user-1") == ("active", 20, 0)
