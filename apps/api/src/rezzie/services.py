@@ -3,6 +3,7 @@ from fastapi import HTTPException
 
 from .billing import BillingRepository
 from .config import Settings
+from .grounding import assert_grounded
 from .providers.base import LLMProvider
 from .schemas import ImportResponse, TailoringResult, TailorRequest
 from .security import assert_safe_public_url, require_generation_key
@@ -38,7 +39,10 @@ class TailoringService:
         if request.credential_mode.value == "subscription":
             if not user_id: raise HTTPException(status_code=401, detail="Authentication is required for subscription usage.")
             credit_source = self._billing.consume_credit(user_id)
-        try: return await self._provider.tailor(api_key=api_key, resume_text=request.resume_text, job_description=request.job_description)
+        try:
+            result = await self._provider.tailor(api_key=api_key, resume_text=request.resume_text, job_description=request.job_description)
+            assert_grounded(request.resume_text, result.tailored_resume)
+            return result
         except Exception:
             if credit_source: self._billing.refund_credit(user_id or "", credit_source)
             raise

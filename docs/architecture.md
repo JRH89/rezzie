@@ -17,7 +17,7 @@ In production the API validates a standard OIDC bearer access token against `OID
 
 ## Tailoring safety contract
 
-The model receives the original resume as the sole facts source. It may reorganize or tighten wording and surface job-description keywords only when grounded by those facts. It must return a structured `TailoringResult` with a changed-text candidate and a review list. The server rejects malformed output; the prompt requires unsupported requirements to be surfaced as review items, and users must approve every result. A stronger semantic-grounding evaluator is a launch requirement before treating this as an automated safety guarantee.
+The model receives the original resume as the sole facts source. It may reorganize or tighten wording and surface job-description keywords only when grounded by those facts. It must return a structured `TailoringResult` with a changed-text candidate and a review list. The server rejects malformed output and runs a deterministic grounding floor that blocks new numerical or proper-name-style claims. The prompt requires unsupported requirements to be surfaced as review items, and users must approve every result. A stronger semantic-grounding evaluator remains necessary before treating this as an automated safety guarantee.
 
 ## Deployment
 
