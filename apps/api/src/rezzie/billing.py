@@ -6,7 +6,7 @@ from typing import Literal
 
 import stripe
 from fastapi import HTTPException
-from sqlalchemy import DateTime, Integer, String, create_engine, select
+from sqlalchemy import DateTime, Integer, String, create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import Settings
@@ -40,11 +40,16 @@ class CreditGrant(Base):
 
 
 class BillingRepository:
-    def __init__(self, database_url: str) -> None:
+    def __init__(self, database_url: str, *, bootstrap_schema: bool = False) -> None:
         connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
         self._engine = create_engine(database_url, connect_args=connect_args)
-        Base.metadata.create_all(self._engine)
+        if bootstrap_schema: Base.metadata.create_all(self._engine)
         self._sessions = sessionmaker(self._engine, expire_on_commit=False)
+
+    def is_ready(self) -> bool:
+        with self._engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return True
 
     @staticmethod
     def _new_account(user_id: str) -> BillingAccount:
@@ -103,6 +108,11 @@ class BillingRepository:
             if source == "subscription": account.subscription_used = max(0, account.subscription_used - 1)
             else: account.purchased_credits += 1
 
+    def balance(self, user_id: str) -> tuple[str, int, int]:
+        account = self.account(user_id)
+        monthly = max(0, account.subscription_credits - account.subscription_used)
+        return account.subscription_status, monthly, account.purchased_credits
+
 
 @dataclass(frozen=True)
 class CheckoutRequest:
@@ -125,6 +135,12 @@ class StripeBillingService:
         self._repository.save_customer(user_id, customer)
         session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": 1}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(packs.get(request.price_id, 0))}, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
         return session.url
+
+    def portal(self, user_id: str) -> str:
+        if not self._settings.stripe_secret_key: raise HTTPException(status_code=503, detail="Stripe billing is not configured.")
+        customer = self._repository.account(user_id).stripe_customer_id
+        if not customer: raise HTTPException(status_code=404, detail="No billing account exists yet.")
+        return stripe.billing_portal.Session.create(customer=customer, return_url=self._settings.app_url)["url"]
 
     def webhook(self, payload: bytes, signature: str | None) -> None:
         if not self._settings.stripe_webhook_secret or not signature: raise HTTPException(status_code=400, detail="Invalid webhook signature.")

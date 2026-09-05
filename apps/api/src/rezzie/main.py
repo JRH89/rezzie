@@ -7,6 +7,7 @@ from .config import Settings
 from .documents import DocumentService
 from .providers.anthropic import AnthropicProvider
 from .schemas import (
+    CreditBalance,
     ImportResponse,
     TailoringResult,
     TailorRequest,
@@ -18,7 +19,7 @@ from .services import JobDescriptionImporter, TailoringService
 settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["POST", "GET"], allow_headers=["Content-Type"])
-billing_repository = BillingRepository(settings.database_url)
+billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(), settings, billing_repository)
 document_service = DocumentService(settings)
@@ -35,7 +36,10 @@ async def health() -> dict[str, str]: return {"status": "ok"}
 
 
 @app.get("/ready")
-async def readiness() -> dict[str, str]: return {"status": "ready"}
+async def readiness() -> dict[str, str]:
+    try: billing_repository.is_ready()
+    except Exception as error: raise HTTPException(status_code=503, detail="Database is unavailable.") from error
+    return {"status": "ready"}
 
 @app.post("/api/v1/job-descriptions/text", response_model=ImportResponse)
 async def import_text(request: TextImportRequest) -> ImportResponse:
@@ -65,6 +69,17 @@ async def tailor(request: TailorRequest, authorization: str | None = Header(defa
 def create_checkout(request: CheckoutRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> dict[str, str]:
     user_id = require_user(authorization, x_rezzie_user_id)
     return {"url": billing_service.checkout(user_id, request)}
+
+
+@app.get("/api/v1/billing/me", response_model=CreditBalance)
+def billing_balance(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> CreditBalance:
+    status, subscription_remaining, purchased_credits = billing_repository.balance(require_user(authorization, x_rezzie_user_id))
+    return CreditBalance(subscription_status=status, subscription_remaining=subscription_remaining, purchased_credits=purchased_credits)
+
+
+@app.post("/api/v1/billing/portal")
+def billing_portal(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> dict[str, str]:
+    return {"url": billing_service.portal(require_user(authorization, x_rezzie_user_id))}
 
 
 @app.post("/api/v1/billing/webhook")

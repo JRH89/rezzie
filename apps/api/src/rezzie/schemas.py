@@ -39,3 +39,9 @@ class TailoringResult(BaseModel):
     matched_keywords: list[str] = Field(max_length=30)
     review_items: list[str] = Field(max_length=20)
     truth_statement: str
+
+
+class CreditBalance(BaseModel):
+    subscription_status: str
+    subscription_remaining: int
+    purchased_credits: int

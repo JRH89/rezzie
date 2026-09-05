@@ -20,6 +20,16 @@ def test_resume_file_imports_plain_text() -> None:
     assert response.json()["source_type"] == "file"
 
 
+def test_billing_balance_requires_identity() -> None:
+    assert client.get("/api/v1/billing/me").status_code == 401
+
+
+def test_billing_balance_uses_local_development_identity() -> None:
+    response = client.get("/api/v1/billing/me", headers={"X-Rezzie-User-Id": "local-user"})
+    assert response.status_code == 200
+    assert response.json()["purchased_credits"] == 0
+
+
 def test_subscription_route_requires_server_model_key() -> None:
     response = client.post("/api/v1/tailor", json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "subscription"})
     assert response.status_code == 503
