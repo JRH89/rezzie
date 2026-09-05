@@ -8,7 +8,7 @@ Truth-preserving, AI-assisted resume tailoring for a specific job description. T
 2. Copy `apps/web/.env.example` to `apps/web/.env` for the local development identity.
 3. `npm install`
 4. `uv sync --directory apps/api`
-5. In one terminal: `uv run --directory apps/api uvicorn rezzie.main:app --reload --port 8000`
+5. In one terminal: `uv run --directory apps/api uvicorn --app-dir src rezzie.main:app --reload --port 8000`
 6. In another: `npm run dev:web`
 
 Use **your own API key** to make a live Claude request without a subscription integration. Subscription mode is deliberately disabled until an authenticated entitlement verifier is connected.
