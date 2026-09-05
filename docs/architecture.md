@@ -4,6 +4,8 @@
 
 `React browser -> Cloudflare -> FastAPI -> Claude API`. The browser talks only to the API; all model keys remain server-side except a user’s transient BYOK value in the request body. Production storage is PostgreSQL plus private object storage. A Cloudflare Worker/Access or equivalent identity layer must inject a verified subject; this repository's local identity is development-only.
 
+In production the API validates a standard OIDC bearer access token against `OIDC_ISSUER`, `OIDC_AUDIENCE`, and `OIDC_JWKS_URL`. Any provider that issues compatible JWT access tokens can be used. The web app needs that provider’s chosen login SDK/configuration to obtain and attach the token; this is intentionally not guessed without a provider decision.
+
 ## Modules
 
 - `api/routes`: versioned HTTP boundary and error mapping.

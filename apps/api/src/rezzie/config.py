@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     stripe_subscription_price_id: str | None = None
     stripe_subscription_monthly_credits: int = 20
     stripe_credit_packs: str = "{}"
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_jwks_url: str | None = None
+    clamav_host: str | None = None
+    clamav_port: int = 3310
 
     @property
     def cors_origins(self) -> list[str]:
