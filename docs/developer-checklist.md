@@ -10,3 +10,4 @@
 | Platform | Provision Postgres/object storage/secrets/Cloudflare | pending | Required before deployment |
 | QA | Run local API/web checks | complete | 2026-09-05: web unit test + production build passed; API pytest: 6 passed; Ruff clean |
 | QA | Run hosted smoke tests in provisioned environment | pending | Requires deployment credentials |
+| QA | Validate grounding and Stripe lifecycle behavior | complete | API tests cover claim guard, credit idempotency, and monthly renewal grant |
