@@ -19,6 +19,8 @@ In production the API validates a standard OIDC bearer access token against `OID
 
 The model receives the original resume as the sole facts source. It may reorganize or tighten wording and surface job-description keywords only when grounded by those facts. It must return a structured `TailoringResult` with a changed-text candidate and a review list. The server rejects malformed output and runs a deterministic grounding floor that blocks new numerical or proper-name-style claims. The prompt requires unsupported requirements to be surfaced as review items, and users must approve every result. A stronger semantic-grounding evaluator remains necessary before treating this as an automated safety guarantee.
 
+`RESUME_TAILORING_MASTER_PROMPT` is the production instruction source. It combines evidence-led summary/skills, experience, and project tailoring but keeps the original resume as the only factual authority. See `docs/master-tailoring-prompt.md`.
+
 ## Deployment
 
 Build `apps/web` into static files and serve from Cloudflare Pages or Nginx. Containerize FastAPI behind Cloudflare Tunnel/reverse proxy. Terminate TLS at Cloudflare, restrict API origin CORS, rate-limit import/generation endpoints, use managed Postgres/object storage, and configure secrets only in the host/CI environment.
