@@ -1,11 +1,13 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { createApi, CreditBalance, TailoringResult } from "./api";
+import { LandingPage } from "./LandingPage";
 
 type ImportMode = "paste" | "url" | "file";
 const minLength = 50;
 
 export function App({ accessToken }: { accessToken?: string }) {
   const api = createApi(accessToken);
+  const [view, setView] = useState<"landing" | "workspace">("landing");
   const [resume, setResume] = useState(""); const [job, setJob] = useState(""); const [key, setKey] = useState("");
   const [credentialMode, setCredentialMode] = useState<"byok" | "subscription">("byok"); const [balance, setBalance] = useState<CreditBalance>();
   const [url, setUrl] = useState(""); const [mode, setMode] = useState<ImportMode>("paste");
@@ -22,6 +24,7 @@ export function App({ accessToken }: { accessToken?: string }) {
   const portal = async () => { try { window.location.assign((await api.portal()).url); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not open billing portal."); } };
   const ready = resume.length >= minLength && job.length >= minLength && (credentialMode === "subscription" || key.length >= 10);
   const creditPackPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID; const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
+  if (view === "landing") return <LandingPage onStart={() => setView("workspace")}/>;
   return <main><header><p className="eyebrow">REZZIE / PRIVATE BY DESIGN</p><h1>Match the role. Keep the truth.</h1><p className="lede">Tailor your existing resume against a job description—without inventing a single claim.</p></header>
     <section className="card"><label htmlFor="resume">Your current resume <span>Paste text or import a .txt, .md, .pdf, or .docx file.</span></label><input aria-label="Resume file" onChange={importResume} accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" type="file"/><textarea id="resume" value={resume} onChange={e => setResume(e.target.value)} placeholder="Paste the resume you want to tailor…" /></section>
     <section className="card"><fieldset><legend>Job description</legend><div className="tabs">{(["paste","url","file"] as ImportMode[]).map(item => <button className={mode === item ? "active" : ""} onClick={() => setMode(item)} key={item} type="button">{item === "paste" ? "Paste text" : item === "url" ? "Import URL" : "Upload .txt"}</button>)}</div>{mode === "paste" && <textarea aria-label="Job description text" value={job} onChange={e => setJob(e.target.value)} placeholder="Paste the complete job description…" />}{mode === "url" && <><input aria-label="Job description URL" value={url} onChange={e => setUrl(e.target.value)} type="url" placeholder="https://company.com/jobs/role"/><button onClick={() => importJob()} disabled={!url || loading} type="button">Import URL</button></>}{mode === "file" && <input aria-label="Job description file" onChange={importJob} accept=".txt,.md,text/plain,text/markdown" type="file" />}</fieldset></section>
