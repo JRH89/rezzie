@@ -15,6 +15,15 @@ def test_health_emits_security_headers() -> None:
     assert response.headers["x-content-type-options"] == "nosniff"
 
 
+def test_cors_preflight_allows_career_fact_updates() -> None:
+    response = client.options(
+        "/api/v1/career-records/record-1/facts/fact-1",
+        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "PATCH"},
+    )
+    assert response.status_code == 200
+    assert "PATCH" in response.headers["access-control-allow-methods"]
+
+
 def test_text_import_validates_minimum_length() -> None:
     response = client.post("/api/v1/job-descriptions/text", headers=LOCAL_IDENTITY, json={"text": "short"})
     assert response.status_code == 422

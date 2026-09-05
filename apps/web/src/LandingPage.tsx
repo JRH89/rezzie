@@ -1,13 +1,42 @@
 import heroImage from "./assets/rezzie-hero-editorial.png";
 import { BrandMark } from "./BrandMark";
 
-export function LandingPage({ onStart }: { onStart: () => void }) {
-  return <main className="landing"><nav className="site-nav"><BrandMark/><div className="nav-links"><a href="#how-it-works">How it works</a><a href="#trust">Our promise</a><button className="nav-cta" onClick={onStart} type="button">Tailor a resume <span>↗</span></button></div></nav>
-    <section className="hero"><div className="hero-copy"><p className="kicker"><i/> RESUME TAILORING, WITH RECEIPTS</p><h1>Stand out for<br/>the <em>right</em> reasons.</h1><p className="hero-lede">Rezzie reshapes your existing experience around each role—so every line is more relevant, never more fictional.</p><div className="hero-actions"><button className="cta" onClick={onStart} type="button">Tailor my resume <span>→</span></button><a href="#how-it-works">See how it works <span>↓</span></a></div><p className="microcopy">Bring your own Anthropic key, or use Rezzie credits.</p></div><div className="hero-art"><img src={heroImage} alt="Editorial arrangement of resume papers, a green folder, pencil, and paperclip"/><div className="proof-card"><span className="proof-number">01</span><p>Every change begins with<br/><strong>your actual experience.</strong></p><span className="proof-line"/></div></div></section>
-    <section className="marquee" aria-label="Rezzie benefits"><span>Grounded in your resume</span><b>✦</b><span>Built for the role in front of you</span><b>✦</b><span>Always yours to review</span><b>✦</b></section>
-    <section className="intro-section" id="how-it-works"><p className="section-label">THE REZZIE METHOD / 01—03</p><div className="section-heading"><h2>A sharper story,<br/>without a taller tale.</h2><p>Job descriptions are noisy. Your experience is not. Rezzie finds the overlap, reorganizes the signal, and leaves the final call with you.</p></div><div className="method-grid"><article><span>01</span><h3>Bring the brief.</h3><p>Paste a JD, import a job link, or upload the posting you care about.</p><div className="diagram source-diagram"><i/><i/><i/><i/></div></article><article><span>02</span><h3>Find the fit.</h3><p>Rezzie maps relevant language back to the experience already in your resume.</p><div className="diagram fit-diagram"><i>YOU</i><b>↔</b><i>ROLE</i></div></article><article><span>03</span><h3>Review every word.</h3><p>Get a tailored draft, keyword context, and anything that needs your judgment.</p><div className="diagram review-diagram"><i>✓</i><i>✓</i><i>?</i></div></article></div></section>
-    <section className="promise-section" id="trust"><div><p className="section-label light">A BETTER KIND OF AI ASSISTANCE</p><h2>Your career is<br/>not a prompt.</h2></div><div className="promise-copy"><p>It is a record of work you actually did. Rezzie is designed to protect that line: no invented credentials, no made-up metrics, no confident fiction.</p><ul><li><b>↗</b> Your resume is the source of truth.</li><li><b>↗</b> Unsupported requirements stay in review.</li><li><b>↗</b> You approve the final version.</li></ul><button className="cta coral" onClick={onStart} type="button">Start with your resume <span>→</span></button></div></section>
-    <section className="closing-section"><p className="section-label">MAKE THE APPLICATION COUNT</p><h2>Ready to make<br/><em>your case?</em></h2><button className="cta" onClick={onStart} type="button">Open Rezzie <span>→</span></button></section>
-    <footer><BrandMark/><p>Tailor the signal. Keep the truth.</p><span>© {new Date().getFullYear()} Rezzie</span></footer>
-  </main>;
+type LandingPageProps = { onStart: () => void };
+
+export function LandingPage({ onStart }: LandingPageProps) {
+  return (
+    <div className="landing">
+      <header className="marketing-header">
+        <a className="brand-link" href="#top" aria-label="Rezzie home"><BrandMark /></a>
+        <nav className="marketing-nav" aria-label="Main navigation">
+          <a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="#safety">Safety</a>
+        </nav>
+        <button className="button button-dark button-small" onClick={onStart} type="button">Open workspace <span aria-hidden="true">↗</span></button>
+      </header>
+      <main id="top">
+        <section className="hero">
+          <div className="hero-copy">
+            <p className="kicker"><span /> AI RESUME TAILORING, GROUNDED IN YOU</p>
+            <h1>A stronger match.<br /><em>Still your story.</em></h1>
+            <p className="hero-lede">Turn one honest resume into a focused application for every role. Rezzie finds the signal, mirrors the right language, and never invents experience.</p>
+            <div className="hero-actions"><button className="button button-primary" onClick={onStart} type="button">Tailor my resume <span aria-hidden="true">→</span></button><a className="text-link" href="#how-it-works">See the 3-minute flow <span aria-hidden="true">↓</span></a></div>
+            <div className="trust-row"><span>✓ No credit card to try with your key</span><span>✓ Your claims stay yours</span></div>
+          </div>
+          <div className="hero-art"><div className="hero-frame"><img src={heroImage} alt="Resume pages arranged with a green folder and pencil" /></div><aside className="proof-card"><span className="proof-number">SOURCE 01</span><p>Every edit traces back to <strong>experience you supplied.</strong></p><span className="proof-line" /></aside><aside className="fit-stamp" aria-hidden="true"><strong>ROLE FIT</strong><span>without fiction</span></aside></div>
+        </section>
+        <div className="signal-strip"><span>Grounded in your resume</span><b>✦</b><span>Keywords in context</span><b>✦</b><span>Always yours to review</span><b>✦</b><span>Ready to download</span></div>
+        <section className="product-section" id="product">
+          <div className="section-intro"><p className="section-label">BUILT FOR THE APPLICATION IN FRONT OF YOU</p><h2>Less rewriting.<br /><em>More relevance.</em></h2></div>
+          <div className="feature-stage">
+            <div className="resume-preview" aria-hidden="true"><div className="preview-top"><span>YOUR EXPERIENCE</span><span className="status-pill">SOURCE-LOCKED</span></div><h3>Senior Product Designer</h3><p className="preview-muted">Experience</p><p><mark>Led cross-functional research</mark> and translated findings into product decisions.</p><p>Built accessible systems used across core customer journeys.</p><div className="preview-note">Matched to: research · systems · accessibility</div></div>
+            <div className="feature-copy"><article><span>01</span><div><h3>Bring the source</h3><p>Upload PDF, DOCX, Markdown, or text. Save confirmed experience in a private Career Record so you can reuse it safely.</p></div></article><article><span>02</span><div><h3>Bring the role</h3><p>Paste a description, upload it, or import a public job link. Rezzie isolates what the employer actually values.</p></div></article><article><span>03</span><div><h3>Leave with a draft</h3><p>Review the tailored resume, grounded keywords, and anything that needs your judgment—then copy or download.</p></div></article></div>
+          </div>
+        </section>
+        <section className="method-section" id="how-it-works"><div className="section-intro compact"><p className="section-label light">ONE CLEAR FLOW / NO PROMPT WRITING</p><h2>From application<br />to <em>ready.</em></h2></div><ol className="method-list"><li><span>1</span><div><strong>Add your resume</strong><p>Paste or upload the version you trust.</p></div></li><li><span>2</span><div><strong>Add the job</strong><p>Use text, a file, or a public link.</p></div></li><li><span>3</span><div><strong>Review and download</strong><p>Keep control of every final word.</p></div></li></ol><button className="button button-coral" onClick={onStart} type="button">Start the guided flow <span aria-hidden="true">→</span></button></section>
+        <section className="safety-section" id="safety"><div><p className="section-label">THE LINE REZZIE WILL NOT CROSS</p><h2>Your career is<br />not a prompt.</h2></div><div className="safety-copy"><p>AI should help you communicate the truth—not improvise a more convenient version of it.</p><ul><li><span>✓</span><div><strong>No invented credentials</strong><small>Employers, dates, metrics, tools, and achievements must come from you.</small></div></li><li><span>✓</span><div><strong>Review gates for saved facts</strong><small>Imported Career Record facts remain off-limits until you confirm them.</small></div></li><li><span>✓</span><div><strong>Transparent review notes</strong><small>Uncertain or unsupported requirements stay visible for your judgment.</small></div></li></ul></div></section>
+        <section className="closing-section"><p className="section-label">YOUR NEXT APPLICATION DESERVES A SHARPER STORY</p><h2>Make your case.<br /><em>Keep it yours.</em></h2><button className="button button-dark" onClick={onStart} type="button">Open Rezzie <span aria-hidden="true">→</span></button></section>
+      </main>
+      <footer className="marketing-footer"><a className="brand-link" href="#top"><BrandMark /></a><p>Tailor the signal. Keep the truth.</p><span>© {new Date().getFullYear()} Rezzie</span></footer>
+    </div>
+  );
 }

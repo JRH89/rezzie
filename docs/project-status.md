@@ -4,8 +4,8 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, and numeric/named-claim safety guard |
-| Latest local verification | done | 24 API tests and 2 web tests passed; Ruff, ESLint, and production build passed 2026-09-05 |
-| Web import/tailor UX | done | React flow; `npm.cmd run check` passed 2026-09-05 |
+| Latest local verification | done | 25 API tests and 4 web interaction tests passed; Ruff, ESLint, production build, and desktop/mobile visual QA passed 2026-09-05 |
+| Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 6 passed 2026-09-05 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
 | OIDC identity integration | done | Generic OIDC JWT verification and React authorization-code client; provider values required at deployment |
@@ -17,4 +17,4 @@
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
-| Guided workspace UX redesign | planned | Current resume workspace is acknowledged as functional but not launch-quality UX |
+| Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |

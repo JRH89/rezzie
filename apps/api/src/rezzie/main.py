@@ -27,7 +27,7 @@ from .services import JobDescriptionImporter, TailoringService
 
 settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["POST", "GET"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["POST", "GET", "PATCH"], allow_headers=["Authorization", "Content-Type"])
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")

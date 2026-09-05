@@ -6,7 +6,7 @@ Turn an uploaded resume into a private, reviewable source of facts. Rezzie may t
 
 ## First release
 
-1. Create a record from pasted/uploaded resume text.
+1. Create a record from pasted or uploaded resume text.
 2. Extract conservative proposed facts from visible lines; never infer or enrich them.
 3. Let the user confirm, edit, reject, or add a fact.
 4. Tailor from confirmed facts only; return a clear error when none are confirmed.
@@ -19,6 +19,6 @@ Turn an uploaded resume into a private, reviewable source of facts. Rezzie may t
 - Editing creates a user-authored fact; record changes remain auditable by timestamps.
 - The MVP does not claim that a fact is externally verified. A later release can add evidence URLs, verification tiers, revisions, cut logs, and interview probe maps.
 
-## UX follow-up
+## Guided experience
 
-The existing workspace is functional but intentionally not the final experience. After record functionality is proven, redesign it as a guided flow: import → review facts → choose a job → review coverage → tailor → review/download. Include progress, plain-language explanations, and contextual tips instead of exposing a dense form all at once.
+The workspace uses a four-stage flow: experience, job description, Claude access, and review/download. It includes visible progress, saved Career Record selection, editable fact review, contextual guidance, source summaries, grounded-keyword and review panels, copy, and text download. The layout has dedicated desktop and mobile behavior.

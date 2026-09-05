@@ -1,39 +1,29 @@
-import { ChangeEvent, useEffect, useState } from "react";
-import { CareerRecord, createApi, CreditBalance, TailoringResult } from "./api";
+import { useEffect, useState } from "react";
 import { LandingPage } from "./LandingPage";
+import { Workspace } from "./Workspace";
 
-type ImportMode = "paste" | "url" | "file";
-const minLength = 50;
+type View = "landing" | "workspace";
+
+function viewFromHash(): View {
+  return window.location.hash === "#workspace" ? "workspace" : "landing";
+}
 
 export function App({ accessToken }: { accessToken?: string }) {
-  const api = createApi(accessToken);
-  const [view, setView] = useState<"landing" | "workspace">("landing");
-  const [resume, setResume] = useState(""); const [job, setJob] = useState(""); const [key, setKey] = useState("");
-  const [credentialMode, setCredentialMode] = useState<"byok" | "subscription">("byok"); const [balance, setBalance] = useState<CreditBalance>();
-  const [url, setUrl] = useState(""); const [mode, setMode] = useState<ImportMode>("paste");
-  const [loading, setLoading] = useState(false); const [error, setError] = useState<string>(); const [result, setResult] = useState<TailoringResult>();
-  const [careerRecord, setCareerRecord] = useState<CareerRecord>();
-  const importJob = async (event?: ChangeEvent<HTMLInputElement>) => {
-    setError(undefined); setLoading(true);
-    try { const imported = mode === "url" ? await api.importUrl(url) : mode === "file" && event?.target.files?.[0] ? await api.importFile(event.target.files[0]) : await api.importText(job); setJob(imported.text); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not import job description."); } finally { setLoading(false); }
-  };
-  const importResume = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; setError(undefined); setLoading(true); try { setResume((await api.importResumeFile(file)).text); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not import resume."); } finally { setLoading(false); } };
-  useEffect(() => { void api.balance().then(setBalance).catch(() => undefined); }, [accessToken]);
-  const createCareerRecord = async () => { setError(undefined); setLoading(true); try { setCareerRecord(await api.createCareerRecord({ label: "My Career Record", source_text: resume })); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not create your Career Record."); } finally { setLoading(false); } };
-  const updateFact = async (factId: string, status: "confirmed" | "rejected") => { if (!careerRecord) return; setError(undefined); setLoading(true); try { const current = careerRecord.facts.find(fact => fact.id === factId); if (!current) return; const updated = await api.updateCareerFact(careerRecord.id, factId, { text: current.text, status, evidence_note: null }); setCareerRecord({ ...careerRecord, facts: careerRecord.facts.map(fact => fact.id === factId ? updated : fact) }); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update this fact."); } finally { setLoading(false); } };
-  const tailor = async () => { setError(undefined); setLoading(true); try { const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? key : undefined }; setResult(careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ resume_text: resume, ...body })); if (credentialMode === "subscription") setBalance(await api.balance()); } catch (reason) { setError(reason instanceof Error ? reason.message : "Tailoring failed."); } finally { setLoading(false); } };
-  const checkout = async (kind: "credits" | "subscription", priceId: string) => { setError(undefined); try { window.location.assign((await api.checkout(kind, priceId)).url); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not start checkout."); } };
-  const portal = async () => { try { window.location.assign((await api.portal()).url); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not open billing portal."); } };
-  const hasConfirmedFacts = careerRecord?.facts.some(fact => fact.status === "confirmed") ?? false;
-  const ready = (careerRecord ? hasConfirmedFacts : resume.length >= minLength) && job.length >= minLength && (credentialMode === "subscription" || key.length >= 10);
-  const creditPackPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID; const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
-  if (view === "landing") return <LandingPage onStart={() => setView("workspace")}/>;
-  return <main><header><p className="eyebrow">REZZIE / PRIVATE BY DESIGN</p><h1>Match the role. Keep the truth.</h1><p className="lede">Tailor your existing resume against a job description—without inventing a single claim.</p></header>
-    <section className="card"><label htmlFor="resume">Your current resume <span>Paste text or import a .txt, .md, .pdf, or .docx file.</span></label><input aria-label="Resume file" onChange={importResume} accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" type="file"/><textarea id="resume" value={resume} onChange={e => setResume(e.target.value)} placeholder="Paste the resume you want to tailor…" />{!careerRecord && <button onClick={() => void createCareerRecord()} disabled={resume.length < minLength || loading} type="button">Create a Career Record for review</button>}{careerRecord && <div className="career-record"><p className="eyebrow">CAREER RECORD / REVIEW REQUIRED</p><h2>Confirm only facts you can stand behind.</h2><p className="hint">Only confirmed facts are used when you tailor from this record.</p>{careerRecord.facts.map(fact => <article className="fact" key={fact.id}><p>{fact.text}</p><small>{fact.status.replace("_", " ")}</small>{fact.status === "needs_review" && <div className="tabs"><button onClick={() => void updateFact(fact.id, "confirmed")} type="button">Confirm</button><button onClick={() => void updateFact(fact.id, "rejected")} type="button">Reject</button></div>}</article>)}</div>}</section>
-    <section className="card"><fieldset><legend>Job description</legend><div className="tabs">{(["paste","url","file"] as ImportMode[]).map(item => <button className={mode === item ? "active" : ""} onClick={() => setMode(item)} key={item} type="button">{item === "paste" ? "Paste text" : item === "url" ? "Import URL" : "Upload a file"}</button>)}</div>{mode === "paste" && <textarea aria-label="Job description text" value={job} onChange={e => setJob(e.target.value)} placeholder="Paste the complete job description…" />}{mode === "url" && <><input aria-label="Job description URL" value={url} onChange={e => setUrl(e.target.value)} type="url" placeholder="https://company.com/jobs/role"/><button onClick={() => importJob()} disabled={!url || loading} type="button">Import URL</button></>}{mode === "file" && <input aria-label="Job description file" onChange={importJob} accept=".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" type="file" />}</fieldset></section>
-    <section className="card"><fieldset><legend>How would you like to tailor?</legend><div className="tabs"><button className={credentialMode === "byok" ? "active" : ""} onClick={() => setCredentialMode("byok")} type="button">Use my Anthropic key</button><button className={credentialMode === "subscription" ? "active" : ""} onClick={() => setCredentialMode("subscription")} type="button">Use Rezzie credits</button></div>{credentialMode === "byok" ? <><label htmlFor="apiKey">Your Anthropic API key <span>Used only for this request; never saved.</span></label><input id="apiKey" value={key} onChange={e => setKey(e.target.value)} type="password" autoComplete="off" placeholder="sk-ant-…"/></> : <p className="hint">{balance ? `${balance.subscription_remaining} monthly and ${balance.purchased_credits} purchased credits available.` : "Your credit balance will load after sign-in."}</p>}</fieldset></section>
-    {(creditPackPrice || subscriptionPrice) && <section className="card"><p className="eyebrow">FLEXIBLE BILLING</p><h2>Credits when you need them.</h2><div className="tabs">{creditPackPrice && <button onClick={() => void checkout("credits", creditPackPrice)} type="button">Buy {import.meta.env.VITE_CREDIT_PACK_CREDITS ?? "5"} credits</button>}{subscriptionPrice && <button onClick={() => void checkout("subscription", subscriptionPrice)} type="button">Subscribe monthly</button>}{balance && <button onClick={() => void portal()} type="button">Manage billing</button>}</div></section>}
-    {error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={!ready || loading} onClick={tailor}>{loading ? "Working…" : "Tailor my resume"}</button>
-    {result && <section className="result"><p className="eyebrow">REVIEW BEFORE USE</p><h2>Your tailored draft</h2><textarea aria-label="Tailored resume" readOnly value={result.tailored_resume}/><h3>Keywords grounded in your resume</h3><p>{result.matched_keywords.join(" · ") || "None identified"}</p><h3>Items requiring your review</h3><ul>{result.review_items.map(item => <li key={item}>{item}</li>)}</ul><p className="truth">{result.truth_statement}</p></section>}</main>;
+  const [view, setView] = useState<View>(viewFromHash);
+
+  useEffect(() => {
+    const handleHashChange = () => setView(viewFromHash());
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  function navigate(next: View) {
+    window.location.hash = next === "workspace" ? "workspace" : "top";
+    setView(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  return view === "landing"
+    ? <LandingPage onStart={() => navigate("workspace")} />
+    : <Workspace accessToken={accessToken} onHome={() => navigate("landing")} />;
 }
