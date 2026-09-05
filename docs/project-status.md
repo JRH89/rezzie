@@ -13,3 +13,4 @@
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
 | Deployment/CI | remaining | CI workflow and production runbook exist; no remote or cloud credentials are configured |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
+| Chrome extension | planned | `docs/chrome-extension-roadmap.md`; no implementation started |
