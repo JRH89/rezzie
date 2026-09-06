@@ -4,6 +4,15 @@ services:
     restart: unless-stopped
     env_file: ./apps/api/.env
     ports: ["127.0.0.1:8000:8000"]
+    environment:
+      ENVIRONMENT: production
+      APP_URL: https://rezzie.org
+      ALLOWED_ORIGINS: https://rezzie.org
+      ALLOWED_HOSTS: api.rezzie.org,127.0.0.1,localhost
+      CLAMAV_HOST: clamav
+      DATABASE_URL: sqlite:////data/rezzie.db
+    volumes:
+      - rezzie_api_data:/data
     depends_on:
       clamav:
         condition: service_healthy
@@ -18,9 +27,13 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    entrypoint: ["/bin/sh", "-c"]
-    command: cloudflared tunnel --no-autoupdate run --token "$$CLOUDFLARE_TUNNEL_TOKEN"
-    env_file: ./apps/api/.env
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./.cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ./.cloudflared/credentials.json:/etc/cloudflared/credentials.json:ro
     depends_on:
       api:
         condition: service_started
+
+volumes:
+  rezzie_api_data:

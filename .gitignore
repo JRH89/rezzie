@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+.cloudflared/credentials.json
+.cloudflared/cert.pem
 .env.local
 .env.*.local
 .venv/

@@ -1,0 +1,7 @@
+tunnel: c8bb5574-9e19-42cf-9062-163da576342b
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: api.rezzie.org
+    service: http://api:8000
+  - service: http_status:404
