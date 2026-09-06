@@ -22,7 +22,7 @@ export function LandingPage({ isAuthenticated, onSignIn, onStart }: LandingPageP
             <div className="hero-actions"><button className="button button-primary" onClick={onStart} type="button">Tailor my resume <span aria-hidden="true">→</span></button><a className="text-link" href="#how-it-works">See the 3-minute flow <span aria-hidden="true">↓</span></a></div>
             <div className="trust-row"><span>✓ No credit card to try with your key</span><span>✓ Your claims stay yours</span></div>
           </div>
-          <div className="hero-art"><div className="hero-frame"><img src={heroImage} alt="Resume pages arranged with a green folder and pencil" /></div><aside className="proof-card"><span className="proof-number">SOURCE 01</span><p>Every edit traces back to <strong>experience you supplied.</strong></p><span className="proof-line" /></aside><aside className="fit-stamp" aria-hidden="true"><strong>ROLE FIT</strong><span>without fiction</span></aside></div>
+          <div className="hero-art"><div className="hero-frame"><img src={heroImage} alt="Resume pages arranged with warm stationery" /></div><aside className="proof-card"><span className="proof-number">SOURCE 01</span><p>Every edit traces back to <strong>experience you supplied.</strong></p><span className="proof-line" /></aside><aside className="fit-stamp" aria-hidden="true"><strong>ROLE FIT</strong><span>without fiction</span></aside></div>
         </section>
         <div className="signal-strip"><span>Grounded in your resume</span><b>✦</b><span>Keywords in context</span><b>✦</b><span>Always yours to review</span><b>✦</b><span>Ready to download</span></div>
         <section className="product-section" id="product">
