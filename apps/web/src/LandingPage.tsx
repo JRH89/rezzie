@@ -1,5 +1,5 @@
 import heroImage from "./assets/rezzie-hero-editorial.png";
-import { BrandMark } from "./BrandMark";
+import { PublicFooter, PublicHeader } from "./SiteChrome";
 
 type LandingPageProps = { isAuthenticated: boolean; onSignIn?: () => void; onSignUp?: () => void; onStart: () => void };
 
@@ -7,13 +7,7 @@ export function LandingPage({ isAuthenticated, onSignIn, onSignUp, onStart }: La
   const startAction = isAuthenticated ? onStart : onSignUp;
   return (
     <div className="landing">
-      <header className="marketing-header">
-        <a className="brand-link" href="#top" aria-label="Rezzie home"><BrandMark /></a>
-        <nav className="marketing-nav" aria-label="Main navigation">
-          <a href="/features">Features</a><a href="/how-it-works">How it works</a><a href="/pricing">Pricing</a><a href="/safety">Safety</a><a href="/blog">Resources</a>
-        </nav>
-        <div className="marketing-actions">{!isAuthenticated && onSignIn && <button className="text-button" onClick={onSignIn} type="button">Sign in</button>}<button className="button button-dark button-small" onClick={startAction} type="button">{isAuthenticated ? "Open workspace" : "Create free account"} <span aria-hidden="true">↗</span></button></div>
-      </header>
+      <PublicHeader isAuthenticated={isAuthenticated} onSignIn={onSignIn} onStart={startAction ?? onStart} />
       <main id="top">
         <section className="hero">
           <div className="hero-copy">
@@ -38,7 +32,7 @@ export function LandingPage({ isAuthenticated, onSignIn, onSignUp, onStart }: La
         <section className="closing-section"><p className="section-label">YOUR NEXT APPLICATION DESERVES A SHARPER STORY</p><h2>Make your case.<br /><em>Keep it yours.</em></h2><button className="button button-dark" onClick={startAction} type="button">Open Rezzie <span aria-hidden="true">→</span></button></section>
         <section className="pricing-section" id="pricing"><div className="section-intro"><p className="section-label">SIMPLE, FLEXIBLE ACCESS</p><h2>Bring your key.<br /><em>Or let us run it.</em></h2><p>Start with your own Anthropic key at no Rezzie cost. Use credits for one-off applications or a monthly plan for an active search.</p></div><div className="pricing-grid"><article className="price-card"><p className="eyebrow">BRING YOUR OWN KEY</p><h3>$0</h3><p>Your Anthropic key is used only for the request and never stored.</p><button className="button button-outline" onClick={startAction} type="button">Use my key</button></article><article className="price-card"><p className="eyebrow">FLEX CREDITS</p><h3>Pay as you go</h3><p>Buy credits and use one per completed tailored resume.</p><button className="button button-outline" onClick={startAction} type="button">Get credits</button></article><article className="price-card featured"><p className="eyebrow">MONTHLY</p><h3>For active searches</h3><p>Receive a fresh monthly allowance. Manage or cancel anytime through Stripe.</p><button className="button button-primary" onClick={startAction} type="button">Choose monthly</button></article></div></section>
       </main>
-      <footer className="marketing-footer"><a className="brand-link" href="/"><BrandMark /></a><nav className="footer-links" aria-label="Footer navigation"><a href="/features">Features</a><a href="/how-it-works">How it works</a><a href="/pricing">Pricing</a><a href="/safety">Safety</a><a href="/about">About</a><a href="/blog">Blog</a><a href="/faq">FAQ</a></nav><p>Tailor the signal. Keep the truth.</p><span>© {new Date().getFullYear()} Rezzie</span></footer>
+      <PublicFooter />
     </div>
   );
 }
