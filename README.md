@@ -13,4 +13,4 @@ Truth-preserving, AI-assisted resume tailoring for a specific job description. T
 
 Use **your own API key** to make a live Claude request without a subscription integration. Subscription mode is deliberately disabled until an authenticated entitlement verifier is connected.
 
-See [architecture](docs/architecture.md), [data model](docs/data-schema.md), and [delivery plan](docs/delivery-plan.md).
+See [architecture](docs/architecture.md), [data model](docs/data-schema.md), [delivery plan](docs/delivery-plan.md), and the [next-machine handoff](docs/next-machine-handoff.md).

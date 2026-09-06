@@ -1,5 +1,7 @@
 # Rezzie engineering rules
 
+Before starting deployment or continuing work on another machine, read `docs/next-machine-handoff.md`, `docs/project-status.md`, and `docs/developer-checklist.md` in addition to this file.
+
 ## Product boundaries
 
 - Rezzie tailors a candidate's existing resume to a job description. It must never invent employers, titles, dates, qualifications, metrics, certifications, tools, or achievements.
