@@ -10,23 +10,44 @@ from .security import assert_safe_public_url, require_generation_key
 
 
 class JobDescriptionImporter:
-    def __init__(self, settings: Settings) -> None:
+    _MAX_REDIRECTS = 5
+
+    def __init__(self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._settings = settings
+        self._transport = transport
 
     async def from_url(self, url: str) -> ImportResponse:
-        assert_safe_public_url(url)
-        try:
-            async with httpx.AsyncClient(follow_redirects=False, timeout=8.0) as client:
-                response = await client.get(url, headers={"User-Agent": "RezzieJobImporter/1.0"})
-                response.raise_for_status()
-        except httpx.HTTPError as error:
-            raise HTTPException(status_code=422, detail="Unable to retrieve that job-description URL.") from error
+        current_url = url
+        async with httpx.AsyncClient(follow_redirects=False, timeout=8.0, transport=self._transport) as client:
+            for redirects_followed in range(self._MAX_REDIRECTS + 1):
+                assert_safe_public_url(current_url)
+                try:
+                    response = await client.get(current_url, headers={"User-Agent": "RezzieJobImporter/1.0"})
+                except httpx.HTTPError as error:
+                    raise HTTPException(status_code=422, detail="Unable to retrieve that job-description URL.") from error
+
+                if response.is_redirect:
+                    if redirects_followed == self._MAX_REDIRECTS:
+                        raise HTTPException(status_code=422, detail="The job-description URL redirected too many times.")
+                    location = response.headers.get("location")
+                    if not location:
+                        raise HTTPException(status_code=422, detail="The job-description URL returned an invalid redirect.")
+                    current_url = str(response.url.join(location))
+                    continue
+
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPError as error:
+                    raise HTTPException(status_code=422, detail="Unable to retrieve that job-description URL.") from error
+                break
+            else:  # pragma: no cover - the loop always exits or raises.
+                raise HTTPException(status_code=422, detail="The job-description URL redirected too many times.")
         if "text/html" not in response.headers.get("content-type", ""):
             raise HTTPException(status_code=422, detail="The URL must return an HTML page.")
         text = " ".join(response.text.replace("<", " <").split())
         if len(text) < 50:
             raise HTTPException(status_code=422, detail="No usable job-description text was found.")
-        return ImportResponse(text=text[:100_000], source_type="url", source_url=url)
+        return ImportResponse(text=text[:100_000], source_type="url", source_url=current_url)
 
 
 class TailoringService:

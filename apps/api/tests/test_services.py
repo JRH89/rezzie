@@ -1,9 +1,10 @@
+import httpx
 import pytest
-
+from fastapi import HTTPException
 from rezzie.billing import BillingRepository
 from rezzie.config import Settings
 from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest
-from rezzie.services import TailoringService
+from rezzie.services import JobDescriptionImporter, TailoringService
 
 
 class RepairingProvider:
@@ -47,3 +48,36 @@ async def test_truth_guard_returns_sanitized_draft_after_a_failed_repair(tmp_pat
     assert "40%" not in result.tailored_resume
     assert any(item.startswith("VERIFY:") for item in result.review_items)
 
+
+@pytest.mark.asyncio
+async def test_job_importer_follows_and_validates_a_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+    checked_urls: list[str] = []
+    monkeypatch.setattr("rezzie.services.assert_safe_public_url", checked_urls.append)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://jobs.example.test/opening":
+            return httpx.Response(302, headers={"location": "/opening/backend"}, request=request)
+        return httpx.Response(200, headers={"content-type": "text/html"}, text="<html>Backend engineer responsibilities and requirements for this role.</html>", request=request)
+
+    importer = JobDescriptionImporter(Settings(), transport=httpx.MockTransport(handler))
+    result = await importer.from_url("https://jobs.example.test/opening")
+
+    assert checked_urls == ["https://jobs.example.test/opening", "https://jobs.example.test/opening/backend"]
+    assert result.source_url == "https://jobs.example.test/opening/backend"
+
+
+@pytest.mark.asyncio
+async def test_job_importer_rejects_an_unsafe_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+    def validate_url(url: str) -> None:
+        if "localhost" in url:
+            raise HTTPException(status_code=422, detail="Private or local URL targets are not allowed.")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://jobs.example.test/opening"
+        return httpx.Response(302, headers={"location": "https://localhost/internal"}, request=request)
+
+    monkeypatch.setattr("rezzie.services.assert_safe_public_url", validate_url)
+    importer = JobDescriptionImporter(Settings(), transport=httpx.MockTransport(handler))
+
+    with pytest.raises(HTTPException, match="Private or local"):
+        await importer.from_url("https://jobs.example.test/opening")
