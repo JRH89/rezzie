@@ -27,7 +27,11 @@ export function extractJob(documentToRead: Document = document): JobSnapshot {
   };
 }
 
-if (typeof chrome !== "undefined") {
+type ContentScriptGlobal = typeof globalThis & { __rezzieContentScriptInstalled?: boolean };
+const pageGlobal = globalThis as ContentScriptGlobal;
+
+if (typeof chrome !== "undefined" && !pageGlobal.__rezzieContentScriptInstalled) {
+  pageGlobal.__rezzieContentScriptInstalled = true;
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
     if (message.type !== "extract-job") return undefined;
     sendResponse({ type: "job-extracted", snapshot: extractJob() } satisfies ExtensionMessage);

@@ -19,5 +19,7 @@
 | Engineering | Career Record evidence gate | complete | Imported facts begin `needs_review`; only confirmed facts can be used in record tailoring |
 | Engineering | Resume Library source persistence | complete | `saved_resumes`/`resume_versions` migration, ownership checks, entitlement limits, deletion route, and workspace selection flow |
 | Engineering | Saved tailored-draft history | complete | Explicit save-only draft API, private ownership checks, free/paid limits, deletion route, and workspace save action |
+| Engineering | Chrome extension shared API shell | complete | Manifest V3 side panel reuses Firebase identity and existing resume/tailor/export routes; browser store configuration remains external |
+| Platform | Configure extension Google auth | pending | Build a production extension, add its `chrome-extension://EXTENSION_ID` Firebase authorized domain, set `VITE_CHROME_EXTENSION_IDS` in the Cloudflare Worker, and redeploy the web bridge |
 | Engineering | Private source-file and artifact storage | pending | Current normalized source text/drafts are stored in SQLite. Define original-file retention and private object storage separately; see `docs/chrome-extension-roadmap.md` |
 | Product/Design | Replace prototype workspace UX | complete | Guided four-step responsive flow visually checked at 1280px and 390px widths |
