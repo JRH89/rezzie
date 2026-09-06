@@ -10,8 +10,7 @@ function AuthenticatedApplication() {
   const auth = useAuth();
   if (auth.isLoading) return <main className="auth-screen"><BrandMark /><div className="auth-card"><span className="auth-loader" /><p>Checking your secure session…</p></div></main>;
   if (auth.error) return <main className="auth-screen"><BrandMark /><div className="auth-card"><p className="eyebrow">SIGN-IN NEEDS ATTENTION</p><h1>We couldn’t complete sign-in.</h1><p>{auth.error.message}</p><button className="button button-primary" onClick={() => void auth.signinRedirect()}>Try again <span>→</span></button></div></main>;
-  if (!auth.isAuthenticated) return <main className="auth-screen"><BrandMark /><div className="auth-card"><p className="eyebrow">REZZIE / SECURE ACCESS</p><h1>Your private tailoring workspace.</h1><p>Sign in to use saved Career Records, Rezzie credits, and your application history.</p><button className="button button-primary" onClick={() => void auth.signinRedirect()}>Sign in to continue <span>→</span></button><small>Resume content and API keys are never placed in browser logs.</small></div></main>;
-  return <App accessToken={auth.user?.access_token} />;
+  return <App accessToken={auth.user?.access_token} isAuthenticated={auth.isAuthenticated} onSignIn={() => void auth.signinRedirect()} />;
 }
 
 export function ApplicationRoot() {

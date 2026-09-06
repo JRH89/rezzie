@@ -8,6 +8,7 @@
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 6 passed 2026-09-05 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
+| Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
 | OIDC identity integration | done | Generic OIDC JWT verification and React authorization-code client; provider values required at deployment |
 | Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |

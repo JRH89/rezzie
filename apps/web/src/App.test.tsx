@@ -41,6 +41,8 @@ describe("guided tailoring workspace", () => {
   it("provides working landing navigation and a way back home", () => {
     render(<App />);
     expect(screen.getByRole("link", { name: "Product" }).getAttribute("href")).toBe("#product");
+    expect(screen.getByRole("link", { name: "Pricing" }).getAttribute("href")).toBe("#pricing");
+    expect(screen.getByRole("heading", { name: /bring your key/i })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to Rezzie home" }));
     expect(screen.getByRole("heading", { name: /a stronger match/i })).toBeTruthy();
