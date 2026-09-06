@@ -250,7 +250,7 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .error-banner > span { align-items: center; background: #b6462d; border-radius: 50%; color: white; display: flex; font-size: .7rem; height: 1.4rem; justify-content: center; width: 1.4rem; }
 .error-banner p { font-size: .75rem; margin: 0; }
 .error-banner button { background: none; border: 0; font-size: 1.2rem; }
-.auth-screen { align-items: center; background: #10201c; color: white; display: flex; flex-direction: column; gap: 2.5rem; justify-content: center; min-height: 100vh; padding: 1.25rem; }
+.auth-screen { align-items: center; background: #10201ce8; color: white; display: flex; flex-direction: column; gap: 2.5rem; inset: 0; justify-content: center; overflow-y: auto; padding: 1.25rem; position: fixed; z-index: 100; }
 .auth-screen .brand-cut { stroke: #10201c; }
 .auth-card { background: #f7f5ef; border-radius: .85rem; color: #10201c; max-width: 510px; padding: clamp(2rem, 6vw, 4rem); text-align: center; width: 100%; }
 .auth-card .eyebrow { color: #e86645; }
