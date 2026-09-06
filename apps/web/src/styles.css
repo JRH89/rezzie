@@ -399,6 +399,9 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .auth-loader { border-top-color: #9a6248; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: .01ms !important; } }
 .content-page { margin: 0 auto; max-width: 900px; padding: clamp(4rem, 8vw, 8rem) clamp(1.25rem, 5vw, 3rem); }
+.product-section .section-intro { align-items: flex-start; flex-direction: column; margin-left: auto; max-width: 48rem; }
+.product-section .section-intro .section-label { max-width: none; }
+.product-section .section-intro h2 { text-align: left; }
 .content-page > h1 { font: 500 clamp(3.2rem, 7vw, 6rem)/.92 Georgia, "Times New Roman", serif; letter-spacing: -.06em; margin: .8rem 0 1.5rem; }
 .page-lede { font-size: 1.25rem; line-height: 1.6; max-width: 46rem; }
 .content-grid, .article-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin: 3.5rem 0; }
