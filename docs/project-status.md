@@ -9,6 +9,7 @@
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 6 passed 2026-09-05 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
 | Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
+| Signed-in billing flow | done | Account route exposes credit balance, credit-pack checkout, monthly upgrade, and Stripe portal entry point |
 | Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |
 | Authentication navigation | done | Distinct sign-in/sign-up entry points; successful auth enters workspace and sign-out returns to landing |
 | Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |

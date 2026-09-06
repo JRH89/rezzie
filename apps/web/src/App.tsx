@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { LandingPage } from "./LandingPage";
+import { BillingPage } from "./BillingPage";
 import { MarketingPage } from "./MarketingPages";
 import { Workspace } from "./Workspace";
 
-type View = "landing" | "workspace" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "blog" | "blog-post";
+type View = "landing" | "workspace" | "account" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "blog" | "blog-post";
 
 function viewFromHash(): View {
-  if (window.location.hash === "#workspace") return "workspace";
+  if (window.location.hash === "#workspace") return "workspace"; if (window.location.hash === "#account") return "account";
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/blog": "blog" };
   return path.startsWith("/blog/") ? "blog-post" : (routes[path] ?? "landing");
@@ -41,6 +42,7 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignUp, o
 
   return view === "landing"
     ? <LandingPage isAuthenticated={isAuthenticated} onSignIn={onSignIn} onSignUp={onSignUp ?? onSignIn} onStart={() => navigate("workspace")} />
-    : view === "workspace" ? <Workspace accessToken={accessToken} onHome={() => navigate("landing")} onSignOut={onSignOut} />
+    : view === "workspace" ? <Workspace accessToken={accessToken} onBilling={() => navigate("account")} onHome={() => navigate("landing")} onSignOut={onSignOut} />
+    : view === "account" ? <BillingPage accessToken={accessToken} onBack={() => navigate("workspace")} />
       : <MarketingPage isAuthenticated={isAuthenticated} kind={view} onSignIn={onSignIn} onStart={() => isAuthenticated ? navigate("workspace") : (onSignUp ?? onSignIn)?.()} />;
 }

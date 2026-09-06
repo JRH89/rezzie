@@ -12,6 +12,7 @@
 | QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 5 web interaction tests, Ruff, ESLint, and production build passed |
 | Engineering | Preserve usable resume document structure | complete | DOCX/PDF import preserves paragraph/table or layout text; DOCX export is transient and no-store |
 | Engineering | Expose signup and managed billing paths | complete | Public pricing section and OIDC-aware account CTA lead into workspace Stripe checkout |
+| Engineering | Give signed-in users a billing destination | complete | Workspace Billing control opens account route with balance, checkout, upgrade, and portal actions |
 | QA | Run hosted smoke tests in provisioned environment | pending | Requires deployment credentials |
 | QA | Validate grounding and Stripe lifecycle behavior | complete | API tests cover claim guard, credit idempotency, and monthly renewal grant |
 | Engineering | Career Record evidence gate | complete | Imported facts begin `needs_review`; only confirmed facts can be used in record tailoring |
