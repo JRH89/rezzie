@@ -2,9 +2,9 @@ import heroImage from "./assets/rezzie-hero-editorial.png";
 import { PricingCards } from "./PricingCards";
 import { PublicFooter, PublicHeader } from "./SiteChrome";
 
-type LandingPageProps = { isAuthenticated: boolean; onSignIn?: () => void; onSignUp?: () => void; onStart: () => void };
+type LandingPageProps = { isAuthenticated: boolean; onBuyCredits: () => void; onSignIn?: () => void; onSignUp?: () => void; onStart: () => void; onSubscribe: () => void };
 
-export function LandingPage({ isAuthenticated, onSignIn, onSignUp, onStart }: LandingPageProps) {
+export function LandingPage({ isAuthenticated, onBuyCredits, onSignIn, onSignUp, onStart, onSubscribe }: LandingPageProps) {
   const startAction = isAuthenticated ? onStart : onSignUp;
   return (
     <div className="landing">
@@ -31,7 +31,7 @@ export function LandingPage({ isAuthenticated, onSignIn, onSignUp, onStart }: La
         <section className="method-section" id="how-it-works"><div className="section-intro compact"><p className="section-label light">ONE CLEAR FLOW / NO PROMPT WRITING</p><h2>From application<br />to <em>ready.</em></h2></div><ol className="method-list"><li><span>1</span><div><strong>Add your resume</strong><p>Paste or upload the version you trust.</p></div></li><li><span>2</span><div><strong>Add the job</strong><p>Use text, a file, or a public link.</p></div></li><li><span>3</span><div><strong>Review and download</strong><p>Keep control of every final word.</p></div></li></ol><button className="button button-coral" onClick={startAction} type="button">Start the guided flow <span aria-hidden="true">→</span></button></section>
         <section className="safety-section" id="safety"><div><p className="section-label">THE LINE REZZIE WILL NOT CROSS</p><h2>Your career is<br />not a prompt.</h2></div><div className="safety-copy"><p>AI should help you communicate the truth—not improvise a more convenient version of it.</p><ul><li><span>✓</span><div><strong>No invented credentials</strong><small>Employers, dates, metrics, tools, and achievements must come from you.</small></div></li><li><span>✓</span><div><strong>Review gates for saved facts</strong><small>Imported Career Record facts remain off-limits until you confirm them.</small></div></li><li><span>✓</span><div><strong>Transparent review notes</strong><small>Uncertain or unsupported requirements stay visible for your judgment.</small></div></li></ul></div></section>
         <section className="closing-section"><p className="section-label">YOUR NEXT APPLICATION DESERVES A SHARPER STORY</p><h2>Make your case.<br /><em>Keep it yours.</em></h2><button className="button button-dark" onClick={startAction} type="button">Open Rezzie <span aria-hidden="true">→</span></button></section>
-        <section className="pricing-section" id="pricing"><div className="section-intro"><p className="section-label">SIMPLE, FLEXIBLE ACCESS</p><h2>Bring your key.<br /><em>Or let us run it.</em></h2><p>Start with your own Anthropic key at no Rezzie cost. Use 20 credits for $5, or receive 50 credits monthly for $9.99 while your search is active.</p></div><PricingCards onStart={startAction ?? onStart} /></section>
+        <section className="pricing-section" id="pricing"><div className="section-intro"><p className="section-label">SIMPLE, FLEXIBLE ACCESS</p><h2>Bring your key.<br /><em>Or let us run it.</em></h2><p>Start with your own Anthropic key at no Rezzie cost. Use 20 credits for $5, or receive 50 credits monthly for $9.99 while your search is active.</p></div><PricingCards onBuyCredits={onBuyCredits} onStart={startAction ?? onStart} onSubscribe={onSubscribe} /></section>
       </main>
       <PublicFooter />
     </div>

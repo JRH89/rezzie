@@ -51,6 +51,14 @@ describe("guided tailoring workspace", () => {
     expect(screen.getByRole("heading", { name: /a stronger match/i })).toBeTruthy();
   });
 
+  it("opens the signed-in billing account instead of returning to the landing page", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
+    fireEvent.click(screen.getByRole("button", { name: "Billing" }));
+    expect(await screen.findByRole("heading", { name: /keep your applications moving/i })).toBeTruthy();
+    expect(window.location.hash).toBe("#account");
+  });
+
   it("opens the appropriate auth action and exits the workspace after sign-out", async () => {
     const signIn = vi.fn();
     const signUp = vi.fn();
