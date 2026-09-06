@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -20,5 +20,23 @@ describe("job description uploads", () => {
     const accepted = screen.getByLabelText(/job description file/i).getAttribute("accept") ?? "";
     expect(accepted).toContain(".pdf");
     expect(accepted).toContain(".docx");
+  });
+
+  it("shows a concise source card after a resume file import and keeps raw text optional", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const body = String(input).includes("/api/v1/resumes/file")
+        ? { text: "A resume extracted from the uploaded document with enough text to continue through the flow." }
+        : [];
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }));
+    }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    const file = new File(["sample"], "Taylor-Resume.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("Resume file"), { target: { files: [file] } });
+    expect(await screen.findByText("Taylor-Resume.pdf")).toBeTruthy();
+    const extractedText = screen.getByText(/review extracted text/i).closest("details") as HTMLDetailsElement;
+    expect(extractedText.open).toBe(false);
+    fireEvent.click(screen.getByText(/review extracted text/i));
+    await waitFor(() => expect(extractedText.open).toBe(true));
   });
 });

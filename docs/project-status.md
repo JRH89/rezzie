@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, and numeric-claim safety guard; job-description terminology is allowed |
-| Latest local verification | done | 46 API tests, 10 web interaction tests, and 5 extension tests passed; Ruff, ESLint, and web/extension production builds passed 2026-09-06 |
+| Latest local verification | done | 46 API tests, 11 web interaction tests, and 5 extension tests passed; Ruff, ESLint, and web/extension production builds passed 2026-09-06 |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 46 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
