@@ -138,17 +138,23 @@ class StripeBillingService:
         if request.kind == "credits" and not 1 <= request.quantity <= 10: raise HTTPException(status_code=422, detail="Credit pack quantity must be between 1 and 10.")
         if request.kind == "subscription" and request.quantity != 1: raise HTTPException(status_code=422, detail="Subscription quantity must be 1.")
         account = self._repository.account(user_id)
-        customer = account.stripe_customer_id or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
-        self._repository.save_customer(user_id, customer)
-        credits = packs.get(request.price_id, 0) * request.quantity
-        session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
+        try:
+            customer = account.stripe_customer_id or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
+            self._repository.save_customer(user_id, customer)
+            credits = packs.get(request.price_id, 0) * request.quantity
+            session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
+        except stripe.error.StripeError as error:
+            raise HTTPException(status_code=502, detail="Stripe Checkout could not start. Verify the server's live Stripe key and matching Price IDs.") from error
         return session.url
 
     def portal(self, user_id: str) -> str:
         if not self._settings.stripe_secret_key: raise HTTPException(status_code=503, detail="Stripe billing is not configured.")
         customer = self._repository.account(user_id).stripe_customer_id
         if not customer: raise HTTPException(status_code=404, detail="No billing account exists yet.")
-        return stripe.billing_portal.Session.create(customer=customer, return_url=self._settings.app_url)["url"]
+        try:
+            return stripe.billing_portal.Session.create(customer=customer, return_url=self._settings.app_url)["url"]
+        except stripe.error.StripeError as error:
+            raise HTTPException(status_code=502, detail="Stripe billing portal could not open. Verify the server's live Stripe configuration.") from error
 
     def webhook(self, payload: bytes, signature: str | None) -> None:
         if not self._settings.stripe_webhook_secret or not signature: raise HTTPException(status_code=400, detail="Invalid webhook signature.")

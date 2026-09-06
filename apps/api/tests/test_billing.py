@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+import stripe
 from fastapi import HTTPException
 
 from rezzie.billing import BillingRepository, CheckoutRequest, StripeBillingService
@@ -70,3 +71,13 @@ def test_credit_checkout_rejects_out_of_range_quantity(tmp_path: object, quantit
 
     with pytest.raises(HTTPException, match="quantity must be between 1 and 10"):
         service.checkout("user-1", CheckoutRequest(kind="credits", price_id="price_pack", quantity=quantity))
+
+
+def test_credit_checkout_returns_safe_error_when_stripe_rejects_configuration(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = StripeBillingService(Settings(stripe_secret_key="sk_test", stripe_credit_packs='{"price_pack":20}'), repository)
+    monkeypatch.setattr("rezzie.billing.stripe.Customer.create", lambda **_: (_ for _ in ()).throw(stripe.error.AuthenticationError("bad key")))
+
+    with pytest.raises(HTTPException, match="Verify the server's live Stripe key") as error:
+        service.checkout("user-1", CheckoutRequest(kind="credits", price_id="price_pack"))
+    assert error.value.status_code == 502

@@ -10,7 +10,7 @@
 | Platform | Provision Postgres/secrets/Cloudflare Tunnel | in progress | Dedicated `rezzie-api` Cloudflare Tunnel is live and API/ClamAV passed public health checks on 2026-09-06. Local SQLite is persisted in the `rezzie_rezzie_api_data` Docker volume; migrate to managed Postgres before higher-concurrency billing use. |
 | Platform | Configure Cloudflare Worker frontend | in progress | Root `wrangler.jsonc` supplies static asset directory and SPA fallback; set production build variables and attach `rezzie.org` |
 | Platform | Automated API deployment | in progress | `deploy.sh` is compatible with the existing Gitea webhook service and rebuilds only Rezzie's API. Create/configure the `rezzie` Gitea repository webhook to POST push events for `main` to `http://192.168.254.54:9001/deploy`. |
-| QA | Run local API/web checks | complete | 2026-09-06: 40 API tests, 8 web interaction tests, Ruff, ESLint, and production build passed |
+| QA | Run local API/web checks | complete | 2026-09-06: 41 API tests, 8 web interaction tests, Ruff, ESLint, and production build passed |
 | Engineering | Preserve usable resume document structure | complete | DOCX/PDF import preserves paragraph/table or layout text; DOCX export is transient and no-store |
 | Engineering | Expose signup and managed billing paths | complete | Public pricing section and OIDC-aware account CTA lead into workspace Stripe checkout |
 | Engineering | Give signed-in users a billing destination | complete | Workspace Billing control opens account route with balance, checkout, upgrade, and portal actions |

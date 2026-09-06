@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createApi, type CreditBalance } from "./api";
 import { BrandMark } from "./BrandMark";
 
+function checkoutError(reason: unknown, fallback: string) { return reason instanceof Error ? reason.message : fallback; }
+
 export function BillingPage({ accessToken, onBack, purchaseIntent }: { accessToken?: string; onBack: () => void; purchaseIntent?: "credits" | "subscription" }) {
   const api = useMemo(() => createApi(accessToken), [accessToken]); const [balance, setBalance] = useState<CreditBalance>(); const [error, setError] = useState<string>(); const [busy, setBusy] = useState(false); const [creditPackQuantity, setCreditPackQuantity] = useState(1);
   const creditPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID; const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
   useEffect(() => { void api.balance().then(setBalance).catch(() => setError("We could not load your credit balance.")); }, [api]);
-  async function checkout(kind: "credits" | "subscription", priceId: string, quantity = 1) { setBusy(true); setError(undefined); try { window.location.assign((await api.checkout(kind, priceId, quantity)).url); } catch { setError("We could not start checkout. Please try again."); setBusy(false); } }
-  async function manage() { setBusy(true); try { window.location.assign((await api.portal()).url); } catch { setError("We could not open billing management."); setBusy(false); } }
+  async function checkout(kind: "credits" | "subscription", priceId: string, quantity = 1) { setBusy(true); setError(undefined); try { window.location.assign((await api.checkout(kind, priceId, quantity)).url); } catch (reason) { setError(checkoutError(reason, "We could not start checkout. Please try again.")); setBusy(false); } }
+  async function manage() { setBusy(true); try { window.location.assign((await api.portal()).url); } catch (reason) { setError(checkoutError(reason, "We could not open billing management.")); setBusy(false); } }
   const handledPurchaseIntent = useRef(false);
   useEffect(() => { if (!purchaseIntent || handledPurchaseIntent.current) return; const priceId = purchaseIntent === "credits" ? creditPrice : subscriptionPrice; if (!priceId) { setError("Checkout is not configured yet. Please try again shortly."); return; } handledPurchaseIntent.current = true; void checkout(purchaseIntent, priceId); }, [creditPrice, purchaseIntent, subscriptionPrice]);
   const credits = balance ? balance.subscription_remaining + balance.purchased_credits : 0;
