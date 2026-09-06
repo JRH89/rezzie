@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Rezzie — tailor this job",
+  "version": "0.1.0",
+  "description": "Tailor your saved resume to the job page you are reviewing.",
+  "action": { "default_title": "Tailor this job with Rezzie" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "offscreen", "downloads"],
+  "host_permissions": ["https://rezzie.org/*", "https://api.rezzie.org/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://rezzie.org https://api.rezzie.org https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com; frame-src https://rezzie.org;"
+  }
+}

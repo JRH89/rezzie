@@ -4,6 +4,7 @@ import { GoogleAuthProvider, User, createUserWithEmailAndPassword, getAuth, onAu
 
 import { App } from "./App";
 import { BrandMark } from "./BrandMark";
+import { ExtensionAuthBridge } from "./ExtensionAuthBridge";
 
 const firebaseConfig = { apiKey: import.meta.env.VITE_FIREBASE_API_KEY, authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID, appId: import.meta.env.VITE_FIREBASE_APP_ID };
 const firebaseConfigured = Object.values(firebaseConfig).every(Boolean);
@@ -39,4 +40,7 @@ function FirebaseApplication() {
   return <><App accessToken={token} isAuthenticated={Boolean(user)} onSignIn={() => openAuthentication("sign-in")} onSignUp={() => openAuthentication("sign-up")} onSignOut={() => void completeSignOut()} />{authenticationMode && <AuthenticationDialog initialMode={authenticationMode} onAuthenticated={completeAuthentication} onClose={() => setAuthenticationMode(undefined)} />}</>;
 }
 
-export function ApplicationRoot() { return firebaseConfigured ? <FirebaseApplication /> : <App />; }
+export function ApplicationRoot() {
+  if (window.location.pathname === "/extension-auth") return <ExtensionAuthBridge />;
+  return firebaseConfigured ? <FirebaseApplication /> : <App />;
+}

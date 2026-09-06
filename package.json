@@ -1,6 +1,6 @@
 {
   "name": "rezzie",
   "private": true,
-  "workspaces": ["apps/web"],
+  "workspaces": ["apps/web", "apps/extension"],
   "scripts": {"dev:web": "npm --workspace @rezzie/web run dev", "build": "npm --workspace @rezzie/web run build", "test:web": "npm --workspace @rezzie/web run test", "check": "npm run test:web && npm run build"}
 }

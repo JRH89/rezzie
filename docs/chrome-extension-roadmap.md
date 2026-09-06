@@ -103,6 +103,8 @@ Define API schemas, auth redirect model, retention/export policy, Store disclosu
 
 Scaffold MV3 build, side panel, service worker, development auth, typed message protocol, and isolated-world content script. Test install, sign-in/out, refresh/restart behavior, and zero broad host permissions.
 
+Current implementation: `apps/extension` builds a Manifest V3 side panel with `activeTab`, `scripting`, `sidePanel`, `storage`, `offscreen`, and `downloads` only. It has a typed message protocol, generic visible-page extraction, saved-resume selection, shared-credit tailoring, and explicit TXT download. Email/password uses Firebase's extension entry point. Google uses the required offscreen-document relay to `https://rezzie.org/extension-auth`; set `VITE_CHROME_EXTENSION_IDS` in the Worker build environment and add the published `chrome-extension://EXTENSION_ID` to Firebase Authorized domains before enabling it.
+
 ### 5. Generic extraction and review
 
 Implement generic extraction, confidence scoring, editable confirmation, and bounded transport. Test hostile DOM, SPA navigation, logged-out pages, no-JD pages, and oversized content.

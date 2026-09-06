@@ -16,7 +16,7 @@
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
 | Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. The API currently uses a persistent local SQLite Docker volume; managed Postgres remains required before higher-concurrency billing use. |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
-| Chrome extension | planned | `docs/chrome-extension-roadmap.md`; no implementation started |
+| Chrome extension | in progress | Manifest V3 side panel builds locally with active-tab JD extraction, Firebase email/password and Google relay scaffolding, saved-resume selection, shared-credit tailoring, and explicit TXT download; Firebase extension-ID allow-list and Store testing remain external |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
 | Public SEO content | done | About, Features, FAQ, 23 categorized resume guides, searchable blog, route metadata, structured data, social preview, sitemap, and robots policy |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
