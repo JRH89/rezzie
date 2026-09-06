@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { blogPosts } from "./blog";
 
 function mockBootstrapRequests() {
   vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
@@ -90,5 +91,13 @@ describe("guided tailoring workspace", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /keyword stuffing/i })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();
+  });
+
+  it("exposes a searchable category-based blog library", () => {
+    window.history.pushState({}, "", "/blog");
+    render(<App />);
+    expect(blogPosts).toHaveLength(23);
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search guides" }), { target: { value: "transferable" } });
+    expect(screen.getByRole("heading", { name: /transferable skills/i })).toBeTruthy();
   });
 });
