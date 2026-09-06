@@ -24,6 +24,15 @@ def test_cors_preflight_allows_career_fact_updates() -> None:
     assert "PATCH" in response.headers["access-control-allow-methods"]
 
 
+def test_cors_preflight_allows_private_library_deletion() -> None:
+    response = client.options(
+        "/api/v1/resumes/resume-1",
+        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "DELETE"},
+    )
+    assert response.status_code == 200
+    assert "DELETE" in response.headers["access-control-allow-methods"]
+
+
 def test_text_import_validates_minimum_length() -> None:
     response = client.post("/api/v1/job-descriptions/text", headers=LOCAL_IDENTITY, json={"text": "short"})
     assert response.status_code == 422
