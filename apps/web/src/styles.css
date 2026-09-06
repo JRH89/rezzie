@@ -118,7 +118,6 @@ a { color: inherit; }
 /* Guided workspace */
 .workspace-shell { background: #f7f5ef; min-height: 100vh; }
 .workspace-header { align-items: center; background: #10201c; color: white; display: flex; justify-content: space-between; min-height: 68px; padding: .85rem clamp(1rem, 3vw, 2.5rem); }
-.workspace-header .brand-cut { stroke: #10201c; }
 .brand-button { background: none; border: 0; color: white; padding: 0; }
 .workspace-header-actions { align-items: center; display: flex; gap: .7rem; }
 .privacy-badge, .credit-badge { border: 1px solid #4b5b55; border-radius: 2rem; font-size: .68rem; padding: .45rem .7rem; }
@@ -374,7 +373,7 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .button-coral { background: #cda78c; color: #2c211b; }
 .button-outline { background: #fffaf4; border-color: #c8ad99; color: #4b3428; }
 .marketing-header { background: #2c211b; color: #fffaf4; max-width: none; min-height: 68px; padding: .85rem clamp(1rem, 3vw, 2.5rem); }
-.marketing-header .brand-mark .brand-cut { stroke: #2c211b; }
+.marketing-header .brand-mark .brand-cut, .workspace-header .brand-mark .brand-cut { stroke: #2c211b; }
 .marketing-header .marketing-nav a { color: #ead7c5; }
 .marketing-header .marketing-nav a:hover { color: #fffaf4; }
 .marketing-header .text-button { color: #ead7c5; }
