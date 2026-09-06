@@ -113,6 +113,7 @@ a { color: inherit; }
 .closing-section h2 em { color: #10201c; }
 .marketing-footer { align-items: center; display: flex; gap: 2rem; justify-content: space-between; margin: 0 3rem; padding: 1.5rem 0; }
 .marketing-footer p, .marketing-footer > span { color: #67716c; font-size: .68rem; }
+.footer-links { display: flex; gap: 1rem; }.footer-links a { color: #685348; font-size: .72rem; text-decoration: none; }.footer-links a:hover { color: #7e513d; }
 
 /* Guided workspace */
 .workspace-shell { background: #f7f5ef; min-height: 100vh; }

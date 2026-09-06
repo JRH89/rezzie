@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -40,8 +40,10 @@ describe("guided tailoring workspace", () => {
 
   it("provides working landing navigation and a way back home", () => {
     render(<App />);
-    expect(screen.getByRole("link", { name: "Product" }).getAttribute("href")).toBe("#product");
-    expect(screen.getByRole("link", { name: "Pricing" }).getAttribute("href")).toBe("#pricing");
+    expect(screen.getAllByRole("link", { name: "Features" })[0].getAttribute("href")).toBe("/features");
+    expect(screen.getByRole("link", { name: "Resources" }).getAttribute("href")).toBe("/blog");
+    expect(screen.getAllByRole("link", { name: "FAQ" })[0].getAttribute("href")).toBe("/faq");
+    expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Blog" }).getAttribute("href")).toBe("/blog");
     expect(screen.getByRole("heading", { name: /bring your key/i })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to Rezzie home" }));
