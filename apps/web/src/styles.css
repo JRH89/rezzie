@@ -421,3 +421,4 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .article-cta { align-items: center; background: #ead8c7; display: flex; gap: 1rem; justify-content: space-between; margin-top: 3rem; padding: 1.5rem; }
 .page-cta { margin-top: 1rem; }
 @media (max-width: 760px) { .content-grid, .article-grid { grid-template-columns: 1fr; }.marketing-nav { display: none; }.article-cta { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 900px) { .product-section .feature-stage { grid-template-columns: 1fr; }.product-section .resume-preview { min-height: 360px; }.product-section .feature-copy article { grid-template-columns: 1.6rem 1fr; } }
