@@ -12,7 +12,7 @@ export function PricingCards({ onBuyCredits, onStart, onSubscribe }: PricingCard
       <p className="eyebrow">FLEX CREDITS</p>
       <h3>$5 <small>for 20 credits</small></h3>
       <p>For the roles that matter. One credit covers one completed managed tailoring request.</p>
-      <button className="button button-outline" onClick={onBuyCredits} type="button">Get credits — 20 for $5</button>
+      <button className="button button-outline" onClick={onBuyCredits} type="button">Get credits</button>
     </article>
     <article className="price-card featured">
       <p className="eyebrow">MONTHLY</p>
