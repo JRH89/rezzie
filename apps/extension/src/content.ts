@@ -27,8 +27,10 @@ export function extractJob(documentToRead: Document = document): JobSnapshot {
   };
 }
 
-chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
-  if (message.type !== "extract-job") return undefined;
-  sendResponse({ type: "job-extracted", snapshot: extractJob() } satisfies ExtensionMessage);
-  return undefined;
-});
+if (typeof chrome !== "undefined") {
+  chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+    if (message.type !== "extract-job") return undefined;
+    sendResponse({ type: "job-extracted", snapshot: extractJob() } satisfies ExtensionMessage);
+    return undefined;
+  });
+}
