@@ -89,5 +89,6 @@ describe("guided tailoring workspace", () => {
     window.history.pushState({}, "", "/blog/keyword-tailoring");
     render(<App />);
     expect(screen.getByRole("heading", { name: /keyword stuffing/i })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();
   });
 });
