@@ -117,6 +117,8 @@ The API uses Firebase ID tokens as bearer tokens. The web configuration identifi
 
 Use `apps/api/.env.production.example` as a values checklist, but create the real `apps/api/.env` only on the server with restrictive permissions.
 
+For the complete copy/paste server runbook, follow [`server-deployment.md`](server-deployment.md). The sections below are its deployment-order summary.
+
 ### A. Provision Postgres
 
 Use managed Postgres (recommended) rather than Firestore. This application needs relational transactions for entitlements/credits. Store the SSL connection string as `DATABASE_URL`; use a pooler/serverless-safe connection option if the provider offers one.

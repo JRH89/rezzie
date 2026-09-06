@@ -7,7 +7,7 @@
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |
 | Platform | Configure Firebase identity + verified subscription webhooks | pending | Enable Google and Email/Password, set Firebase web values and API issuer/audience/JWKS URL |
 | Platform | Create Stripe Prices + production webhook | pending | Follow `docs/stripe-setup.md`; store only server-side secrets |
-| Platform | Provision Postgres/object storage/secrets/Cloudflare | pending | Required before deployment |
+| Platform | Provision Postgres/secrets/Cloudflare Tunnel | pending | Follow `docs/server-deployment.md`; required before deployment |
 | Platform | Configure Cloudflare Worker frontend | in progress | Root `wrangler.jsonc` supplies static asset directory and SPA fallback; set production build variables and attach `rezzie.org` |
 | QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 5 web interaction tests, Ruff, ESLint, and production build passed |
 | Engineering | Preserve usable resume document structure | complete | DOCX/PDF import preserves paragraph/table or layout text; DOCX export is transient and no-store |
