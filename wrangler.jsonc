@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-  "name": "rezzie-web",
+  "name": "rezzie",
   "compatibility_date": "2026-09-05",
   "assets": {
     "directory": "./apps/web/dist",

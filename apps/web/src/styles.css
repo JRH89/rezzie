@@ -350,7 +350,14 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .button-primary:hover:not(:disabled), .button-dark:hover:not(:disabled) { background: #49362b; box-shadow: 0 12px 28px #2c211b38; }
 .button-coral { background: #cda78c; color: #2c211b; }
 .button-outline { background: #fffaf4; border-color: #c8ad99; color: #4b3428; }
-.marketing-header { border-bottom: 1px solid #dfd2c4; max-width: 1320px; padding: 1.05rem clamp(1.25rem, 4vw, 3rem); }
+.marketing-header { background: #2c211b; color: #fffaf4; max-width: none; min-height: 68px; padding: .85rem clamp(1rem, 3vw, 2.5rem); }
+.marketing-header .brand-mark .brand-cut { stroke: #2c211b; }
+.marketing-header .marketing-nav a { color: #ead7c5; }
+.marketing-header .marketing-nav a:hover { color: #fffaf4; }
+.marketing-header .text-button { color: #ead7c5; }
+.marketing-header .text-button:hover { color: #fffaf4; }
+.marketing-header .button-dark { background: #fffaf4; box-shadow: none; color: #2c211b; }
+.marketing-header .button-dark:hover:not(:disabled) { background: #ead8c7; box-shadow: none; }
 .marketing-actions { justify-self: end; }
 .marketing-nav { gap: 1.8rem; }
 .marketing-nav a:hover, .text-link:hover, .text-button { color: #7e513d; }
