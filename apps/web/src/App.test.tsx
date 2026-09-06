@@ -59,8 +59,10 @@ describe("guided tailoring workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /start the guided flow/i }));
     fireEvent.click(screen.getByRole("button", { name: /open rezzie/i }));
     fireEvent.click(screen.getByRole("button", { name: /use my key/i }));
+    fireEvent.click(screen.getByRole("button", { name: /get credits/i }));
+    fireEvent.click(screen.getByRole("button", { name: /choose monthly/i }));
     expect(signIn).toHaveBeenCalledTimes(1);
-    expect(signUp).toHaveBeenCalledTimes(5);
+    expect(signUp).toHaveBeenCalledTimes(7);
 
     rerender(<App isAuthenticated onSignOut={signOut} />);
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
@@ -79,5 +81,11 @@ describe("guided tailoring workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
     expect(await screen.findByRole("button", { name: /docx/i })).toBeTruthy();
     expect(screen.getByLabelText("Tailored resume")).toBeTruthy();
+  });
+
+  it("renders public content routes directly", () => {
+    window.history.pushState({}, "", "/blog/keyword-tailoring");
+    render(<App />);
+    expect(screen.getByRole("heading", { name: /keyword stuffing/i })).toBeTruthy();
   });
 });

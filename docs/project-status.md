@@ -17,6 +17,7 @@
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | planned | `docs/chrome-extension-roadmap.md`; no implementation started |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
+| Public SEO content | done | About, Features, FAQ, blog index, three resume-tailoring guides, route-specific metadata, sitemap, and robots policy |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
