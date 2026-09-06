@@ -8,9 +8,13 @@ async function ensureOffscreenDocument() {
 }
 
 async function extractCurrentJob(): Promise<JobSnapshot> {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (!tab.id || !tab.url?.startsWith("http")) throw new Error("Open a public job-description page first.");
-  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) throw new Error("Return to the job tab, then open Rezzie from the browser toolbar.");
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+  } catch {
+    throw new Error("Open Rezzie from its browser-toolbar icon while viewing the job page, then try again.");
+  }
   const response = await chrome.tabs.sendMessage(tab.id, { type: "extract-job" } satisfies ExtensionMessage) as ExtensionMessage;
   if (response.type !== "job-extracted") throw new Error("We could not read this page.");
   return response.snapshot;

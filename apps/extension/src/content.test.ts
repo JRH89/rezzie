@@ -27,4 +27,10 @@ describe("visible job extraction", () => {
     expect(snapshot.text).not.toContain("Browse jobs");
     expect(snapshot.text).not.toContain("privacy policy");
   });
+
+  it("reads the selected Indeed sidebar job instead of the search-results page", () => {
+    const snapshot = extractJob(page(`<main><h1>Software Engineer jobs in Redlands</h1><aside>Search results and filters</aside><section id="jobDescriptionText"><h2>Software Engineer</h2>${"Build and maintain dependable software with a collaborative engineering team. ".repeat(20)}</section></main>`));
+    expect(snapshot.text).toContain("Build and maintain dependable software");
+    expect(snapshot.text).not.toContain("Search results and filters");
+  });
 });
