@@ -1,4 +1,3 @@
-from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,12 +21,6 @@ class Settings(BaseSettings):
     oidc_jwks_url: str | None = None
     clamav_host: str | None = None
     clamav_port: int = 3310
-
-    @model_validator(mode="after")
-    def require_postgres_in_production(self) -> "Settings":
-        if self.environment == "production" and not self.database_url.startswith("postgresql"):
-            raise ValueError("Production requires a managed PostgreSQL DATABASE_URL.")
-        return self
 
     @property
     def cors_origins(self) -> list[str]:

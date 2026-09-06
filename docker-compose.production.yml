@@ -10,6 +10,9 @@ services:
       ALLOWED_ORIGINS: https://rezzie.org
       ALLOWED_HOSTS: api.rezzie.org,127.0.0.1,localhost
       CLAMAV_HOST: clamav
+      DATABASE_URL: sqlite:////data/rezzie.db
+    volumes:
+      - rezzie_api_data:/data
     depends_on:
       clamav:
         condition: service_healthy
@@ -31,3 +34,6 @@ services:
     depends_on:
       api:
         condition: service_started
+
+volumes:
+  rezzie_api_data:
