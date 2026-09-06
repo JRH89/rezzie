@@ -24,3 +24,5 @@ Use `apps/api/.env.production.example` as the template: production web traffic i
 - Back up Postgres, test restore, and alert on API 5xx/latency and Stripe webhook delivery failures.
 - Rotate Anthropic/Stripe/OIDC secrets using the host secret manager. Rotate the Stripe webhook signing secret with overlap rather than downtime.
 - Keep ClamAV signatures current and fail closed if the scanner is unhealthy. Review document/upload and model usage costs regularly.
+
+For the end-to-end Cloudflare Pages, Tunnel, Firebase, Postgres, and Stripe sequence, see `docs/launch-rezzie-org.md`.

@@ -4,12 +4,15 @@ export type CreditBalance = { subscription_status: string; subscription_remainin
 export type CareerFact = { id: string; fact_type: "claim" | "skill"; text: string; source_excerpt: string; status: "needs_review" | "confirmed" | "rejected"; evidence_note?: string | null };
 export type CareerRecord = { id: string; label: string; created_at: string; updated_at: string; facts: CareerFact[] };
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
+
 function requestFor(accessToken?: string) {
   return async function request<T>(path: string, options: RequestInit): Promise<T> {
   const headers = new Headers(options.headers);
   if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  const response = await fetch(path, { ...options, headers });
+  const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "Request failed."); }
   return response.json() as Promise<T>;
   };
@@ -21,7 +24,7 @@ export function createApi(accessToken?: string) {
     if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     const path = format === "pdf" ? "/api/v1/resumes/export/pdf" : "/api/v1/resumes/export";
-    const response = await fetch(path, { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml }) });
+    const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml }) });
     if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `We could not create the ${format.toUpperCase()} file.`); }
     return response.blob();
   }

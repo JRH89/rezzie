@@ -15,3 +15,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command: cloudflared tunnel --no-autoupdate run --token "$$CLOUDFLARE_TUNNEL_TOKEN"
+    env_file: ./apps/api/.env
+    depends_on:
+      api:
+        condition: service_started
