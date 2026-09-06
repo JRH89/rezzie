@@ -168,6 +168,7 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .career-option summary { cursor: pointer; font-size: .8rem; font-weight: 750; }
 .career-option summary span { background: #b8dfc5; border-radius: 2rem; float: right; font-size: .6rem; padding: .3rem .5rem; text-transform: uppercase; }
 .career-option > p, .record-guidance { color: #5e6963; font-size: .75rem; line-height: 1.45; }
+.library-manager { background: #f5ede4; border: 1px solid #d9c8b9; border-radius: .7rem; margin: 1rem 0; padding: 1rem; }.library-manager summary { cursor: pointer; font-size: .8rem; font-weight: 750; }.library-manager > p { color: #685348; font-size: .75rem; line-height: 1.45; }.library-manager section { border-top: 1px solid #d9c8b9; display: grid; gap: .45rem; margin-top: .8rem; padding-top: .8rem; }.library-manager section > div { align-items: center; display: flex; gap: .45rem; justify-content: flex-end; }.library-manager section span { flex: 1; font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.library-manager button { background: transparent; border: 0; color: #8e5138; font-size: .7rem; padding: .25rem; }
 .inline-form { display: flex; gap: .6rem; }
 .inline-form .button { border-radius: .45rem; flex: 0 0 auto; min-height: auto; }
 .source-switcher { margin-bottom: 1.2rem; }
