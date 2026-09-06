@@ -131,7 +131,7 @@ def create_career_record(request: CareerRecordCreate, authorization: str | None 
 @app.get("/api/v1/career-records", response_model=list[CareerRecordResponse])
 def list_career_records(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> list[CareerRecordResponse]:
     user_id = require_user(authorization, x_rezzie_user_id)
-    return [career_record_response(user_id, record) for record in career_records.list(user_id)]
+    return [career_record_response(user_id, record) for record in career_records.list_records(user_id)]
 
 
 @app.get("/api/v1/career-records/{record_id}", response_model=CareerRecordResponse)

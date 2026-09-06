@@ -68,7 +68,7 @@ class CareerRecordRepository:
                 session.add(CareerFact(id=str(uuid4()), record_id=record.id, fact_type=fact_type, text=fact_text, source_excerpt=fact_text, status="needs_review", evidence_note=None))
         return record
 
-    def list(self, user_id: str) -> list[CareerRecord]:
+    def list_records(self, user_id: str) -> list[CareerRecord]:
         with self._sessions() as session:
             return list(session.scalars(select(CareerRecord).where(CareerRecord.user_id == user_id).order_by(CareerRecord.updated_at.desc())))
 
