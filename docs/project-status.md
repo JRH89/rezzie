@@ -14,7 +14,7 @@
 | Authentication navigation | done | Distinct sign-in/sign-up entry points; successful auth enters workspace and sign-out returns to landing |
 | Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
-| Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. The API currently uses a persistent local SQLite Docker volume; managed Postgres remains required before higher-concurrency billing use. |
+| Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. Production configuration now requires managed Postgres and includes a transaction-safe legacy SQLite migration utility; provider provisioning and the cutover remain external. |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | planned | `docs/chrome-extension-roadmap.md`; no implementation started |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |

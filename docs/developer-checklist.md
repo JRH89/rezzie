@@ -7,7 +7,7 @@
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |
 | Platform | Configure Firebase identity + verified subscription webhooks | pending | Enable Google and Email/Password, set Firebase web values and API issuer/audience/JWKS URL |
 | Platform | Create Stripe Prices + production webhook | pending | Follow `docs/stripe-setup.md`; store only server-side secrets |
-| Platform | Provision Postgres/secrets/Cloudflare Tunnel | in progress | Dedicated `rezzie-api` Cloudflare Tunnel is live and API/ClamAV passed public health checks on 2026-09-06. Local SQLite is persisted in the `rezzie_rezzie_api_data` Docker volume; migrate to managed Postgres before higher-concurrency billing use. |
+| Platform | Provision managed Postgres and migrate data | in progress | Dedicated `rezzie-api` Cloudflare Tunnel is live. Production now rejects SQLite and includes a tested one-time legacy migration; create the provider database, take the documented backup, run cutover, and complete hosted smoke tests. |
 | Platform | Configure Cloudflare Worker frontend | in progress | Root `wrangler.jsonc` supplies static asset directory and SPA fallback; set production build variables and attach `rezzie.org` |
 | Platform | Automated API deployment | in progress | `deploy.sh` is compatible with the existing Gitea webhook service and rebuilds only Rezzie's API. Create/configure the `rezzie` Gitea repository webhook to POST push events for `main` to `http://192.168.254.54:9001/deploy`. |
 | QA | Run local API/web checks | complete | 2026-09-06: 41 API tests, 8 web interaction tests, Ruff, ESLint, and production build passed |

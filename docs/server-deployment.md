@@ -78,9 +78,31 @@ CLOUDFLARE_TUNNEL_TOKEN=REPLACE_ME
 
 Never put `VITE_*` values, Firebase Admin credentials, or a Cloudflare API token in this file. The frontend's public `VITE_*` values belong in the Cloudflare Worker build configuration.
 
-## 3. Provision Postgres
+## 3. Provision managed Postgres and migrate the legacy SQLite data
 
-Create one dedicated database user and one dedicated database. Give that user access only to Rezzie's database. Copy the provider's Postgres connection string into `DATABASE_URL`; do not use SQLite in production.
+Create one dedicated database user and one dedicated database. Give that user access only to Rezzie's database. Copy the provider's SSL/pooler Postgres connection string into `DATABASE_URL`; do not use SQLite in production. The production Compose file intentionally does not override this value, and the API refuses to start in production unless it begins with `postgresql`.
+
+Before switching the running service, take a local backup of the existing named SQLite volume. This command is read-only against the volume and writes a timestamped database copy into `/opt/rezzie/backups`:
+
+```bash
+cd /opt/rezzie
+mkdir -p backups
+docker run --rm -v rezzie_rezzie_api_data:/source:ro -v "$PWD/backups":/backup alpine sh -c 'cp /source/rezzie.db /backup/rezzie-before-postgres.db'
+```
+
+Verify the backup is non-empty, stop writes briefly, and migrate into a **new, empty** Postgres database. The migration is all-or-nothing and logs table counts only:
+
+```bash
+test -s backups/rezzie-before-postgres.db
+docker compose -f docker-compose.production.yml stop api
+docker compose -f docker-compose.production.yml run --rm \
+  -e LEGACY_SQLITE_DATABASE_URL=sqlite:////legacy/rezzie.db \
+  -v rezzie_rezzie_api_data:/legacy:ro \
+  api sh -c 'alembic upgrade head && python -m rezzie.sqlite_migration'
+docker compose -f docker-compose.production.yml up -d --build api cloudflared
+```
+
+Do not remove the old named volume until the hosted smoke test succeeds and the backup has been retained for the documented recovery window. The old `rezzie_rezzie_api_data` volume remains untouched when Compose is updated.
 
 The API container runs `alembic upgrade head` before Uvicorn starts, so the initial database tables and later migrations are applied automatically. A failed migration prevents the API from starting, which is intentional.
 
