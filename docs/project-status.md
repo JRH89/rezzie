@@ -22,6 +22,7 @@
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |
-| Saved tailoring drafts and private source-file objects | planned | Add user-approved draft history and private object storage after managed Postgres migration |
+| Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side |
+| Private source-file objects and artifact storage | planned | Add private object storage after managed Postgres migration |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
 | Resume document fidelity | done | Structured PDF/DOCX extraction, formatted review preview, and transient editable DOCX export |

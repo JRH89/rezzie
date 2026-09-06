@@ -50,3 +50,19 @@ def test_paid_credit_balance_allows_more_saved_resumes() -> None:
     for index in range(5):
         assert save(user_id, label=f"Resume {index + 1}").status_code == 201
     assert save(user_id, label="Sixth resume").status_code == 409
+
+
+def test_saved_drafts_are_private_and_limited() -> None:
+    user_id = "draft-owner"
+    body = {"label": "Platform role", "tailored_resume": SOURCE, "resume_html": "<p>Safe saved text</p>"}
+    created = client.post("/api/v1/tailoring-drafts", headers=headers(user_id), json=body)
+    assert created.status_code == 201
+    draft = created.json()
+    assert draft["label"] == "Platform role"
+    assert client.get("/api/v1/tailoring-drafts", headers=headers("other-draft-user")).json() == []
+    assert client.get(f"/api/v1/tailoring-drafts/{draft['id']}", headers=headers("other-draft-user")).status_code == 404
+
+    for index in range(2):
+        assert client.post("/api/v1/tailoring-drafts", headers=headers(user_id), json={**body, "label": f"Draft {index}"}).status_code == 201
+    assert client.post("/api/v1/tailoring-drafts", headers=headers(user_id), json={**body, "label": "Too many"}).status_code == 409
+    assert client.delete(f"/api/v1/tailoring-drafts/{draft['id']}", headers=headers(user_id)).status_code == 204

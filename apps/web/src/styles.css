@@ -172,6 +172,10 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .inline-form .button { border-radius: .45rem; flex: 0 0 auto; min-height: auto; }
 .source-switcher { margin-bottom: 1.2rem; }
 .source-switcher label { display: block; margin-bottom: .45rem; }
+.save-draft-panel { align-items: end; background: #f5ede4; border: 1px solid #d9c8b9; display: grid; gap: .8rem; grid-template-columns: 1fr minmax(150px, .6fr) auto; margin: 1rem 0; padding: 1rem; }
+.save-draft-panel strong, .save-draft-panel small { display: block; }
+.save-draft-panel small { color: #657169; font-size: .72rem; line-height: 1.4; margin-top: .3rem; }
+.save-draft-panel label { display: grid; gap: .35rem; }
 .record-review { border: 1px solid #d9ded8; border-radius: .8rem; padding: 1.2rem; }
 .record-review-heading { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
 .record-review-heading .eyebrow { color: #e86645; margin: 0 0 .4rem; }
@@ -432,3 +436,4 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .billing-page { margin: 0 auto; max-width: 920px; padding: 5rem 1.5rem; }.billing-page h1 { font: 500 clamp(3rem, 6vw, 5rem)/.95 Georgia,serif; margin: .7rem 0; }.credit-summary { background: #2c211b; color: #fffaf4; display: grid; gap: .3rem; margin: 2rem 0; padding: 2rem; }.credit-summary strong { font-size: 3rem; }.credit-summary small { color: #ead7c5; }.billing-plans { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-bottom: 1.5rem; }.billing-plans article { background: #fffaf4; border: 1px solid #d7c4b3; padding: 1.5rem; }.billing-plans .featured { background: #ead8c7; }.quantity-control { display: grid; font-size: .72rem; gap: .4rem; margin: 1.25rem 0; }.quantity-control select { background: #fffaf4; }@media(max-width:700px){.billing-plans{grid-template-columns:1fr}.workspace-header-actions .icon-button{font-size:.7rem}}
 @media (max-width: 760px) { .content-grid, .article-grid, .pricing-notes { grid-template-columns: 1fr; }.marketing-nav { display: none; }.article-cta { align-items: flex-start; flex-direction: column; } }
 @media (max-width: 900px) { .product-section .feature-stage { grid-template-columns: 1fr; }.product-section .resume-preview { min-height: 360px; }.product-section .feature-copy article { grid-template-columns: 1.6rem 1fr; } }
+@media (max-width: 700px) { .save-draft-panel { align-items: stretch; grid-template-columns: 1fr; }.save-draft-panel .button { width: 100%; } }

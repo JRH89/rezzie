@@ -79,6 +79,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [result, setResult] = useState<TailoringResult>();
   const [editorState, setEditorState] = useState({ html: "", text: "" });
   const [copied, setCopied] = useState(false);
+  const [draftLabel, setDraftLabel] = useState("Tailored resume");
+  const [draftSaved, setDraftSaved] = useState(false);
 
   useEffect(() => {
     void api.balance().then(setBalance).catch(() => undefined);
@@ -164,7 +166,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
-      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume), text: tailored.tailored_resume }); setStep(4);
+      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
     finally { setLoading(false); }
@@ -174,6 +176,21 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     if (!result) return;
     await navigator.clipboard.writeText(editorState.text || result.tailored_resume);
     setCopied(true);
+  }
+
+  async function saveDraft() {
+    if (!result || draftSaved) return;
+    setLoading(true); setError(undefined);
+    try {
+      await api.saveTailoringDraft({
+        label: draftLabel,
+        tailored_resume: editorState.text || result.tailored_resume,
+        resume_html: editorState.html,
+        resume_id: selectedSavedResume,
+      });
+      setDraftSaved(true);
+    } catch (reason) { setError(errorMessage(reason, "We could not save that draft.")); }
+    finally { setLoading(false); }
   }
 
   async function downloadResult(format: "docx" | "pdf") {
@@ -228,6 +245,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
           {step === 4 && result && <>
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
             <div className="result-toolbar"><p>Make any final edits, then download.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-outline" onClick={downloadText} type="button">TXT ↓</button><button className="button button-outline" disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button></div></div>
+            <div className="save-draft-panel"><div><strong>Keep this version for later</strong><small>Saved drafts stay private in your Rezzie library. You can delete them anytime.</small></div><label htmlFor="draft-label">Draft name<input id="draft-label" value={draftLabel} onChange={event => setDraftLabel(event.target.value)} disabled={draftSaved} /></label><button className="button button-outline" disabled={loading || draftSaved || draftLabel.trim().length === 0} onClick={() => void saveDraft()} type="button">{draftSaved ? "Saved" : "Save draft"}</button></div>
             <RichResumeEditor text={result.tailored_resume} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
             <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
             <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>

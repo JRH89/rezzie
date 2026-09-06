@@ -49,6 +49,30 @@ class SavedResumeResponse(BaseModel):
     updated_at: datetime
 
 
+class SavedTailoringDraftCreate(BaseModel):
+    label: str = Field(default="Tailored resume", min_length=1, max_length=160)
+    tailored_resume: str = Field(min_length=50, max_length=100_000)
+    resume_html: str | None = Field(default=None, max_length=200_000)
+    resume_id: str | None = Field(default=None, max_length=36)
+
+    @field_validator("label")
+    @classmethod
+    def strip_draft_label(cls, value: str) -> str:
+        label = value.strip()
+        if not label:
+            raise ValueError("A draft name is required.")
+        return label
+
+
+class SavedTailoringDraftResponse(BaseModel):
+    id: str
+    resume_id: str | None
+    label: str
+    tailored_resume: str
+    resume_html: str | None
+    created_at: datetime
+
+
 class TailorRequest(BaseModel):
     resume_text: str = Field(min_length=50, max_length=100_000)
     job_description: str = Field(min_length=50, max_length=100_000)

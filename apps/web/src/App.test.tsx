@@ -94,6 +94,21 @@ describe("guided tailoring workspace", () => {
     expect(screen.getByLabelText("Tailored resume")).toBeTruthy();
   });
 
+  it("only saves a tailored draft after an explicit user action", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /continue to the job/i }));
+    fireEvent.change(screen.getByLabelText(/job description text/i), { target: { value: "b".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /review setup/i }));
+    fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
+    fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
+    const callsBeforeSave = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    fireEvent.click(await screen.findByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBeforeSave));
+    expect(screen.getByRole("button", { name: "Saved" })).toBeTruthy();
+  });
+
   it("renders public content routes directly", () => {
     window.history.pushState({}, "", "/blog/keyword-tailoring");
     render(<App />);

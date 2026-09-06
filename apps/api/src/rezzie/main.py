@@ -10,7 +10,12 @@ from .documents import DocumentService, ResumeExportService, editor_html_to_text
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .records import CareerRecord, CareerRecordRepository
-from .resume_library import ResumeLibraryService, ResumeVersion, SavedResume
+from .resume_library import (
+    ResumeLibraryService,
+    ResumeVersion,
+    SavedResume,
+    SavedTailoringDraft,
+)
 from .schemas import (
     CareerFactCreate,
     CareerFactResponse,
@@ -23,6 +28,8 @@ from .schemas import (
     ResumeVersionCreate,
     SavedResumeCreate,
     SavedResumeResponse,
+    SavedTailoringDraftCreate,
+    SavedTailoringDraftResponse,
     TailorCareerRecordRequest,
     TailoringResult,
     TailorRequest,
@@ -83,6 +90,17 @@ def saved_resume_response(resume: SavedResume, version: ResumeVersion) -> SavedR
         updated_at=resume.updated_at,
     )
 
+
+def saved_draft_response(draft: SavedTailoringDraft) -> SavedTailoringDraftResponse:
+    return SavedTailoringDraftResponse(
+        id=draft.id,
+        resume_id=draft.resume_id,
+        label=draft.label,
+        tailored_resume=draft.tailored_resume,
+        resume_html=draft.resume_html,
+        created_at=draft.created_at,
+    )
+
 @app.get("/health")
 async def health() -> dict[str, str]: return {"status": "ok"}
 
@@ -141,6 +159,31 @@ def add_resume_version(resume_id: str, request: ResumeVersionCreate, authorizati
 @app.delete("/api/v1/resumes/{resume_id}", status_code=204)
 def delete_saved_resume(resume_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     resume_library.delete(require_user(authorization, x_rezzie_user_id), resume_id)
+    return Response(status_code=204)
+
+
+@app.post("/api/v1/tailoring-drafts", response_model=SavedTailoringDraftResponse, status_code=201)
+def save_tailoring_draft(request: SavedTailoringDraftCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SavedTailoringDraftResponse:
+    draft = resume_library.save_draft(
+        require_user(authorization, x_rezzie_user_id), label=request.label, tailored_resume=request.tailored_resume,
+        resume_html=request.resume_html, resume_id=request.resume_id,
+    )
+    return saved_draft_response(draft)
+
+
+@app.get("/api/v1/tailoring-drafts", response_model=list[SavedTailoringDraftResponse])
+def list_tailoring_drafts(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> list[SavedTailoringDraftResponse]:
+    return [saved_draft_response(draft) for draft in resume_library.list_drafts(require_user(authorization, x_rezzie_user_id))]
+
+
+@app.get("/api/v1/tailoring-drafts/{draft_id}", response_model=SavedTailoringDraftResponse)
+def get_tailoring_draft(draft_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SavedTailoringDraftResponse:
+    return saved_draft_response(resume_library.draft(require_user(authorization, x_rezzie_user_id), draft_id))
+
+
+@app.delete("/api/v1/tailoring-drafts/{draft_id}", status_code=204)
+def delete_tailoring_draft(draft_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
+    resume_library.delete_draft(require_user(authorization, x_rezzie_user_id), draft_id)
     return Response(status_code=204)
 
 
