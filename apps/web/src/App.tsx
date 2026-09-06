@@ -42,5 +42,5 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignUp, o
   return view === "landing"
     ? <LandingPage isAuthenticated={isAuthenticated} onSignIn={onSignIn} onSignUp={onSignUp ?? onSignIn} onStart={() => navigate("workspace")} />
     : view === "workspace" ? <Workspace accessToken={accessToken} onHome={() => navigate("landing")} onSignOut={onSignOut} />
-      : <MarketingPage kind={view} onStart={() => navigate("workspace")} />;
+      : <MarketingPage isAuthenticated={isAuthenticated} kind={view} onSignIn={onSignIn} onStart={() => isAuthenticated ? navigate("workspace") : (onSignUp ?? onSignIn)?.()} />;
 }
