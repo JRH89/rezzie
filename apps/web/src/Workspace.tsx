@@ -9,6 +9,11 @@ const minLength = 50;
 const fileTypes = ".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const stepLabels = ["Your experience", "The job", "Tailor", "Review"];
+const tailoringStages = [
+  { title: "Reading your sources", detail: "Keeping your resume as the factual boundary." },
+  { title: "Finding supported themes", detail: "Matching relevant role language to your existing experience." },
+  { title: "Preparing your draft", detail: "Writing a focused version for you to review and edit." },
+];
 
 function errorMessage(reason: unknown, fallback: string) {
   return reason instanceof Error ? reason.message : fallback;
@@ -57,6 +62,23 @@ function RichResumeEditor({ text, onChange }: { text: string; onChange: (html: s
   return <div className="rich-editor-shell"><div className="rich-editor-toolbar" role="toolbar" aria-label="Resume formatting"><button aria-label="Bold" onClick={() => command("bold")} type="button"><b>B</b></button><button aria-label="Italic" onClick={() => command("italic")} type="button"><i>I</i></button><button aria-label="Underline" onClick={() => command("underline")} type="button"><u>U</u></button><button aria-label="Heading" onClick={() => command("formatBlock", "h3")} type="button">Heading</button><button aria-label="Bulleted list" onClick={() => command("insertUnorderedList")} type="button">• List</button><button aria-label="Align left" onClick={() => command("justifyLeft")} type="button">Left</button><button aria-label="Align center" onClick={() => command("justifyCenter")} type="button">Center</button><button aria-label="Undo" onClick={() => command("undo")} type="button">Undo</button><button aria-label="Redo" onClick={() => command("redo")} type="button">Redo</button></div><div className="resume-document rich-editor" aria-label="Tailored resume" contentEditable onInput={update} onPaste={pastePlainText} ref={editor} role="textbox" suppressContentEditableWarning /></div>;
 }
 
+function TailoringProgress() {
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setStage(current => Math.min(current + 1, tailoringStages.length - 1)), 2_200);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <section aria-atomic="true" aria-live="polite" className="tailoring-progress" role="status">
+    <div className="tailoring-orbit" aria-hidden="true"><span /><span /><i>✦</i></div>
+    <p className="eyebrow">REZZIE IS WORKING</p>
+    <h2>Tailoring your resume.</h2>
+    <p className="tailoring-stage">{tailoringStages[stage].title}</p>
+    <p>{tailoringStages[stage].detail}</p>
+    <ol aria-label="Tailoring stages">{tailoringStages.map((item, index) => <li className={index < stage ? "complete" : index === stage ? "current" : ""} key={item.title}><span>{index < stage ? "✓" : index + 1}</span>{item.title}</li>)}</ol>
+    <small>This usually takes a moment. You will review every change before using it.</small>
+  </section>;
+}
+
 export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { accessToken?: string; onBilling: (intent?: "credits" | "subscription") => void; onHome: () => void; onSignOut?: () => void }) {
   const api = useMemo(() => createApi(accessToken), [accessToken]);
   const [step, setStep] = useState<Step>(1);
@@ -76,6 +98,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [apiKey, setApiKey] = useState("");
   const [balance, setBalance] = useState<CreditBalance>();
   const [loading, setLoading] = useState(false);
+  const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TailoringResult>();
   const [editorState, setEditorState] = useState({ html: "", text: "" });
@@ -185,14 +208,14 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   }
 
   async function tailor() {
-    setLoading(true); setError(undefined); setCopied(false);
+    setLoading(true); setIsTailoring(true); setError(undefined); setCopied(false);
     const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
       setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setIsTailoring(false); }
   }
 
   async function copyResult() {
@@ -237,7 +260,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
       <nav className="stepper" aria-label="Tailoring progress">{stepLabels.map((label, index) => { const number = (index + 1) as Step; const available = number <= step || (number === 2 && sourceReady) || (number === 3 && sourceReady && jobReady) || (number === 4 && Boolean(result)); return <button key={label} className={number === step ? "current" : number < step ? "complete" : ""} disabled={!available} onClick={() => setStep(number)} type="button"><span>{number < step ? "✓" : number}</span><small>{label}</small></button>; })}</nav>
 
       <main className="workspace-main">
-        <section className="workspace-content">
+        <section aria-busy={isTailoring} className="workspace-content">
           {step === 1 && <>
             <div className="step-heading"><p className="eyebrow">STEP 1 OF 4</p><h1>Start with what’s true.</h1><p>Add the resume you trust. Rezzie will use it as the boundary for every suggestion.</p></div>
             {savedResumes.length > 0 && <div className="source-switcher"><label htmlFor="saved-resume">Use a saved private resume</label><select id="saved-resume" value={selectedSavedResume ?? ""} onChange={event => selectSavedResume(event.target.value)}><option value="">Use a new resume instead</option>{savedResumes.map(saved => <option key={saved.id} value={saved.id}>{saved.label}</option>)}</select></div>}
@@ -265,6 +288,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
             <div className="truth-check"><span>✓</span><p><strong>Truth boundary is on.</strong> Rezzie may reorganize and sharpen supported experience, but cannot add unsupported claims.</p></div>
             <div className="step-actions"><button className="back-link" onClick={() => setStep(2)} type="button">← Back</button><button className="button button-primary button-large" disabled={!credentialsReady || loading} onClick={() => void tailor()} type="button">{loading ? "Tailoring your resume…" : "Tailor my resume"}<span>✦</span></button></div>
           </>}
+
+          {isTailoring && <TailoringProgress />}
 
           {step === 4 && result && <>
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
