@@ -12,7 +12,7 @@
 | Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |
 | Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
-| Deployment/CI | remaining | CI workflow and production runbook exist; no remote or cloud credentials are configured |
+| Deployment/CI | in progress | Cloudflare Worker static-assets configuration is committed; production Worker, Tunnel, Postgres, and provider values still require setup |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | planned | `docs/chrome-extension-roadmap.md`; no implementation started |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |

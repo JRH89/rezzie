@@ -23,7 +23,7 @@ The model receives the original resume as the sole facts source. It may reorgani
 
 ## Deployment
 
-Build `apps/web` into static files and serve from Cloudflare Pages or Nginx. Containerize FastAPI behind Cloudflare Tunnel/reverse proxy. Terminate TLS at Cloudflare, restrict API origin CORS, rate-limit import/generation endpoints, use managed Postgres/object storage, and configure secrets only in the host/CI environment.
+Build `apps/web` into static files and serve from Cloudflare Workers static assets or Nginx. Containerize FastAPI behind Cloudflare Tunnel/reverse proxy. Terminate TLS at Cloudflare, restrict API origin CORS, rate-limit import/generation endpoints, use managed Postgres/object storage, and configure secrets only in the host/CI environment.
 
 The API runs Alembic migrations before Uvicorn starts. Use `DATABASE_URL=postgresql+psycopg://...` in production; schema creation at application startup is permitted only in local development.
 

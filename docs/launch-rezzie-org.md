@@ -2,7 +2,7 @@
 
 ## Architecture
 
-- **Cloudflare Pages** serves the static React app at `https://rezzie.org`.
+- **Cloudflare Workers static assets** serves the static React app at `https://rezzie.org`.
 - **Your server** runs the API and ClamAV with `docker-compose.production.yml`.
 - **Cloudflare Tunnel** runs beside the API and publishes `https://api.rezzie.org` to `http://api:8000` inside the Compose network. The server does not need an inbound port opened for the API.
 - **Managed PostgreSQL** stores billing accounts, credit grants, and Career Records. Do not use Firestore: Firebase is used solely for authentication.
@@ -13,18 +13,19 @@ Before pushing, create a **public empty** GitHub repository (recommended name: `
 
 Then add the provided repository URL as `origin` and push `main` only after reviewing the final `git status` and secret scan.
 
-## 2. Deploy the frontend with Cloudflare Pages
+## 2. Deploy the frontend with Cloudflare Workers
 
-In Cloudflare: **Workers & Pages → Create → Pages → Import an existing Git repository**. Select the repository and configure:
+In Cloudflare: **Workers & Pages → Create application → Workers → Import a Git repository**. Select the repository and configure:
 
 | Setting | Value |
 | --- | --- |
 | Production branch | `main` |
 | Build command | `npm run build` |
-| Build output directory | `apps/web/dist` |
 | Root directory | repository root |
 
-Add these Pages environment variables:
+There is intentionally no output-directory field: [`wrangler.jsonc`](../wrangler.jsonc) declares `apps/web/dist` as the Worker static-assets directory and enables SPA route fallback.
+
+Add these production environment variables:
 
 ```env
 VITE_API_BASE_URL=https://api.rezzie.org
@@ -37,7 +38,7 @@ VITE_CREDIT_PACK_CREDITS=5
 VITE_SUBSCRIPTION_PRICE_ID=price_...
 ```
 
-After the first successful build, add `rezzie.org` (and optionally `www.rezzie.org`) under **Pages → Custom domains**. Set a redirect from `www.rezzie.org` to `rezzie.org`.
+After the first successful build, add `rezzie.org` (and optionally `www.rezzie.org`) under the Worker’s **Settings → Domains & Routes**. Set a redirect from `www.rezzie.org` to `rezzie.org`.
 
 ## 3. Deploy the API on your server
 

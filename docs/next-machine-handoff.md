@@ -11,7 +11,7 @@ The repository is public at `https://github.com/JRH89/rezzie.git`, branch `main`
 ## Current architecture
 
 ```text
-React + TypeScript (apps/web) ── Cloudflare Pages ── https://rezzie.org
+React + TypeScript (apps/web) ── Cloudflare Workers static assets ── https://rezzie.org
                                                      │
                                                      │ HTTPS / CORS
                                                      ▼
@@ -25,7 +25,7 @@ Stripe Checkout/Webhooks ── FastAPI credit ledger in Postgres
 Anthropic Claude Haiku 4.5 ── server master key or transient user BYOK
 ```
 
-The intended production target is the user's **Arch/Omarchy server** for API, ClamAV, and Cloudflare Tunnel. The development machine is not the server. The frontend belongs on Cloudflare Pages. Do not open the API directly to the internet; Tunnel is the sole public route.
+The intended production target is the user's **Arch/Omarchy server** for API, ClamAV, and Cloudflare Tunnel. The development machine is not the server. The frontend deploys from Git to Cloudflare Workers static assets. Do not open the API directly to the internet; Tunnel is the sole public route.
 
 ## Current state
 
@@ -44,7 +44,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 ### Not done / external dependencies
 
 - No production deployment exists yet.
-- No managed Postgres database, Cloudflare Tunnel, Pages project, Stripe Products/Prices/webhook, or Firebase production-domain configuration is confirmed.
+- No managed Postgres database, Cloudflare Tunnel, Worker project, Stripe Products/Prices/webhook, or Firebase production-domain configuration is confirmed.
 - No hosted end-to-end test has occurred.
 - Chrome extension is planned only: `docs/chrome-extension-roadmap.md`.
 
@@ -93,7 +93,7 @@ npm run build --workspace @rezzie/web
 The user already enabled Google and Email/Password in Firebase and added Firebase values on their development machine. Do not ask them to paste values into chat or commit them.
 
 1. In Firebase Authentication, add `rezzie.org` to **Authorized domains**.
-2. In Cloudflare Pages production environment variables, set:
+2. In Cloudflare Worker production environment variables, set:
 
 ```env
 VITE_API_BASE_URL=https://api.rezzie.org
@@ -160,18 +160,17 @@ https://api.rezzie.org/ready
 
 Both must be healthy before connecting frontend billing.
 
-### D. Deploy frontend with Cloudflare Pages
+### D. Deploy frontend with Cloudflare Workers static assets
 
-Connect the GitHub repository in **Workers & Pages → Pages**. Configure:
+Connect the GitHub repository in **Workers & Pages → Create application → Workers**. Configure:
 
 | Setting | Value |
 | --- | --- |
 | Production branch | `main` |
 | Root directory | repository root |
 | Build command | `npm run build` |
-| Output directory | `apps/web/dist` |
 
-Set the Firebase values plus `VITE_API_BASE_URL=https://api.rezzie.org` in Pages production environment variables. Attach `rezzie.org` via Pages Custom Domains. Optionally attach `www.rezzie.org` and redirect it to apex.
+The output directory is intentionally not a dashboard setting: root [`wrangler.jsonc`](../wrangler.jsonc) declares `apps/web/dist` and SPA fallback. Set the Firebase values plus `VITE_API_BASE_URL=https://api.rezzie.org` in Worker production environment variables. Attach `rezzie.org` in the Worker’s **Settings → Domains & Routes**. Optionally attach `www.rezzie.org` and redirect it to apex.
 
 ## Stripe production setup
 
@@ -185,7 +184,7 @@ STRIPE_SUBSCRIPTION_PRICE_ID=price_...
 STRIPE_SUBSCRIPTION_MONTHLY_CREDITS=20
 STRIPE_CREDIT_PACKS={"price_...":5}
 
-# Cloudflare Pages build environment
+# Cloudflare Worker build environment
 VITE_CREDIT_PACK_PRICE_ID=price_...
 VITE_CREDIT_PACK_CREDITS=5
 VITE_SUBSCRIPTION_PRICE_ID=price_...
