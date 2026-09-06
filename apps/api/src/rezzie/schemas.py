@@ -23,6 +23,32 @@ class ImportResponse(BaseModel):
     source_url: str | None = None
 
 
+class SavedResumeCreate(BaseModel):
+    label: str = Field(default="My resume", min_length=1, max_length=160)
+    source_text: str = Field(min_length=50, max_length=100_000)
+
+    @field_validator("label")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        label = value.strip()
+        if not label:
+            raise ValueError("A resume name is required.")
+        return label
+
+
+class ResumeVersionCreate(BaseModel):
+    source_text: str = Field(min_length=50, max_length=100_000)
+
+
+class SavedResumeResponse(BaseModel):
+    id: str
+    version_id: str
+    label: str
+    source_text: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class TailorRequest(BaseModel):
     resume_text: str = Field(min_length=50, max_length=100_000)
     job_description: str = Field(min_length=50, max_length=100_000)

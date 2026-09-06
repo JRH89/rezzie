@@ -17,4 +17,6 @@
 | QA | Run hosted smoke tests in provisioned environment | pending | Requires deployment credentials |
 | QA | Validate grounding and Stripe lifecycle behavior | complete | API tests cover claim guard, credit idempotency, and monthly renewal grant |
 | Engineering | Career Record evidence gate | complete | Imported facts begin `needs_review`; only confirmed facts can be used in record tailoring |
+| Engineering | Resume Library source persistence | complete | `saved_resumes`/`resume_versions` migration, ownership checks, entitlement limits, deletion route, and workspace selection flow |
+| Engineering | Saved draft history and private artifact storage | pending | Depends on managed Postgres and private object storage; see `docs/chrome-extension-roadmap.md` |
 | Product/Design | Replace prototype workspace UX | complete | Guided four-step responsive flow visually checked at 1280px and 390px widths |

@@ -3,6 +3,7 @@ export type TailoringResult = { tailored_resume: string; matched_keywords: strin
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number };
 export type CareerFact = { id: string; fact_type: "claim" | "skill"; text: string; source_excerpt: string; status: "needs_review" | "confirmed" | "rejected"; evidence_note?: string | null };
 export type CareerRecord = { id: string; label: string; created_at: string; updated_at: string; facts: CareerFact[] };
+export type SavedResume = { id: string; version_id: string; label: string; source_text: string; created_at: string; updated_at: string };
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
@@ -14,6 +15,7 @@ function requestFor(accessToken?: string) {
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "Request failed."); }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
   };
 }
@@ -33,6 +35,10 @@ export function createApi(accessToken?: string) {
     importUrl: (url: string) => request<ImportResponse>("/api/v1/job-descriptions/url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }),
     importFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/job-descriptions/file", { method: "POST", body: form }); },
     importResumeFile: (file: File) => { const form = new FormData(); form.append("file", file); return request<ImportResponse>("/api/v1/resumes/file", { method: "POST", body: form }); },
+    saveResume: (body: { label: string; source_text: string }) => request<SavedResume>("/api/v1/resumes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    listSavedResumes: () => request<SavedResume[]>("/api/v1/resumes", { method: "GET" }),
+    addResumeVersion: (resumeId: string, body: { source_text: string }) => request<SavedResume>(`/api/v1/resumes/${resumeId}/versions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    deleteSavedResume: (resumeId: string) => request<void>(`/api/v1/resumes/${resumeId}`, { method: "DELETE" }),
     exportResume,
     createCareerRecord: (body: { label: string; source_text: string }) => request<CareerRecord>("/api/v1/career-records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     listCareerRecords: () => request<CareerRecord[]>("/api/v1/career-records", { method: "GET" }),

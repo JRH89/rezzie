@@ -10,6 +10,7 @@ from .documents import DocumentService, ResumeExportService, editor_html_to_text
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .records import CareerRecord, CareerRecordRepository
+from .resume_library import ResumeLibraryService, ResumeVersion, SavedResume
 from .schemas import (
     CareerFactCreate,
     CareerFactResponse,
@@ -19,6 +20,9 @@ from .schemas import (
     CreditBalance,
     ImportResponse,
     ResumeExportRequest,
+    ResumeVersionCreate,
+    SavedResumeCreate,
+    SavedResumeResponse,
     TailorCareerRecordRequest,
     TailoringResult,
     TailorRequest,
@@ -34,6 +38,7 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 career_records = CareerRecordRepository(billing_repository.sessions)
+resume_library = ResumeLibraryService(billing_repository.sessions, billing_repository)
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(settings.anthropic_model), settings, billing_repository)
 document_service = DocumentService(settings)
@@ -67,6 +72,17 @@ def career_record_response(user_id: str, record: CareerRecord) -> CareerRecordRe
         ],
     )
 
+
+def saved_resume_response(resume: SavedResume, version: ResumeVersion) -> SavedResumeResponse:
+    return SavedResumeResponse(
+        id=resume.id,
+        version_id=version.id,
+        label=resume.label,
+        source_text=version.source_text,
+        created_at=resume.created_at,
+        updated_at=resume.updated_at,
+    )
+
 @app.get("/health")
 async def health() -> dict[str, str]: return {"status": "ok"}
 
@@ -97,6 +113,35 @@ async def import_file(file: UploadFile = File(...), authorization: str | None = 
 async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     return ImportResponse(text=await document_service.extract(file), source_type="file")
+
+
+@app.post("/api/v1/resumes", response_model=SavedResumeResponse, status_code=201)
+def save_resume(request: SavedResumeCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SavedResumeResponse:
+    resume, version = resume_library.create(require_user(authorization, x_rezzie_user_id), label=request.label, source_text=request.source_text)
+    return saved_resume_response(resume, version)
+
+
+@app.get("/api/v1/resumes", response_model=list[SavedResumeResponse])
+def list_saved_resumes(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> list[SavedResumeResponse]:
+    return [saved_resume_response(resume, version) for resume, version in resume_library.list(require_user(authorization, x_rezzie_user_id))]
+
+
+@app.get("/api/v1/resumes/{resume_id}", response_model=SavedResumeResponse)
+def get_saved_resume(resume_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SavedResumeResponse:
+    resume, version = resume_library.get(require_user(authorization, x_rezzie_user_id), resume_id)
+    return saved_resume_response(resume, version)
+
+
+@app.post("/api/v1/resumes/{resume_id}/versions", response_model=SavedResumeResponse, status_code=201)
+def add_resume_version(resume_id: str, request: ResumeVersionCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SavedResumeResponse:
+    resume, version = resume_library.add_version(require_user(authorization, x_rezzie_user_id), resume_id, request.source_text)
+    return saved_resume_response(resume, version)
+
+
+@app.delete("/api/v1/resumes/{resume_id}", status_code=204)
+def delete_saved_resume(resume_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
+    resume_library.delete(require_user(authorization, x_rezzie_user_id), resume_id)
+    return Response(status_code=204)
 
 
 @app.post("/api/v1/resumes/export")
