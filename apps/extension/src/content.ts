@@ -5,6 +5,10 @@ const NON_JOB_CONTENT = "script, style, noscript, nav, footer, [role='navigation
 const JOB_CONTAINERS = [
   "#jobDescriptionText", // Indeed, including the selected-result sidebar
   ".jobsearch-JobComponent-description", // Indeed
+  ".jobs-description__content", // LinkedIn current job view
+  ".jobs-description-content__text", // LinkedIn alternate job view
+  ".jobs-box__html-content", // LinkedIn legacy job view
+  "#job-details", // LinkedIn authenticated job pane
   "#content .job__description", // Greenhouse
   ".posting-description", // Lever
   "[data-testid='job-description']", // Ashby

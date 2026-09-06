@@ -33,4 +33,10 @@ describe("visible job extraction", () => {
     expect(snapshot.text).toContain("Build and maintain dependable software");
     expect(snapshot.text).not.toContain("Search results and filters");
   });
+
+  it("reads the LinkedIn description pane instead of feed content", () => {
+    const snapshot = extractJob(page(`<main><h1>Software Engineer</h1><section class="feed">People you may know and recommended posts</section><section class="jobs-description__content">${"Design, build, test, and improve secure services used by customers every day. ".repeat(20)}</section></main>`));
+    expect(snapshot.text).toContain("Design, build, test, and improve secure services");
+    expect(snapshot.text).not.toContain("People you may know");
+  });
 });
