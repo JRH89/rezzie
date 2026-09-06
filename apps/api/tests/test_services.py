@@ -1,6 +1,7 @@
 import httpx
 import pytest
 from fastapi import HTTPException
+
 from rezzie.billing import BillingRepository
 from rezzie.config import Settings
 from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest

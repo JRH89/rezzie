@@ -122,6 +122,7 @@ class BillingRepository:
 class CheckoutRequest:
     kind: Literal["credits", "subscription"]
     price_id: str
+    quantity: int = 1
 
 
 class StripeBillingService:
@@ -134,10 +135,13 @@ class StripeBillingService:
         packs = json.loads(self._settings.stripe_credit_packs)
         if request.kind == "credits" and request.price_id not in packs: raise HTTPException(status_code=422, detail="Unknown credit pack.")
         if request.kind == "subscription" and request.price_id != self._settings.stripe_subscription_price_id: raise HTTPException(status_code=422, detail="Unknown subscription plan.")
+        if request.kind == "credits" and not 1 <= request.quantity <= 10: raise HTTPException(status_code=422, detail="Credit pack quantity must be between 1 and 10.")
+        if request.kind == "subscription" and request.quantity != 1: raise HTTPException(status_code=422, detail="Subscription quantity must be 1.")
         account = self._repository.account(user_id)
         customer = account.stripe_customer_id or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
         self._repository.save_customer(user_id, customer)
-        session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": 1}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(packs.get(request.price_id, 0))}, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
+        credits = packs.get(request.price_id, 0) * request.quantity
+        session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
         return session.url
 
     def portal(self, user_id: str) -> str:

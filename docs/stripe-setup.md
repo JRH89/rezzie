@@ -1,6 +1,6 @@
 # Stripe setup: credits and monthly plans
 
-Rezzie charges **one credit per completed tailoring run**. A credit pack is a one-time Checkout purchase; a monthly subscription grants `STRIPE_SUBSCRIPTION_MONTHLY_CREDITS` at each successful paid renewal. Purchased credits carry over. Monthly credits reset each period and are consumed first.
+Rezzie charges **one credit per completed tailoring run**. A credit pack is a one-time Checkout purchase; a monthly subscription grants `STRIPE_SUBSCRIPTION_MONTHLY_CREDITS` at each successful paid renewal. Purchased credits carry over. Monthly credits reset each period and are consumed first. Users may select **1–10 credit packs** in one Checkout session.
 
 ## Dashboard configuration
 

@@ -151,7 +151,7 @@ Redeploy the Worker after changing build variables. These `VITE_*` values are br
 
 In Stripe **test mode**, create:
 
-- A one-time `Rezzie credits` Price: **$5.00**, mapped to **20** credits.
+- A one-time `Rezzie credits` Price: **$5.00**, mapped to **20** credits. Users can choose 1–10 packs in one checkout (20–200 credits).
 - A recurring `Rezzie monthly` Price: **$9.99/month**, mapped to **50** credits per successful billing period.
 
 Put the Price IDs in the server and Worker variables shown above. Create a webhook with this public endpoint:

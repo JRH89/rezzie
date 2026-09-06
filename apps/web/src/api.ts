@@ -41,7 +41,7 @@ export function createApi(accessToken?: string) {
     tailorCareerRecord: (body: { record_id: string; job_description: string; credential_mode: "byok" | "subscription"; api_key?: string }) => request<TailoringResult>("/api/v1/tailor/career-record", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     tailor: (body: { resume_text: string; job_description: string; credential_mode: "byok" | "subscription"; api_key?: string }) => request<TailoringResult>("/api/v1/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     balance: () => request<CreditBalance>("/api/v1/billing/me", { method: "GET" }),
-    checkout: (kind: "credits" | "subscription", priceId: string) => request<{ url: string }>("/api/v1/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, price_id: priceId }) }),
+    checkout: (kind: "credits" | "subscription", priceId: string, quantity = 1) => request<{ url: string }>("/api/v1/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, price_id: priceId, quantity }) }),
     portal: () => request<{ url: string }>("/api/v1/billing/portal", { method: "POST" }),
   };
 }

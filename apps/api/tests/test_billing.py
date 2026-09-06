@@ -1,7 +1,9 @@
+from types import SimpleNamespace
+
 import pytest
 from fastapi import HTTPException
 
-from rezzie.billing import BillingRepository, StripeBillingService
+from rezzie.billing import BillingRepository, CheckoutRequest, StripeBillingService
 from rezzie.config import Settings
 
 
@@ -47,3 +49,24 @@ def test_paid_invoice_resets_monthly_credit_allowance(tmp_path: object, monkeypa
     monkeypatch.setattr("rezzie.billing.stripe.Webhook.construct_event", lambda *_: event)
     service.webhook(b"{}", "signature")
     assert repository.balance("user-1") == ("active", 20, 0)
+
+
+def test_credit_checkout_uses_selected_pack_quantity(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = StripeBillingService(Settings(stripe_secret_key="sk_test", stripe_credit_packs='{"price_pack":20}'), repository)
+    captured: dict[str, object] = {}
+    monkeypatch.setattr("rezzie.billing.stripe.Customer.create", lambda **_: {"id": "cus_1"})
+    monkeypatch.setattr("rezzie.billing.stripe.checkout.Session.create", lambda **kwargs: captured.update(kwargs) or SimpleNamespace(url="https://checkout.example"))
+
+    assert service.checkout("user-1", CheckoutRequest(kind="credits", price_id="price_pack", quantity=3)) == "https://checkout.example"
+    assert captured["line_items"] == [{"price": "price_pack", "quantity": 3}]
+    assert captured["metadata"] == {"rezzie_kind": "credits", "credits": "60"}
+
+
+@pytest.mark.parametrize("quantity", [0, 11])
+def test_credit_checkout_rejects_out_of_range_quantity(tmp_path: object, quantity: int) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = StripeBillingService(Settings(stripe_secret_key="sk_test", stripe_credit_packs='{"price_pack":20}'), repository)
+
+    with pytest.raises(HTTPException, match="quantity must be between 1 and 10"):
+        service.checkout("user-1", CheckoutRequest(kind="credits", price_id="price_pack", quantity=quantity))
