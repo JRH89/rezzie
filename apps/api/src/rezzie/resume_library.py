@@ -1,4 +1,6 @@
 """Private, user-owned resume source versions for reuse across Rezzie clients."""
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import uuid4
 
