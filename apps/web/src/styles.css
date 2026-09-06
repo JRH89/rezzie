@@ -259,6 +259,20 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .auth-card .button { margin-top: 1rem; }
 .auth-card small { color: #6a756f; display: block; font-size: .62rem; margin-top: 1.5rem; }
 .auth-loader { animation: spin .8s linear infinite; border: 3px solid #d8ddd8; border-radius: 50%; border-top-color: #e86645; display: inline-block; height: 2rem; width: 2rem; }
+.auth-card { position: relative; }
+.auth-card .brand-mark { margin-bottom: 1.5rem; }
+.auth-card label { display: block; margin: 1rem 0 .35rem; text-align: left; }
+.auth-card input { background: #fffaf4; }
+.auth-close { background: none; border: 0; font-size: 1.5rem; position: absolute; right: 1rem; top: .7rem; }
+.google-button { align-items: center; background: #fffaf4; border: 1px solid #cdb7a4; border-radius: .45rem; display: flex; font-weight: 700; gap: .8rem; justify-content: center; margin-top: 1.5rem; min-height: 2.8rem; width: 100%; }
+.google-button span { color: #9a6248; font-size: 1.1rem; font-weight: 900; }
+.auth-divider { align-items: center; color: #856f60; display: flex; font-size: .72rem; gap: .7rem; margin: 1rem 0; }
+.auth-divider::before, .auth-divider::after { background: #decec0; content: ""; flex: 1; height: 1px; }
+.auth-submit { margin-top: 1.2rem; width: 100%; }
+.auth-link, .auth-switch button { background: none; border: 0; color: #7e513d; font-size: .73rem; font-weight: 750; padding: .55rem; }
+.auth-switch { color: #6b5649; font-size: .72rem; margin-top: 1rem; }
+.auth-error { color: #8e4d38 !important; font-size: .74rem; margin: .8rem 0 0 !important; }
+.auth-notice { color: #4b3428 !important; font-size: .74rem; margin: .8rem 0 0 !important; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) {

@@ -9,7 +9,7 @@
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 6 passed 2026-09-05 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
 | Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
-| OIDC identity integration | done | Generic OIDC JWT verification and React authorization-code client; provider values required at deployment |
+| Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |
 | Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
 | Deployment/CI | remaining | CI workflow and production runbook exist; no remote or cloud credentials are configured |

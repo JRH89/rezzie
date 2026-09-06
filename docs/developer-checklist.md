@@ -5,7 +5,7 @@
 | Engineering | Keep providers interchangeable | complete | `providers/base.py`, `providers/anthropic.py` |
 | Engineering | Do not persist BYOK | complete | request-scoped credentials policy |
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |
-| Platform | Configure OIDC identity + verified subscription webhooks | pending | Set issuer, audience, JWKS URL, client ID, and web redirect origin |
+| Platform | Configure Firebase identity + verified subscription webhooks | pending | Enable Google and Email/Password, set Firebase web values and API issuer/audience/JWKS URL |
 | Platform | Create Stripe Prices + production webhook | pending | Follow `docs/stripe-setup.md`; store only server-side secrets |
 | Platform | Provision Postgres/object storage/secrets/Cloudflare | pending | Required before deployment |
 | QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 4 web interaction tests, Ruff, ESLint, and production build passed |
