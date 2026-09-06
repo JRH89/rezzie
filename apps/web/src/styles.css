@@ -56,7 +56,8 @@ a { color: inherit; }
 .fit-stamp { align-items: center; background: #b8dfc5; border-radius: 50%; display: flex; flex-direction: column; height: 108px; justify-content: center; left: -2.25rem; position: absolute; top: -2.25rem; transform: rotate(-10deg); width: 108px; }
 .fit-stamp strong { font: 600 .78rem Georgia, serif; }
 .fit-stamp span { font-size: .58rem; margin-top: .2rem; }
-.signal-strip { align-items: center; background: #10201c; color: #eef2ec; display: flex; font: 500 .9rem Georgia, serif; gap: 2.4rem; justify-content: center; overflow: hidden; padding: 1.05rem; white-space: nowrap; }
+.signal-strip { align-items: center; background: #10201c; color: #eef2ec; display: flex; font: 500 .9rem Georgia, serif; gap: 2.4rem; justify-content: center; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; padding: 1.05rem; scrollbar-width: thin; white-space: nowrap; }
+.signal-strip span, .signal-strip b { flex: 0 0 auto; }
 .signal-strip b { color: #e86645; }
 .product-section { margin: auto; max-width: 1480px; padding: 9rem clamp(1.25rem, 7vw, 7.5rem); }
 .section-intro { align-items: end; display: flex; justify-content: space-between; margin-bottom: 5rem; }
@@ -300,7 +301,8 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
   .trust-row { flex-direction: column; gap: .35rem; }
   .fit-stamp { height: 82px; left: -.4rem; top: -2rem; width: 82px; }
   .proof-card { bottom: -2rem; max-width: 220px; right: .5rem; }
-  .signal-strip { justify-content: flex-start; }
+  .signal-strip { gap: 1.25rem; justify-content: flex-start; padding: .95rem 1.15rem; scroll-snap-type: x proximity; }
+  .signal-strip span { scroll-snap-align: start; }
   .product-section, .safety-section { padding: 6rem 1.15rem; }
   .section-intro { align-items: flex-start; display: block; }
   .section-intro h2 { margin-top: 2rem; text-align: left; }
