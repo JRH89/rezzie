@@ -406,6 +406,7 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .product-section .section-intro { align-items: flex-start; flex-direction: column; margin: 0 0 3rem; max-width: 48rem; }
 .product-section .section-intro .section-label { max-width: none; }
 .product-section .section-intro h2 { font-size: clamp(3.2rem, 5vw, 5.4rem); margin: .75rem 0 0; text-align: left; }
+.section-page-link { color: #7e513d; font-size: .8rem; font-weight: 800; margin-top: 1.25rem; text-decoration: none; }.section-page-link:hover { text-decoration: underline; }
 .product-section .feature-stage { border-top: 0; gap: clamp(2rem, 5vw, 4.5rem); grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); padding-top: 0; }
 .product-section .resume-preview { box-shadow: 12px 14px 0 #6f4d3b; min-height: 390px; transform: none; }
 .product-section .feature-copy { display: grid; gap: .8rem; }

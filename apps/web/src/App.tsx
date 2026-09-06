@@ -3,12 +3,12 @@ import { LandingPage } from "./LandingPage";
 import { MarketingPage } from "./MarketingPages";
 import { Workspace } from "./Workspace";
 
-type View = "landing" | "workspace" | "about" | "features" | "faq" | "blog" | "keyword-tailoring" | "honest-resume-tailoring" | "job-description";
+type View = "landing" | "workspace" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "blog" | "keyword-tailoring" | "honest-resume-tailoring" | "job-description";
 
 function viewFromHash(): View {
   if (window.location.hash === "#workspace") return "workspace";
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/faq": "faq", "/blog": "blog", "/blog/keyword-tailoring": "keyword-tailoring", "/blog/honest-resume-tailoring": "honest-resume-tailoring", "/blog/job-description": "job-description" };
+  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/blog": "blog", "/blog/keyword-tailoring": "keyword-tailoring", "/blog/honest-resume-tailoring": "honest-resume-tailoring", "/blog/job-description": "job-description" };
   return routes[path] ?? "landing";
 }
 
