@@ -12,7 +12,7 @@ Rezzie charges **one credit per completed tailoring run**. A credit pack is a on
 
 ## Webhook endpoint
 
-Create an endpoint at `https://api.your-domain.example/api/v1/billing/webhook`. Copy its signing secret (`whsec_...`) to `STRIPE_WEBHOOK_SECRET`; never place it in the browser.
+Create an endpoint at `https://api.rezzie.org/api/v1/billing/webhook`. Copy its signing secret (`whsec_...`) to `STRIPE_WEBHOOK_SECRET`; never place it in the browser.
 
 Subscribe the endpoint to these events:
 

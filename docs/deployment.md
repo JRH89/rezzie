@@ -9,12 +9,12 @@
 
 ## Required environment values
 
-Set `ENVIRONMENT=production`, `APP_URL`, exact `ALLOWED_ORIGINS`, exact `ALLOWED_HOSTS`, `DATABASE_URL`, `OIDC_ISSUER`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`, `ANTHROPIC_API_KEY`, all `STRIPE_*` values, and `CLAMAV_HOST=clamav` when using the provided Compose service. Do not use localhost defaults in production.
+Use `apps/api/.env.production.example` as the template: production web traffic is `https://rezzie.org`, API traffic is `https://api.rezzie.org`, and those exact origins/hosts must be used in `APP_URL`, `ALLOWED_ORIGINS`, and `ALLOWED_HOSTS`. Set `DATABASE_URL`, Firebase token verification values, `ANTHROPIC_API_KEY`, all `STRIPE_*` values, and `CLAMAV_HOST=clamav` when using the provided Compose service. Do not use localhost defaults in production.
 
 ## Launch sequence
 
 1. Configure the Stripe Prices and webhook as described in `stripe-setup.md`.
-2. Configure Firebase Authentication: enable Google and Email/Password, add the web domain to Firebase Authorized domains, and set `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` at web-build time. Set the Firebase token issuer, project-ID audience, and Google JWKS URL in the API. The API rejects production header-based identities; see `docs/firebase-auth-setup.md`.
+2. Configure Firebase Authentication: enable Google and Email/Password, add `rezzie.org` to Firebase Authorized domains, and set `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` at web-build time. Set the Firebase token issuer, project-ID audience, and Google JWKS URL in the API. The API rejects production header-based identities; see `docs/firebase-auth-setup.md`.
 3. Deploy the web static build and API/ClamAV services. The API container executes `alembic upgrade head` before serving traffic.
 4. In Cloudflare, allow traffic only to required domains, enforce HTTPS, set a WAF rule that blocks non-Stripe traffic to the webhook only if signature validation remains untouched, and rate-limit `/api/v1/tailor`, URL/file import, and checkout routes by authenticated identity/IP.
 5. Register `/health` for liveness and `/ready` for database readiness. Run test-mode Stripe checkout and a real OIDC login against the deployed URLs before switching Stripe to live mode.
