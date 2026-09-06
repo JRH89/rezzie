@@ -48,6 +48,22 @@ describe("guided tailoring workspace", () => {
     expect(screen.getByRole("heading", { name: /a stronger match/i })).toBeTruthy();
   });
 
+  it("opens the appropriate auth action and exits the workspace after sign-out", async () => {
+    const signIn = vi.fn();
+    const signUp = vi.fn();
+    const signOut = vi.fn();
+    const { rerender } = render(<App isAuthenticated={false} onSignIn={signIn} onSignUp={signUp} />);
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.click(screen.getByRole("button", { name: /create free account/i }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(signUp).toHaveBeenCalledTimes(1);
+
+    rerender(<App isAuthenticated onSignOut={signOut} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
+    rerender(<App isAuthenticated={false} onSignOut={signOut} />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: /a stronger match/i })).toBeTruthy());
+  });
+
   it("shows the review and download workspace after tailoring", async () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));

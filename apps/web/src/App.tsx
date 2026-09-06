@@ -8,7 +8,7 @@ function viewFromHash(): View {
   return window.location.hash === "#workspace" ? "workspace" : "landing";
 }
 
-export function App({ accessToken, isAuthenticated = true, onSignIn, onSignOut }: { accessToken?: string; isAuthenticated?: boolean; onSignIn?: () => void; onSignOut?: () => void }) {
+export function App({ accessToken, isAuthenticated = true, onSignIn, onSignUp, onSignOut }: { accessToken?: string; isAuthenticated?: boolean; onSignIn?: () => void; onSignUp?: () => void; onSignOut?: () => void }) {
   const [view, setView] = useState<View>(viewFromHash);
 
   useEffect(() => {
@@ -16,6 +16,13 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignOut }
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated && view === "workspace") {
+      window.location.hash = "top";
+      setView("landing");
+    }
+  }, [isAuthenticated, view]);
 
   function navigate(next: View) {
     if (next === "workspace" && !isAuthenticated) {
@@ -28,6 +35,6 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignOut }
   }
 
   return view === "landing"
-    ? <LandingPage isAuthenticated={isAuthenticated} onSignIn={onSignIn} onStart={() => navigate("workspace")} />
+    ? <LandingPage isAuthenticated={isAuthenticated} onSignIn={onSignIn} onSignUp={onSignUp ?? onSignIn} onStart={() => navigate("workspace")} />
     : <Workspace accessToken={accessToken} onHome={() => navigate("landing")} onSignOut={onSignOut} />;
 }

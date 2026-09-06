@@ -9,7 +9,7 @@
 | Platform | Create Stripe Prices + production webhook | pending | Follow `docs/stripe-setup.md`; store only server-side secrets |
 | Platform | Provision Postgres/object storage/secrets/Cloudflare | pending | Required before deployment |
 | Platform | Configure Cloudflare Worker frontend | in progress | Root `wrangler.jsonc` supplies static asset directory and SPA fallback; set production build variables and attach `rezzie.org` |
-| QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 4 web interaction tests, Ruff, ESLint, and production build passed |
+| QA | Run local API/web checks | complete | 2026-09-05: 35 API tests, 5 web interaction tests, Ruff, ESLint, and production build passed |
 | Engineering | Preserve usable resume document structure | complete | DOCX/PDF import preserves paragraph/table or layout text; DOCX export is transient and no-store |
 | Engineering | Expose signup and managed billing paths | complete | Public pricing section and OIDC-aware account CTA lead into workspace Stripe checkout |
 | QA | Run hosted smoke tests in provisioned environment | pending | Requires deployment credentials |

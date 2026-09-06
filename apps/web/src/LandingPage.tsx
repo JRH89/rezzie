@@ -1,9 +1,9 @@
 import heroImage from "./assets/rezzie-hero-editorial.png";
 import { BrandMark } from "./BrandMark";
 
-type LandingPageProps = { isAuthenticated: boolean; onSignIn?: () => void; onStart: () => void };
+type LandingPageProps = { isAuthenticated: boolean; onSignIn?: () => void; onSignUp?: () => void; onStart: () => void };
 
-export function LandingPage({ isAuthenticated, onSignIn, onStart }: LandingPageProps) {
+export function LandingPage({ isAuthenticated, onSignIn, onSignUp, onStart }: LandingPageProps) {
   return (
     <div className="landing">
       <header className="marketing-header">
@@ -11,7 +11,7 @@ export function LandingPage({ isAuthenticated, onSignIn, onStart }: LandingPageP
         <nav className="marketing-nav" aria-label="Main navigation">
           <a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#safety">Safety</a>
         </nav>
-        <div className="marketing-actions">{!isAuthenticated && onSignIn && <button className="text-button" onClick={onSignIn} type="button">Sign in</button>}<button className="button button-dark button-small" onClick={onStart} type="button">{isAuthenticated ? "Open workspace" : "Create free account"} <span aria-hidden="true">↗</span></button></div>
+        <div className="marketing-actions">{!isAuthenticated && onSignIn && <button className="text-button" onClick={onSignIn} type="button">Sign in</button>}<button className="button button-dark button-small" onClick={isAuthenticated ? onStart : onSignUp} type="button">{isAuthenticated ? "Open workspace" : "Create free account"} <span aria-hidden="true">↗</span></button></div>
       </header>
       <main id="top">
         <section className="hero">
