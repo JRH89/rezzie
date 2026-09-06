@@ -55,8 +55,12 @@ describe("guided tailoring workspace", () => {
     const { rerender } = render(<App isAuthenticated={false} onSignIn={signIn} onSignUp={signUp} />);
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     fireEvent.click(screen.getByRole("button", { name: /create free account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start the guided flow/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open rezzie/i }));
+    fireEvent.click(screen.getByRole("button", { name: /use my key/i }));
     expect(signIn).toHaveBeenCalledTimes(1);
-    expect(signUp).toHaveBeenCalledTimes(1);
+    expect(signUp).toHaveBeenCalledTimes(5);
 
     rerender(<App isAuthenticated onSignOut={signOut} />);
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
