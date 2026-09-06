@@ -1,19 +1,35 @@
 import type { ExtensionMessage, JobSnapshot } from "./messages";
 
 const MAX_JOB_CHARS = 100_000;
+const NON_JOB_CONTENT = "script, style, noscript, nav, footer, [role='navigation'], [aria-label*='cookie' i]";
+const JOB_CONTAINERS = [
+  "#content .job__description", // Greenhouse
+  ".posting-description", // Lever
+  "[data-testid='job-description']", // Ashby
+  "[data-automation-id='jobPostingDescription']", // Workday
+  "[data-automation-id*='job-description' i]",
+  "[class*='job-description' i]",
+  "[id*='job-description' i]",
+  "main",
+  "article",
+];
 
 function clean(value: string | null | undefined) {
   return (value ?? "").replace(/\s+/g, " ").trim();
 }
 
 function textFrom(root: Element | null) {
-  return clean(root?.textContent).slice(0, MAX_JOB_CHARS);
+  if (!root) return "";
+  const readable = root.cloneNode(true) as Element;
+  readable.querySelectorAll(NON_JOB_CONTENT).forEach(node => node.remove());
+  return clean(readable.textContent).slice(0, MAX_JOB_CHARS);
 }
 
 function matchingContainer(documentToRead: Document) {
-  const selectors = ["main", "article", "[data-automation-id*='job']", "[class*='job-description' i]", "[id*='job-description' i]"];
-  const candidates = selectors.flatMap(selector => Array.from(documentToRead.querySelectorAll(selector)));
-  return candidates.map(node => ({ node, length: textFrom(node).length })).sort((left, right) => right.length - left.length)[0]?.node ?? documentToRead.body;
+  const candidates = JOB_CONTAINERS.flatMap((selector, priority) => Array.from(documentToRead.querySelectorAll(selector)).map(node => ({ node, priority })));
+  return candidates
+    .map(candidate => ({ ...candidate, length: textFrom(candidate.node).length }))
+    .sort((left, right) => left.priority - right.priority || right.length - left.length)[0]?.node ?? documentToRead.body;
 }
 
 export function extractJob(documentToRead: Document = document): JobSnapshot {

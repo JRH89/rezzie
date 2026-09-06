@@ -19,4 +19,12 @@ describe("visible job extraction", () => {
     expect(snapshot.confidence).toBe("low");
     expect(snapshot.text).toContain("Short posting");
   });
+
+  it("prefers a known job board description and removes page boilerplate", () => {
+    const snapshot = extractJob(page(`<main><nav>Browse jobs and create an account</nav><h1>Ignored page heading</h1><section id="content"><div class="job__description"><h1>Staff Engineer</h1>${"Own the platform roadmap and mentor engineers. ".repeat(24)}<footer>Equal opportunity employer and privacy policy</footer></div></section></main>`));
+    expect(snapshot.title).toBe("Ignored page heading");
+    expect(snapshot.text).toContain("Own the platform roadmap");
+    expect(snapshot.text).not.toContain("Browse jobs");
+    expect(snapshot.text).not.toContain("privacy policy");
+  });
 });

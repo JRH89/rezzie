@@ -26,7 +26,7 @@ Resume files and generated drafts are sensitive personal data. Storage must be u
 - Retain saved items until the user deletes them or closes the account. Offer per-item deletion, “delete all library data,” and an account-deletion path. Generated but unsaved drafts remain transient and are discarded after the request.
 - Keep the existing Career Record separate: it is a review-gated collection of candidate-confirmed facts for grounding. A saved resume is a private document/version and must not silently turn imported lines into confirmed facts.
 
-## Prerequisite architecture (before extension work)
+## Architecture boundaries
 
 1. **Make current SQLite operations reliable.** The extension calls the existing single API, so it does not require a separate database or a Postgres migration. Complete the SQLite backup/restore rehearsal and restricted host-access checks first. Move to Supabase/Postgres when Rezzie needs multiple API instances, sustained concurrent writes, or managed point-in-time recovery.
 2. **Introduce private object storage.** Use an S3-compatible private bucket (for example Cloudflare R2) only for original uploads and rendered artifacts that need fidelity. Keep objects private; issue short-lived server-generated downloads after ownership checks. Text metadata and authorization remain in SQLite until the future database migration.
@@ -45,7 +45,7 @@ Create `apps/extension` as a TypeScript Manifest V3 package, sharing only genera
 | Side panel | Auth, resume selection, extracted-text review, tailoring progress, diff/review, explicit download action. | Service-worker messages only. |
 | Rezzie API | Persist chosen resume/run, enforce credits/grounding, render/download signed artifacts. | Server-side user data, billing, Claude. |
 
-Use the standard browser OIDC authorization-code flow with extension-specific redirect handling. Do not reuse the web app’s token storage mechanically; extension storage and redirect configuration require their own security review.
+Email/password authentication uses Firebase's extension entry point. Google authentication uses a restricted offscreen-document relay to the hosted Rezzie bridge, with the production extension ID allow-listed in both Firebase and the bridge's build configuration. Firebase tokens are held only in `chrome.storage.session`; BYOK remains request-scoped and is never stored.
 
 ## Permissions and security baseline
 
@@ -103,7 +103,7 @@ Define API schemas, auth redirect model, retention/export policy, Store disclosu
 
 Scaffold MV3 build, side panel, service worker, development auth, typed message protocol, and isolated-world content script. Test install, sign-in/out, refresh/restart behavior, and zero broad host permissions.
 
-Current implementation: `apps/extension` builds a Manifest V3 side panel with `activeTab`, `scripting`, `sidePanel`, `storage`, `offscreen`, and `downloads` only. It has a typed message protocol, generic visible-page extraction, saved-resume selection, shared-credit tailoring, and explicit TXT download. Email/password uses Firebase's extension entry point. Google uses the required offscreen-document relay to `https://rezzie.org/extension-auth`; set `VITE_CHROME_EXTENSION_IDS` in the Worker build environment and add the published `chrome-extension://EXTENSION_ID` to Firebase Authorized domains before enabling it.
+Current implementation: `apps/extension` builds a Manifest V3 side panel with `activeTab`, `scripting`, `sidePanel`, `storage`, `offscreen`, and `downloads` only. It has a typed message protocol, guarded visible-page extraction with Greenhouse/Lever/Ashby/Workday selectors and generic fallback, saved-resume selection, shared-credit or request-scoped BYOK tailoring, and explicit TXT/PDF/DOCX downloads. Email/password uses Firebase's extension entry point. Google uses the required offscreen-document relay to `https://rezzie.org/extension-auth`; set `VITE_CHROME_EXTENSION_IDS` in the Worker build environment and add the published `chrome-extension://EXTENSION_ID` to Firebase Authorized domains before enabling it.
 
 ### 5. Generic extraction and review
 
