@@ -7,7 +7,7 @@ Rezzie charges **one credit per completed tailoring run**. A credit pack is a on
 1. In Stripe **test mode**, create a `Rezzie credits` product with a one-time Price of **$5.00 for 20 credits**, and create a `Rezzie monthly` product with a recurring monthly Price of **$9.99 for 50 credits**.
 2. Create a `Rezzie Pro` product and a recurring monthly Price.
 3. Set these server-only values in `apps/api/.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_SUBSCRIPTION_PRICE_ID`, `STRIPE_SUBSCRIPTION_MONTHLY_CREDITS=50`, and `STRIPE_CREDIT_PACKS={"price_123":20}`. `STRIPE_CREDIT_PACKS` maps a Stripe Price ID to the credits granted.
-4. Configure `APP_URL` to the public web origin. Configure `DATABASE_URL` to managed Postgres before production; SQLite is only for local development.
+4. Configure `APP_URL` to the public web origin. The current single-server production deployment uses the persistent SQLite Docker volume; follow [SQLite operations](sqlite-operations.md) for backups and restore rehearsals before enabling live charges.
 5. Enable the Stripe Customer Portal if customers should self-manage/cancel subscriptions. Add a portal endpoint before exposing its link in the UI.
 
 ## Webhook endpoint

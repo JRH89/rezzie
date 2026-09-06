@@ -5,7 +5,7 @@
 - **Cloudflare Workers static assets** serves the static React app at `https://rezzie.org`.
 - **Your server** runs the API and ClamAV with `docker-compose.production.yml`.
 - **Cloudflare Tunnel** runs beside the API and publishes `https://api.rezzie.org` to `http://api:8000` inside the Compose network. The server does not need an inbound port opened for the API.
-- **Managed PostgreSQL** stores billing accounts, credit grants, and Career Records. Do not use Firestore: Firebase is used solely for authentication.
+- **Persistent SQLite** stores billing accounts, credit grants, Career Records, saved resumes, and drafts while Rezzie runs as one API instance. Firebase is used solely for authentication. Follow [SQLite operations](sqlite-operations.md) for backups and restore rehearsals; move to Supabase/Postgres when concurrency or managed recovery warrants it.
 
 ## 1. Make the public repository
 
@@ -44,7 +44,7 @@ After the first successful build, add `rezzie.org` (and optionally `www.rezzie.o
 
 1. Install Docker Engine and Docker Compose on the server.
 2. Clone the repository there and create `apps/api/.env` from `apps/api/.env.production.example` using server-only secrets.
-3. Provision Postgres and set its private connection string as `DATABASE_URL`. Do not use SQLite in production.
+3. Keep the provided persistent SQLite volume and complete the [backup/restore steps](sqlite-operations.md) before enabling live billing. Supabase/Postgres is a future migration, not a current requirement.
 4. In Cloudflare Zero Trust, create a **managed tunnel**, install/copy its token, and add it as `CLOUDFLARE_TUNNEL_TOKEN` in the server `.env`.
 5. Configure the tunnel public hostname: `api.rezzie.org` → `http://api:8000`.
 6. Start the services with `docker compose -f docker-compose.production.yml up -d --build`.

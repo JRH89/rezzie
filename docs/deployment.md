@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Managed PostgreSQL reachable only from the API host. Set `DATABASE_URL` to the `postgresql+psycopg://` connection string.
+- A persistent SQLite Docker volume for the current single-API deployment, with tested backups/restores as described in [SQLite operations](sqlite-operations.md). A managed Postgres URL is a future scaling migration, not a launch prerequisite.
 - A public web origin and an API hostname, both behind Cloudflare. Put only the API origin behind Cloudflare Tunnel or a reverse proxy; the provided production Compose binding is loopback-only.
 - OIDC provider configuration that issues JWT access tokens for the web app/API.
 - Anthropic, Stripe, and Stripe webhook secrets stored only in the hosting secret manager.
@@ -21,7 +21,7 @@ Use `apps/api/.env.production.example` as the template: production web traffic i
 
 ## Operations
 
-- Back up Postgres, test restore, and alert on API 5xx/latency and Stripe webhook delivery failures.
+- Back up the SQLite volume, test restore, and alert on API 5xx/latency and Stripe webhook delivery failures. See [SQLite operations](sqlite-operations.md).
 - Rotate Anthropic/Stripe/OIDC secrets using the host secret manager. Rotate the Stripe webhook signing secret with overlap rather than downtime.
 - Keep ClamAV signatures current and fail closed if the scanner is unhealthy. Review document/upload and model usage costs regularly.
 

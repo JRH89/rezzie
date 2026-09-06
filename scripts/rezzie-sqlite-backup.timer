@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Rezzie SQLite backup every day
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=20m
+Unit=rezzie-sqlite-backup.service
+
+[Install]
+WantedBy=timers.target

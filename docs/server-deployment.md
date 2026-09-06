@@ -8,7 +8,7 @@ Do these steps **on the server**, not the development PC. Do not paste any secre
 
 You need these accounts and values before starting:
 
-- A managed Postgres database and its SSL connection string.
+- The persistent SQLite volume declared in `docker-compose.production.yml`, plus a tested backup/restore process. See [`sqlite-operations.md`](sqlite-operations.md).
 - Firebase project ID (not an Admin SDK/service-account key).
 - Anthropic server API key for managed-credit users.
 - Stripe test-mode secret key, webhook signing secret, and the two Price IDs.
@@ -55,8 +55,8 @@ OIDC_ISSUER=https://securetoken.google.com/YOUR_FIREBASE_PROJECT_ID
 OIDC_AUDIENCE=YOUR_FIREBASE_PROJECT_ID
 OIDC_JWKS_URL=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
 
-# Managed Postgres. Use the provider's SSL/pooler connection string when supplied.
-DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
+# Current one-instance deployment. Keep this database in Docker's named volume.
+DATABASE_URL=sqlite:////data/rezzie.db
 
 # Managed Rezzie usage only. BYOK users do not consume this key.
 ANTHROPIC_API_KEY=sk-ant-REPLACE_ME
@@ -78,9 +78,9 @@ CLOUDFLARE_TUNNEL_TOKEN=REPLACE_ME
 
 Never put `VITE_*` values, Firebase Admin credentials, or a Cloudflare API token in this file. The frontend's public `VITE_*` values belong in the Cloudflare Worker build configuration.
 
-## 3. Provision Postgres
+## 3. Confirm persistent SQLite operations
 
-Create one dedicated database user and one dedicated database. Give that user access only to Rezzie's database. Copy the provider's Postgres connection string into `DATABASE_URL`; do not use SQLite in production.
+The current single-instance deployment uses the named SQLite Docker volume. Keep `DATABASE_URL=sqlite:////data/rezzie.db` and complete the backup/restore rehearsal in [`sqlite-operations.md`](sqlite-operations.md) before enabling live billing. Do not copy the database or backups into the repository. Use Supabase/Postgres later when Rezzie needs multiple API instances, sustained concurrent writes, or managed point-in-time recovery.
 
 The API container runs `alembic upgrade head` before Uvicorn starts, so the initial database tables and later migrations are applied automatically. A failed migration prevents the API from starting, which is intentional.
 

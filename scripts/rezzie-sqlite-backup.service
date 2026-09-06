@@ -1,0 +1,9 @@
+[Unit]
+Description=Create a consistent encrypted-at-rest-ready SQLite backup for Rezzie
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/rezzie
+ExecStart=/opt/rezzie/scripts/backup-rezzie-sqlite.sh

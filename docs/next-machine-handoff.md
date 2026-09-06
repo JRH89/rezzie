@@ -18,10 +18,10 @@ React + TypeScript (apps/web) ── Cloudflare Workers static assets ── htt
 FastAPI + ClamAV (apps/api) ── Cloudflare Tunnel ── https://api.rezzie.org
                                                      │
                                                      ▼
-                                               Managed Postgres
+                                    Persistent SQLite Docker volume
 
 Firebase Authentication ── Firebase ID token ── FastAPI JWT verification
-Stripe Checkout/Webhooks ── FastAPI credit ledger in Postgres
+Stripe Checkout/Webhooks ── FastAPI credit ledger in SQLite
 Anthropic Claude Haiku 4.5 ── server master key or transient user BYOK
 ```
 
@@ -36,17 +36,17 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Resume/job import accepts text, Markdown, PDF, and DOCX. DOCX/PDF extraction preserves useful text structure; production upload scanning fails closed unless ClamAV is configured.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
 - Firebase web auth supports Google popup sign-in, email/password signup/sign-in, password reset, session restore, and sign-out.
-- Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; no live Stripe resources are configured.
+- Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks before this handoff: 35 API tests, 4 web tests, Ruff, ESLint, and web production build.
+- Latest verified checks: 45 API tests, 8 web interaction tests, 2 extension tests, Ruff, ESLint, and web/extension production builds passed on 2026-09-06.
 
 ### Not done / external dependencies
 
-- No production deployment exists yet.
-- No managed Postgres database, Cloudflare Tunnel, Worker project, Stripe Products/Prices/webhook, or Firebase production-domain configuration is confirmed.
-- No hosted end-to-end test has occurred.
-- Chrome extension is planned only: `docs/chrome-extension-roadmap.md`.
+- The API, ClamAV, and dedicated Cloudflare Tunnel are running; `/health` and `/ready` were publicly checked on 2026-09-06.
+- The current production shape is one API container using the persistent `rezzie_rezzie_api_data` SQLite Docker volume. Follow `docs/sqlite-operations.md`; Supabase/Postgres is a future scale migration, not a launch prerequisite.
+- Hosted Firebase, Stripe, and browser-extension flows need a deliberate end-to-end smoke test after each external configuration change.
+- The Chrome extension shell is implemented locally; its Firebase extension-ID allow-list and Chrome Web Store submission remain external.
 
 ## Local development on a new machine
 
@@ -119,9 +119,9 @@ Use `apps/api/.env.production.example` as a values checklist, but create the rea
 
 For the complete copy/paste server runbook, follow [`server-deployment.md`](server-deployment.md). The sections below are its deployment-order summary.
 
-### A. Provision Postgres
+### A. Confirm persistent SQLite operations
 
-Use managed Postgres (recommended) rather than Firestore. This application needs relational transactions for entitlements/credits. Store the SSL connection string as `DATABASE_URL`; use a pooler/serverless-safe connection option if the provider offers one.
+The current one-instance deployment uses the named Docker volume `rezzie_rezzie_api_data`. Before live billing, run the backup and restore rehearsal in [`sqlite-operations.md`](sqlite-operations.md). Do not bind-mount the database into a Git checkout or synchronize backups to a public/cloud-synced folder. Plan a Supabase/Postgres migration only when Rezzie needs multiple API instances, sustained concurrent writes, managed point-in-time recovery, or a larger operations team.
 
 ### B. Prepare the Arch/Omarchy server
 

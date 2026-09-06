@@ -10,7 +10,7 @@
 ## Required before public launch
 
 - Connect a real identity provider and replace `DevelopmentIdentity`.
-- Provision managed Postgres, configure `DATABASE_URL`, run the included Alembic migration, and add encrypted persisted resume/job/run repositories with retention/deletion.
+- Run and record the persistent SQLite backup/restore rehearsal before enabling live billing. Plan the Supabase/Postgres migration when multiple API instances, sustained concurrent writes, or managed point-in-time recovery are needed.
 - Configure the included production-fail-closed ClamAV scanner and validate PDF/DOCX extraction in the deployed environment.
 - Complete rate limits, abuse monitoring, consent/legal copy, error tracking, accessibility review, and threat model.
-- Configure Cloudflare origin restrictions, secrets, managed database/backups, CI/CD, and production smoke tests.
+- Configure Cloudflare origin restrictions, secrets, SQLite backup/off-host encryption, CI/CD, and production smoke tests.

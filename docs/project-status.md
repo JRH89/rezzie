@@ -12,9 +12,9 @@
 | Signed-in billing flow | done | Account route exposes credit balance, credit-pack checkout, monthly upgrade, and Stripe portal entry point |
 | Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |
 | Authentication navigation | done | Distinct sign-in/sign-up entry points; successful auth enters workspace and sign-out returns to landing |
-| Durable billing persistence | done | Postgres-ready SQLAlchemy ledger + Alembic migration; managed DB provisioning required |
+| Durable billing persistence | done | SQLAlchemy ledger + Alembic migration on the persistent SQLite Docker volume; Supabase/Postgres is the documented future scale path |
 | PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
-| Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. The API currently uses a persistent local SQLite Docker volume; managed Postgres remains required before higher-concurrency billing use. |
+| Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. The API uses a persistent local SQLite Docker volume; backup/restore rehearsal is documented in `docs/sqlite-operations.md`. |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | in progress | Manifest V3 side panel builds locally with active-tab JD extraction, Firebase email/password and Google relay scaffolding, saved-resume selection, shared-credit tailoring, and explicit TXT download; Firebase extension-ID allow-list and Store testing remain external |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
@@ -23,6 +23,6 @@
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side |
-| Private source-file objects and artifact storage | planned | Add private object storage after managed Postgres migration |
+| Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
 | Resume document fidelity | done | Structured PDF/DOCX extraction, formatted review preview, and transient editable DOCX export |

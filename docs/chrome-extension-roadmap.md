@@ -10,7 +10,7 @@ This is deliberately the last product surface to build. Rezzie first needs a dur
 
 ### Identity, credits, and BYOK
 
-- The web app and extension authenticate as the same Firebase user. Both send that Firebase ID token to the existing Rezzie API, so the API's existing Postgres billing ledger remains the only authority for purchased credits and subscription credits.
+- The web app and extension authenticate as the same Firebase user. Both send that Firebase ID token to the existing Rezzie API, so the API's existing billing ledger remains the only authority for purchased credits and subscription credits.
 - Credit packs and subscriptions are account entitlements, not device entitlements. A credit bought on the web is immediately usable in the extension and vice versa.
 - Do **not** persist a user-supplied Anthropic key. Rezzie's product and security rules define BYOK as request-scoped: keys are never stored, returned, or exposed to another client. Persisting an API key would require an encrypted key-vault design, key rotation/deletion controls, incident response, and a material change to that policy.
 - A signed-in user with available credits or an active subscription can tailor from either client using the server-managed model key. A BYOK-only user enters their key for the current web or extension session when they choose to use BYOK.
@@ -28,8 +28,8 @@ Resume files and generated drafts are sensitive personal data. Storage must be u
 
 ## Prerequisite architecture (before extension work)
 
-1. **Move production billing/data to managed Postgres.** The current local SQLite Docker volume is not a sufficient foundation for multi-client documents, access controls, or concurrent credit use. Complete migration, backup, restore, and restricted database-access checks first.
-2. **Introduce private object storage.** Use an S3-compatible private bucket (for example Cloudflare R2) only for original uploads and rendered artifacts that need fidelity. Keep objects private; issue short-lived server-generated downloads after ownership checks. Text metadata and authorization remain in Postgres.
+1. **Make current SQLite operations reliable.** The extension calls the existing single API, so it does not require a separate database or a Postgres migration. Complete the SQLite backup/restore rehearsal and restricted host-access checks first. Move to Supabase/Postgres when Rezzie needs multiple API instances, sustained concurrent writes, or managed point-in-time recovery.
+2. **Introduce private object storage.** Use an S3-compatible private bucket (for example Cloudflare R2) only for original uploads and rendered artifacts that need fidelity. Keep objects private; issue short-lived server-generated downloads after ownership checks. Text metadata and authorization remain in SQLite until the future database migration.
 3. **Create a resume-library domain service.** Add `Resume`, `ResumeVersion`, and `SavedTailoringRun` models/repositories behind interfaces, with user ownership checks, size/type limits, quota enforcement, and deletion orchestration. Do not add this logic directly to route handlers.
 4. **Version the shared API contract.** Define explicit OpenAPI schemas for library, job snapshot, tailoring run, and artifact endpoints, then generate or validate TypeScript client types for both `apps/web` and the future extension. The clients must not duplicate request shapes.
 5. **Upgrade the web workspace first.** The current React app becomes the reference implementation for saving/selecting/deleting resumes and drafts. It validates all privacy, quota, export, and billing behavior before Chrome-specific work begins.
@@ -85,7 +85,7 @@ The generic fallback ranks semantic containers (`main`, `article`, `[data-automa
 
 ### 0. Data and production foundation
 
-Complete managed Postgres migration, private object-storage setup, backup/restore rehearsal, and an explicit retention/deletion policy. Add data-classification rules for originals, extracted text, saved drafts, artifacts, and logs. Exit only when production data is no longer dependent on the local SQLite Docker volume.
+Complete the SQLite backup/restore rehearsal, private object-storage decision, and an explicit retention/deletion policy. Add data-classification rules for originals, extracted text, saved drafts, artifacts, and logs. A future Supabase/Postgres migration is a scale milestone, not an extension prerequisite.
 
 ### 1. Shared resume library and web experience
 
