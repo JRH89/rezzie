@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .auth import verified_user_id
@@ -9,6 +9,7 @@ from .config import Settings
 from .documents import DocumentService, ResumeExportService, editor_html_to_text
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
+from .rate_limits import RateLimiter
 from .records import CareerRecord, CareerRecordRepository
 from .resume_library import (
     ResumeLibraryService,
@@ -34,9 +35,16 @@ from .schemas import (
     TailoringResult,
     TailorRequest,
     TextImportRequest,
+    TrustedSourceCreate,
+    TrustedSourceResponse,
     UrlImportRequest,
 )
 from .services import JobDescriptionImporter, TailoringService
+from .trusted_sources import (
+    ExternalSource,
+    TrustedSourceRepository,
+    TrustedSourceService,
+)
 
 settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
@@ -45,6 +53,9 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 career_records = CareerRecordRepository(billing_repository.sessions)
+trusted_sources = TrustedSourceRepository(billing_repository.sessions)
+trusted_source_service = TrustedSourceService(trusted_sources, billing_repository)
+rate_limiter = RateLimiter(billing_repository.sessions, settings.rate_limit_salt)
 resume_library = ResumeLibraryService(billing_repository.sessions, billing_repository)
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(settings.anthropic_model), settings, billing_repository)
@@ -100,6 +111,22 @@ def saved_draft_response(draft: SavedTailoringDraft) -> SavedTailoringDraftRespo
         resume_html=draft.resume_html,
         created_at=draft.created_at,
     )
+
+
+def trusted_source_response(source: ExternalSource) -> TrustedSourceResponse:
+    return TrustedSourceResponse(id=source.id, label=source.label, url=source.url, source_type=source.source_type, fetched_at=source.fetched_at)
+
+
+@app.middleware("http")
+async def limit_public_requests(request: Request, call_next: object) -> Response:
+    if request.url.path in {"/health", "/ready", "/api/v1/billing/webhook"}:
+        return await call_next(request)  # type: ignore[operator]
+    if request.url.path.startswith("/api/"):
+        try:
+            rate_limiter.enforce("api-ip", request.client.host if request.client else "unknown", limit=120, seconds=60)
+        except HTTPException as error:
+            return JSONResponse(status_code=error.status_code, content={"detail": error.detail}, headers=error.headers)
+    return await call_next(request)  # type: ignore[operator]
 
 @app.get("/health")
 async def health() -> dict[str, str]: return {"status": "ok"}
@@ -159,6 +186,27 @@ def add_resume_version(resume_id: str, request: ResumeVersionCreate, authorizati
 @app.delete("/api/v1/resumes/{resume_id}", status_code=204)
 def delete_saved_resume(resume_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     resume_library.delete(require_user(authorization, x_rezzie_user_id), resume_id)
+    return Response(status_code=204)
+
+
+@app.post("/api/v1/trusted-sources", response_model=TrustedSourceResponse, status_code=201)
+async def add_trusted_source(request: TrustedSourceCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> TrustedSourceResponse:
+    user_id = require_user(authorization, x_rezzie_user_id)
+    rate_limiter.enforce("trusted-source-user", user_id, limit=5, seconds=3_600)
+    if not request.ownership_attested:
+        raise HTTPException(status_code=422, detail="Confirm that you own or are authorized to use this public source.")
+    source = await trusted_source_service.add(user_id, url=str(request.url), label=request.label.strip())
+    return trusted_source_response(source)
+
+
+@app.get("/api/v1/trusted-sources", response_model=list[TrustedSourceResponse])
+def list_trusted_sources(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> list[TrustedSourceResponse]:
+    return [trusted_source_response(source) for source in trusted_sources.list(require_user(authorization, x_rezzie_user_id))]
+
+
+@app.delete("/api/v1/trusted-sources/{source_id}", status_code=204)
+def delete_trusted_source(source_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
+    trusted_sources.delete(require_user(authorization, x_rezzie_user_id), source_id)
     return Response(status_code=204)
 
 
@@ -244,7 +292,18 @@ def add_career_fact(record_id: str, request: CareerFactCreate, authorization: st
 @app.post("/api/v1/tailor", response_model=TailoringResult)
 async def tailor(request: TailorRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> TailoringResult:
     user_id = verified_user_id(settings, authorization, x_rezzie_user_id)
-    try: return await tailoring_service.tailor(request, user_id)
+    if request.external_source_ids:
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication is required for Trusted Sources.")
+        rate_limiter.enforce("source-backed-tailoring-user", user_id, limit=12, seconds=900)
+        sources = trusted_sources.selected(user_id, request.external_source_ids)
+        if not billing_repository.has_active_subscription(user_id):
+            raise HTTPException(status_code=403, detail="Trusted Sources are available with an active Rezzie subscription.")
+    else:
+        if user_id:
+            rate_limiter.enforce("tailoring-user", user_id, limit=12, seconds=900)
+        sources = []
+    try: return await tailoring_service.tailor(request, user_id, sources)
     except ValueError as error: raise HTTPException(status_code=502, detail=str(error)) from error
 
 

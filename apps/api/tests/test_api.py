@@ -78,6 +78,25 @@ def test_billing_balance_uses_local_development_identity() -> None:
     assert response.json()["purchased_credits"] == 0
 
 
+def test_trusted_source_requires_ownership_attestation() -> None:
+    response = client.post(
+        "/api/v1/trusted-sources",
+        headers=LOCAL_IDENTITY,
+        json={"label": "Portfolio", "url": "https://example.com", "ownership_attested": False},
+    )
+    assert response.status_code == 422
+    assert "Confirm that you own" in response.json()["detail"]
+
+
+def test_trusted_source_requires_subscription_before_fetching() -> None:
+    response = client.post(
+        "/api/v1/trusted-sources",
+        headers=LOCAL_IDENTITY,
+        json={"label": "Portfolio", "url": "https://example.com", "ownership_attested": True},
+    )
+    assert response.status_code == 403
+
+
 def test_subscription_route_requires_server_model_key() -> None:
     response = client.post("/api/v1/tailor", json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "subscription"})
     assert response.status_code == 503

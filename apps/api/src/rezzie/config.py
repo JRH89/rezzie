@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     oidc_jwks_url: str | None = None
     clamav_host: str | None = None
     clamav_port: int = 3310
+    rate_limit_salt: str = "development-rate-limit-salt"
 
     @property
     def cors_origins(self) -> list[str]:

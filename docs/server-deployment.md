@@ -71,6 +71,7 @@ STRIPE_CREDIT_PACKS={"price_CREDITS_500":20}
 # Keep these exact values for the internal ClamAV container.
 CLAMAV_HOST=clamav
 CLAMAV_PORT=3310
+RATE_LIMIT_SALT=replace-with-a-long-random-secret
 
 # Added after creating the Cloudflare managed tunnel in step 4.
 CLOUDFLARE_TUNNEL_TOKEN=REPLACE_ME

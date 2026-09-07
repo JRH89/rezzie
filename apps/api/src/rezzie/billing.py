@@ -105,6 +105,23 @@ class BillingRepository:
                 account.purchased_credits -= 1; return "purchased"
         raise HTTPException(status_code=402, detail="No tailoring credits available. Purchase credits or subscribe.")
 
+    def consume_credits(self, user_id: str, credits: int) -> list[Literal["subscription", "purchased"]]:
+        if credits < 1:
+            raise ValueError("credits must be positive")
+        consumed: list[Literal["subscription", "purchased"]] = []
+        try:
+            for _ in range(credits):
+                consumed.append(self.consume_credit(user_id))
+        except Exception:
+            for source in consumed:
+                self.refund_credit(user_id, source)
+            raise
+        return consumed
+
+    def has_active_subscription(self, user_id: str) -> bool:
+        account = self.account(user_id)
+        return account.subscription_status in {"active", "trialing"}
+
     def refund_credit(self, user_id: str, source: str) -> None:
         with self._sessions.begin() as session:
             account = session.get(BillingAccount, user_id)

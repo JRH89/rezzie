@@ -78,6 +78,7 @@ class TailorRequest(BaseModel):
     job_description: str = Field(min_length=50, max_length=100_000)
     credential_mode: CredentialMode
     api_key: str | None = Field(default=None, min_length=10, max_length=500)
+    external_source_ids: list[str] = Field(default_factory=list, max_length=3)
 
     @field_validator("api_key")
     @classmethod
@@ -90,6 +91,27 @@ class TailoringResult(BaseModel):
     matched_keywords: list[str] = Field(max_length=30)
     review_items: list[str] = Field(max_length=20)
     truth_statement: str
+    changes: list["TailoringChange"] = Field(default_factory=list, max_length=40)
+
+
+class TailoringChange(BaseModel):
+    text: str = Field(min_length=2, max_length=10_000)
+    kind: str = Field(pattern="^(source_backed|tailored)$")
+    source_url: str | None = Field(default=None, max_length=2_000)
+
+
+class TrustedSourceCreate(BaseModel):
+    url: HttpUrl
+    label: str = Field(min_length=1, max_length=160)
+    ownership_attested: bool
+
+
+class TrustedSourceResponse(BaseModel):
+    id: str
+    label: str
+    url: str
+    source_type: str
+    fetched_at: datetime
 
 
 class ResumeExportRequest(BaseModel):

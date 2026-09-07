@@ -26,11 +26,11 @@ class AnthropicProvider:
     def __init__(self, model: str = "claude-haiku-4-5") -> None:
         self._model = model
 
-    async def tailor(self, *, api_key: str, resume_text: str, job_description: str) -> TailoringResult:
+    async def tailor(self, *, api_key: str, resume_text: str, job_description: str, evidence_text: str = "") -> TailoringResult:
         return await self._generate(
             api_key=api_key,
             system=RESUME_TAILORING_MASTER_PROMPT,
-            user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nJOB_DESCRIPTION:\n{job_description}",
+            user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nCANDIDATE-ATTESTED_EXTERNAL_EVIDENCE:\n{evidence_text or 'None supplied.'}\n\nJOB_DESCRIPTION:\n{job_description}",
         )
 
     async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult:

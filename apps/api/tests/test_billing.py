@@ -26,6 +26,13 @@ def test_credit_is_consumed_and_refundable(tmp_path: object) -> None:
     assert repository.consume_credit("user-1") == "purchased"
 
 
+def test_source_backed_credit_charge_consumes_two_credits(tmp_path: object) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    repository.grant_purchase_once("user-1", "checkout-1", 2)
+    assert repository.consume_credits("user-1", 2) == ["purchased", "purchased"]
+    assert repository.balance("user-1") == ("none", 0, 0)
+
+
 def test_balance_keeps_credit_types_separate(tmp_path: object) -> None:
     repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
     repository.grant_purchase_once("user-1", "checkout-1", 3)
