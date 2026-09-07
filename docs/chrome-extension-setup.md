@@ -23,7 +23,7 @@ VITE_FIREBASE_APP_ID=...
 
 Then build and load `apps/extension/dist` from Chrome's `chrome://extensions` page using **Developer mode** and **Load unpacked**. Copy the generated extension ID; it changes if the extension is not built with a stable signing key, so do not configure production auth from a temporary development ID.
 
-The extension asks Chrome for page access on Indeed, LinkedIn, Greenhouse, Lever, Ashby, and Workday so it can read the active job description only when the user requests it. Accept Chrome's updated permission prompt after reloading an unpacked build. It does not receive broad access to unrelated sites.
+The extension asks Chrome for page access only on supported job boards and applicant-tracking systems: Indeed, LinkedIn, Greenhouse, Lever, Ashby, Workday, Built In, Jack and Jill Jobs, Dice, ZipRecruiter, Monster, CareerBuilder, SimplyHired, Wellfound, FlexJobs, Idealist, Jobcase, Snagajob, USAJOBS, GovernmentJobs, SmartRecruiters, iCIMS, Jobvite, BambooHR, Paylocity, Paycom, UKG, SuccessFactors, Taleo, Dayforce, Recruitee, Teamtailor, Personio, and Rippling. It reads a listing only after the user selects **Read this job page**. Accept Chrome's updated permission prompt after reloading an unpacked build; it does not receive broad access to unrelated sites.
 
 ## Enable production Google sign-in
 
