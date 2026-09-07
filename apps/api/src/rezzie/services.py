@@ -3,11 +3,53 @@ from fastapi import HTTPException
 
 from .billing import BillingRepository
 from .config import Settings
+from .documents import is_section_heading
 from .grounding import assert_grounded, remove_unsupported_quantitative_lines
 from .providers.base import LLMProvider
 from .schemas import ImportResponse, TailoringChange, TailoringResult, TailorRequest
 from .security import assert_safe_public_url, require_generation_key
 from .trusted_sources import ExternalSource
+
+SUMMARY_HEADINGS = {"SUMMARY", "PROFESSIONAL SUMMARY", "CAREER SUMMARY", "PROFILE", "PROFESSIONAL PROFILE", "CAREER PROFILE", "OBJECTIVE"}
+
+
+def _heading_name(line: str) -> str:
+    return " ".join(line.replace(":", "").split()).upper()
+
+
+def _summary_bounds(lines: list[str]) -> tuple[int, int] | None:
+    for index, line in enumerate(lines):
+        if _heading_name(line) not in SUMMARY_HEADINGS:
+            continue
+        end = index + 1
+        while end < len(lines) and not is_section_heading(lines[end]):
+            end += 1
+        return index, end
+    return None
+
+
+def preserve_source_summary(source_resume: str, tailored_resume: str) -> str:
+    """Prevent an empty model-produced summary from discarding source content."""
+    source_lines = source_resume.splitlines()
+    source_bounds = _summary_bounds(source_lines)
+    if not source_bounds:
+        return tailored_resume
+    source_summary = "\n".join(source_lines[source_bounds[0] + 1:source_bounds[1]]).strip()
+    if not source_summary:
+        return tailored_resume
+
+    tailored_lines = tailored_resume.splitlines()
+    tailored_bounds = _summary_bounds(tailored_lines)
+    if tailored_bounds:
+        existing_summary = "\n".join(tailored_lines[tailored_bounds[0] + 1:tailored_bounds[1]]).strip()
+        if existing_summary:
+            return tailored_resume
+        replacement = [*tailored_lines[:tailored_bounds[0] + 1], source_summary, *tailored_lines[tailored_bounds[1]:]]
+        return "\n".join(replacement).strip()
+
+    insertion_index = next((index for index, line in enumerate(tailored_lines) if is_section_heading(line)), len(tailored_lines))
+    replacement = [*tailored_lines[:insertion_index], "SUMMARY", source_summary, "", *tailored_lines[insertion_index:]]
+    return "\n".join(replacement).strip()
 
 
 class JobDescriptionImporter:
@@ -70,12 +112,14 @@ class TailoringService:
             if evidence_text:
                 provider_args["evidence_text"] = evidence_text
             result = await self._provider.tailor(**provider_args)
+            result = result.model_copy(update={"tailored_resume": preserve_source_summary(request.resume_text, result.tailored_resume)})
             try:
                 assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
             except HTTPException as error:
                 if error.status_code != 422:
                     raise
                 result = await self._provider.repair(api_key=api_key, resume_text=request.resume_text, job_description=request.job_description, rejected_draft=result.tailored_resume)
+                result = result.model_copy(update={"tailored_resume": preserve_source_summary(request.resume_text, result.tailored_resume)})
                 try:
                     assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
                 except HTTPException as repair_error:

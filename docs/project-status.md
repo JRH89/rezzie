@@ -3,10 +3,10 @@
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
-| Truth-preserving generation policy | done | Prompt, structured output, numeric-claim safety guard, and server-date-based tenure handling; job-description terminology is allowed |
-| Latest local verification | done | 54 API tests and Ruff passed 2026-09-06 using test-safe host/origin settings; 11 web interaction tests, 7 extension tests, ESLint, and web/extension production builds previously passed 2026-09-06 |
-| Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
-| API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 54 passed 2026-09-06 |
+| Truth-preserving generation policy | done | Prompt, structured output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
+| Latest local verification | done | 56 API tests and Ruff passed 2026-09-06 using test-safe host/origin settings; 11 web interaction tests, 7 extension tests, ESLint, and web/extension production builds previously passed 2026-09-06 |
+| Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
+| API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 56 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
 | Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
 | Signed-in billing flow | done | Account route exposes credit balance, credit-pack checkout, monthly upgrade, and Stripe portal entry point |

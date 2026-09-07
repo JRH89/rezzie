@@ -5,7 +5,11 @@ from fastapi import HTTPException
 from rezzie.billing import BillingRepository
 from rezzie.config import Settings
 from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest
-from rezzie.services import JobDescriptionImporter, TailoringService
+from rezzie.services import (
+    JobDescriptionImporter,
+    TailoringService,
+    preserve_source_summary,
+)
 
 
 class RepairingProvider:
@@ -48,6 +52,22 @@ async def test_truth_guard_returns_sanitized_draft_after_a_failed_repair(tmp_pat
 
     assert "40%" not in result.tailored_resume
     assert any(item.startswith("VERIFY:") for item in result.review_items)
+
+
+def test_preserves_a_source_summary_when_the_generated_section_is_empty() -> None:
+    source = "Taylor Example\n\nPROFESSIONAL SUMMARY\nGrounded product leader with platform delivery experience.\n\nEXPERIENCE\nAcme Corp | Product Manager"
+    generated = "Taylor Example\n\nPROFESSIONAL SUMMARY\n\nEXPERIENCE\nAcme Corp | Product Manager"
+
+    result = preserve_source_summary(source, generated)
+
+    assert "Grounded product leader with platform delivery experience." in result
+
+
+def test_does_not_overwrite_a_nonempty_generated_summary() -> None:
+    source = "SUMMARY\nOriginal source summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
+    generated = "SUMMARY\nTailored, grounded summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
+
+    assert preserve_source_summary(source, generated) == generated
 
 
 @pytest.mark.asyncio
