@@ -17,7 +17,7 @@ async function extractCurrentJob(): Promise<JobSnapshot> {
     return result;
   } catch (reason) {
     const detail = reason instanceof Error ? reason.message : "Chrome did not allow access.";
-    throw new Error(`Rezzie could not read this tab. Reload the extension once, then retry. Chrome said: ${detail}`);
+    throw new Error(`Rezzie could not read this tab. Reload the extension once, then retry. Chrome said: ${detail}`, { cause: reason });
   }
 }
 
