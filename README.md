@@ -1,4 +1,4 @@
-# Rezzie
+# Rezzie 0.1.0
 
 **Rezzie is a truth-preserving AI resume tailoring platform.** A candidate supplies a resume and a target job description; Rezzie produces an editable, job-focused draft that improves relevance without inventing experience, metrics, qualifications, employers, or credentials.
 
