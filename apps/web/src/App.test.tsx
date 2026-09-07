@@ -59,6 +59,14 @@ describe("guided tailoring workspace", () => {
     expect(window.location.hash).toBe("#account");
   });
 
+  it("opens the credit-pack selector before creating a checkout session", async () => {
+    vi.stubEnv("VITE_CREDIT_PACK_PRICE_ID", "price_credit_pack");
+    window.location.hash = "#account?purchase=credits";
+    render(<App />);
+    expect(await screen.findByLabelText("Packs to buy")).toBeTruthy();
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.some(([input]) => String(input).includes("/billing/checkout"))).toBe(false);
+  });
+
   it("opens the appropriate auth action and exits the workspace after sign-out", async () => {
     const signIn = vi.fn();
     const signUp = vi.fn();

@@ -119,7 +119,7 @@ def trusted_source_response(source: ExternalSource) -> TrustedSourceResponse:
 
 @app.middleware("http")
 async def limit_public_requests(request: Request, call_next: object) -> Response:
-    if request.url.path in {"/health", "/ready", "/api/v1/billing/webhook"}:
+    if request.method == "OPTIONS" or request.url.path in {"/health", "/ready", "/api/v1/billing/webhook"}:
         return await call_next(request)  # type: ignore[operator]
     if request.url.path.startswith("/api/"):
         try:

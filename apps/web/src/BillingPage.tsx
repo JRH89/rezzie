@@ -11,7 +11,7 @@ export function BillingPage({ accessToken, onBack, purchaseIntent }: { accessTok
   async function checkout(kind: "credits" | "subscription", priceId: string, quantity = 1) { setBusy(true); setError(undefined); try { window.location.assign((await api.checkout(kind, priceId, quantity)).url); } catch (reason) { setError(checkoutError(reason, "We could not start checkout. Please try again.")); setBusy(false); } }
   async function manage() { setBusy(true); try { window.location.assign((await api.portal()).url); } catch (reason) { setError(checkoutError(reason, "We could not open billing management.")); setBusy(false); } }
   const handledPurchaseIntent = useRef(false);
-  useEffect(() => { if (!purchaseIntent || handledPurchaseIntent.current) return; const priceId = purchaseIntent === "credits" ? creditPrice : subscriptionPrice; if (!priceId) { setError("Checkout is not configured yet. Please try again shortly."); return; } handledPurchaseIntent.current = true; void checkout(purchaseIntent, priceId); }, [creditPrice, purchaseIntent, subscriptionPrice]);
+  useEffect(() => { if (purchaseIntent !== "subscription" || handledPurchaseIntent.current) return; if (!subscriptionPrice) { setError("Checkout is not configured yet. Please try again shortly."); return; } handledPurchaseIntent.current = true; void checkout("subscription", subscriptionPrice); }, [purchaseIntent, subscriptionPrice]);
   const credits = balance ? balance.subscription_remaining + balance.purchased_credits : 0;
   const creditsPerPack = Number(import.meta.env.VITE_CREDIT_PACK_CREDITS ?? "20");
   const totalCredits = creditsPerPack * creditPackQuantity;
