@@ -13,8 +13,8 @@ flock -n 9 || {
 
 cd "$repo_dir"
 
-echo "Updating Rezzie from origin/main..."
-git pull --ff-only origin main
+echo "Updating Rezzie from gitea/main..."
+git pull --ff-only gitea main
 
 echo "Building the Rezzie API image..."
 docker compose -f "$compose_file" build api
@@ -23,7 +23,7 @@ echo "Recreating only the Rezzie API service..."
 docker compose -f "$compose_file" up -d --no-deps --force-recreate api
 
 echo "Waiting for the Rezzie API health check..."
-for attempt in {1..15}; do
+for attempt in {1..30}; do
   if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8000/health >/dev/null; then
     echo "Rezzie API deployment complete."
     exit 0
@@ -32,4 +32,14 @@ for attempt in {1..15}; do
 done
 
 echo "Rezzie API did not become healthy after deployment."
+echo "API container status:"
+docker compose -f "$compose_file" ps api
+
+container_id="$(docker compose -f "$compose_file" ps -q api)"
+if [[ -n "$container_id" ]]; then
+  docker inspect --format 'status={{.State.Status}} restarting={{.State.Restarting}} exit_code={{.State.ExitCode}} error={{.State.Error}}' "$container_id"
+fi
+
+echo "Recent Rezzie API logs:"
+docker compose -f "$compose_file" logs --tail=120 api
 exit 1
