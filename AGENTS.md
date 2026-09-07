@@ -22,3 +22,8 @@ Before starting deployment or continuing work on another machine, read `docs/nex
 - Add unit tests for deterministic business rules and API integration tests for every externally visible route/negative path. Add browser tests for major user flows once the UI is stable.
 - Run the relevant formatter, type checker, unit tests, and production build before claiming a change is verified. Report missing toolchain/dependency access as a blocker, never as a pass.
 - Maintain `docs/project-status.md` and `docs/developer-checklist.md` with evidence and outstanding external decisions.
+
+
+# Pushing to prod
+
+Always push to both remotes (gitea, origin)
