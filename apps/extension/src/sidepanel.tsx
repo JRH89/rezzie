@@ -183,7 +183,6 @@ function App() {
         <p>{isSignUp ? "Create a private account to save resumes and use Rezzie credits." : "Sign in to use your saved resumes and shared credits."}</p>
       </div>
       <button className="button secondary" disabled={busy} onClick={() => void google()} type="button">Continue with Google</button>
-      <p className="hint">Google sign-in requires the published extension ID to be allow-listed in Firebase.</p>
       <label>Email<input autoComplete="email" onChange={event => setEmail(event.target.value)} type="email" value={email} /></label>
       <label>Password<input autoComplete={isSignUp ? "new-password" : "current-password"} minLength={8} onChange={event => setPassword(event.target.value)} type="password" value={password} /></label>
       <button className="button" disabled={busy || !email.trim() || password.length < 8} onClick={() => void submitEmailAuthentication()} type="button">{busy ? "Working..." : isSignUp ? "Create account" : "Sign in"}</button>
