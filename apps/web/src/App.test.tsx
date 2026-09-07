@@ -44,6 +44,7 @@ describe("guided tailoring workspace", () => {
     expect(screen.getAllByRole("link", { name: "Features" })[0].getAttribute("href")).toBe("/features");
     expect(screen.getByRole("link", { name: "Resources" }).getAttribute("href")).toBe("/blog");
     expect(screen.getAllByRole("link", { name: "FAQ" })[0].getAttribute("href")).toBe("/faq");
+    expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe("/privacy");
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Blog" }).getAttribute("href")).toBe("/blog");
     expect(screen.getByRole("heading", { name: /bring your key/i })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
@@ -142,6 +143,13 @@ describe("guided tailoring workspace", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /keyword stuffing/i })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Footer navigation" })).toBeTruthy();
+  });
+
+  it("renders the privacy policy as a public route", () => {
+    window.history.pushState({}, "", "/privacy");
+    render(<App />);
+    expect(screen.getByRole("heading", { name: /your application materials are personal/i })).toBeTruthy();
+    expect(document.title).toBe("Privacy policy | Rezzie");
   });
 
   it("exposes a searchable category-based blog library", () => {

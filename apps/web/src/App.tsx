@@ -4,13 +4,13 @@ import { BillingPage } from "./BillingPage";
 import { MarketingPage } from "./MarketingPages";
 import { Workspace } from "./Workspace";
 
-type View = "landing" | "workspace" | "account" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "blog" | "blog-post";
+type View = "landing" | "workspace" | "account" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "privacy" | "blog" | "blog-post";
 type PurchaseIntent = "credits" | "subscription";
 
 function viewFromHash(): View {
   if (window.location.hash === "#workspace") return "workspace"; if (window.location.hash.startsWith("#account")) return "account";
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/blog": "blog" };
+  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/privacy": "privacy", "/blog": "blog" };
   return path.startsWith("/blog/") ? "blog-post" : (routes[path] ?? "landing");
 }
 
