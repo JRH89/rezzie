@@ -7,7 +7,16 @@
   "background": { "service_worker": "background.js", "type": "module" },
   "side_panel": { "default_path": "sidepanel.html" },
   "permissions": ["activeTab", "scripting", "sidePanel", "storage", "offscreen", "downloads"],
-  "host_permissions": ["https://rezzie.org/*", "https://api.rezzie.org/*"],
+  "host_permissions": [
+    "https://rezzie.org/*",
+    "https://api.rezzie.org/*",
+    "https://*.indeed.com/*",
+    "https://*.linkedin.com/*",
+    "https://*.greenhouse.io/*",
+    "https://*.lever.co/*",
+    "https://*.ashbyhq.com/*",
+    "https://*.myworkdayjobs.com/*"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://rezzie.org https://api.rezzie.org https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com; frame-src https://rezzie.org;"
   }

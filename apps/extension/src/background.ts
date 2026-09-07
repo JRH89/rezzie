@@ -1,4 +1,5 @@
 import type { ExtensionMessage, JobSnapshot } from "./messages";
+import { extractJobFromPage } from "./page-extractor";
 
 const OFFSCREEN_PATH = "offscreen.html";
 
@@ -11,13 +12,13 @@ async function extractCurrentJob(): Promise<JobSnapshot> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("Return to the job tab, then open Rezzie from the browser toolbar.");
   try {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
-  } catch {
-    throw new Error("Open Rezzie from its browser-toolbar icon while viewing the job page, then try again.");
+    const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractJobFromPage });
+    if (!result) throw new Error("No page content was returned.");
+    return result;
+  } catch (reason) {
+    const detail = reason instanceof Error ? reason.message : "Chrome did not allow access.";
+    throw new Error(`Rezzie could not read this tab. Reload the extension once, then retry. Chrome said: ${detail}`);
   }
-  const response = await chrome.tabs.sendMessage(tab.id, { type: "extract-job" } satisfies ExtensionMessage) as ExtensionMessage;
-  if (response.type !== "job-extracted") throw new Error("We could not read this page.");
-  return response.snapshot;
 }
 
 chrome.runtime.onInstalled.addListener(() => { void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }); });
