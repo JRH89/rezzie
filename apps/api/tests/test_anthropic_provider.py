@@ -32,6 +32,7 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
+    monkeypatch.setattr(AnthropicProvider, "_reference_date", staticmethod(lambda: "2026-09-06"))
     result = await AnthropicProvider("claude-haiku-4-5").tailor(
         api_key="test-api-key",
         resume_text="A" * 50,
@@ -41,6 +42,7 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
     assert captured["model"] == "claude-haiku-4-5"
     assert "temperature" not in captured
     assert captured["max_tokens"] == 8192
+    assert "The authoritative current date is 2026-09-06" in str(captured["system"])
     output_config = captured["output_config"]
     assert isinstance(output_config, dict)
     assert output_config["format"]["type"] == "json_schema"

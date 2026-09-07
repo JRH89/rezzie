@@ -31,7 +31,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 
 ### Implemented and locally verified
 
-- Claude provider defaults to `claude-haiku-4-5`; JSON parsing, structured-output fallback, request repair, and numeric-claim fallback are tested.
+- Claude provider defaults to `claude-haiku-4-5`; JSON parsing, structured-output fallback, request repair, numeric-claim fallback, and server-date-based tenure handling are tested.
 - Keyword tailoring is allowed. The prior named-claim hard failure was removed because it blocked legitimate JD wording.
 - Resume/job import accepts text, Markdown, PDF, and DOCX. DOCX/PDF extraction preserves useful text structure; production upload scanning fails closed unless ClamAV is configured.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
@@ -40,7 +40,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 52 API tests and Ruff passed with test-safe host/origin settings on 2026-09-06. Eleven web interaction tests, seven extension tests, ESLint, and web/extension production builds previously passed on 2026-09-06.
+- Latest verified checks: 54 API tests and Ruff passed with test-safe host/origin settings on 2026-09-06. Eleven web interaction tests, seven extension tests, ESLint, and web/extension production builds previously passed on 2026-09-06.
 
 ### Not done / external dependencies
 

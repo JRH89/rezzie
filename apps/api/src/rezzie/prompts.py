@@ -45,3 +45,12 @@ Return valid JSON only, with exactly these keys:
 - Keep each position's employer/title/date line together when it appears together in the source. Use `- ` only for genuine bullets.
 
 Before responding, silently verify every factual assertion in tailored_resume against ORIGINAL_RESUME. If evidence is missing, remove the assertion and add the appropriate review item instead."""
+
+
+def prompt_with_reference_date(reference_date: str) -> str:
+    """Supply a server-derived date instead of relying on model time knowledge."""
+    return f"""{RESUME_TAILORING_MASTER_PROMPT}
+
+# TIME REFERENCE
+The authoritative current date is {reference_date}. Do not use your training-data cutoff or an assumed current year.
+You may state a whole-number duration in years only when it is directly calculable from an explicit employment date range in ORIGINAL_RESUME. For a year-only range such as `2020–Present`, use the difference between the stated start year and this reference year. Do not calculate tenure from an isolated year, an ambiguous date, or external evidence."""
