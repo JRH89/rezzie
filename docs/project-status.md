@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, and numeric-claim safety guard; job-description terminology is allowed |
-| Latest local verification | done | 46 API tests, 11 web interaction tests, and 7 extension tests passed; Ruff, ESLint, and web/extension production builds passed 2026-09-06 |
+| Latest local verification | done | 51 API tests, 11 web interaction tests, and 7 extension tests passed; Ruff, ESLint, and web/extension production builds passed 2026-09-06 |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
 | API/security contract tests | done | `uv run --directory apps/api pytest` — 46 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
@@ -21,6 +21,7 @@
 | Public SEO content | done | About, Features, FAQ, 23 categorized resume guides, searchable blog, route metadata, structured data, social preview, sitemap, and robots policy |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
+| Trusted Sources and rate limits | done | Subscriber-only public GitHub/portfolio evidence, source-backed 2-credit tailoring, per-line undo/provenance review, SSRF-safe import, and persistent SQLite rate limits; see `docs/trusted-sources.md` |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side |
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |

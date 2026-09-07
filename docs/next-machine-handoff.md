@@ -36,10 +36,11 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Resume/job import accepts text, Markdown, PDF, and DOCX. DOCX/PDF extraction preserves useful text structure; production upload scanning fails closed unless ClamAV is configured.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
 - Firebase web auth supports Google popup sign-in, email/password signup/sign-in, password reset, session restore, and sign-out.
+- Trusted Sources are subscriber-only public GitHub/portfolio evidence. They require candidate ownership attestation, charge two credits for a source-backed tailoring run, use SSRF-safe bounded retrieval, and show source-backed changes with individual undo controls. Set `RATE_LIMIT_SALT` server-side; see `docs/trusted-sources.md`.
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 46 API tests, 11 web interaction tests, 7 extension tests, Ruff, ESLint, and web/extension production builds passed on 2026-09-06.
+- Latest verified checks: 51 API tests, 11 web interaction tests, 7 extension tests, Ruff, ESLint, and web/extension production builds passed on 2026-09-06.
 
 ### Not done / external dependencies
 

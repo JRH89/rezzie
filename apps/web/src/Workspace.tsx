@@ -1,6 +1,6 @@
 import { ChangeEvent, ClipboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
-import { CareerFact, CareerRecord, createApi, CreditBalance, SavedResume, SavedTailoringDraft, TailoringResult } from "./api";
+import { CareerFact, CareerRecord, createApi, CreditBalance, SavedResume, SavedTailoringDraft, TailoringChange, TailoringResult, TrustedSource } from "./api";
 
 type ImportMode = "paste" | "url" | "file";
 type CredentialMode = "byok" | "subscription";
@@ -32,24 +32,26 @@ function isResumeHeading(line: string) {
   return ["SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING"].includes(line.replace(":", "").trim().toUpperCase());
 }
 
-function editorHtml(text: string) {
+function editorHtml(text: string, changes: TailoringChange[] = []) {
+  const sourceBacked = new Set(changes.filter(change => change.kind === "source_backed").map(change => change.text.trim()));
   return text.split("\n").map((rawLine, index) => {
     const line = rawLine.trim();
     const escaped = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     if (!line) return "<div><br></div>";
-    if (index === 0) return `<h1>${escaped}</h1>`;
-    if (index === 1) return `<p>${escaped}</p>`;
-    if (isResumeHeading(line)) return `<h3>${escaped.replace(/:$/, "")}</h3>`;
+    const rendered = sourceBacked.has(line) ? `<mark class="source-backed-highlight">${escaped}</mark>` : escaped;
+    if (index === 0) return `<h1>${rendered}</h1>`;
+    if (index === 1) return `<p>${rendered}</p>`;
+    if (isResumeHeading(line)) return `<h3>${rendered.replace(/:$/, "")}</h3>`;
     if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return `<div>${escaped.slice(2)}</div>`;
-    return `<p>${escaped}</p>`;
+    return `<p>${rendered}</p>`;
   }).join("");
 }
 
-function RichResumeEditor({ text, onChange }: { text: string; onChange: (html: string, plainText: string) => void }) {
+function RichResumeEditor({ text, changes, onChange }: { text: string; changes: TailoringChange[]; onChange: (html: string, plainText: string) => void }) {
   const editor = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (editor.current) editor.current.innerHTML = editorHtml(text);
-  }, [text]);
+    if (editor.current) editor.current.innerHTML = editorHtml(text, changes);
+  }, [changes, text]);
   function update() {
     if (editor.current) onChange(editor.current.innerHTML, editor.current.innerText);
   }
@@ -98,6 +100,11 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [credentialMode, setCredentialMode] = useState<CredentialMode>("byok");
   const [apiKey, setApiKey] = useState("");
   const [balance, setBalance] = useState<CreditBalance>();
+  const [trustedSources, setTrustedSources] = useState<TrustedSource[]>([]);
+  const [selectedTrustedSources, setSelectedTrustedSources] = useState<string[]>([]);
+  const [trustedSourceUrl, setTrustedSourceUrl] = useState("");
+  const [trustedSourceLabel, setTrustedSourceLabel] = useState("");
+  const [sourceOwnershipAttested, setSourceOwnershipAttested] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string>();
@@ -112,13 +119,15 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     void api.listCareerRecords().then(setRecords).catch(() => undefined);
     void api.listSavedResumes().then(setSavedResumes).catch(() => undefined);
     void api.listTailoringDrafts().then(setSavedDrafts).catch(() => undefined);
+    void api.listTrustedSources().then(sources => { setTrustedSources(sources); setSelectedTrustedSources(sources.map(source => source.id)); }).catch(() => undefined);
   }, [api]);
 
   const confirmedCount = careerRecord?.facts.filter(fact => fact.status === "confirmed").length ?? 0;
   const reviewCount = careerRecord?.facts.filter(fact => fact.status === "needs_review").length ?? 0;
   const sourceReady = careerRecord ? confirmedCount > 0 : resume.trim().length >= minLength;
   const jobReady = job.trim().length >= minLength;
-  const credentialsReady = credentialMode === "subscription" || apiKey.trim().length >= 10;
+  const usesTrustedSources = selectedTrustedSources.length > 0;
+  const credentialsReady = usesTrustedSources ? credentialMode === "subscription" : credentialMode === "subscription" || apiKey.trim().length >= 10;
 
   async function importResume(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -158,6 +167,27 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     finally { setLoading(false); }
   }
 
+  async function addTrustedSource() {
+    if (!trustedSourceUrl.trim() || !trustedSourceLabel.trim()) return;
+    setLoading(true); setError(undefined);
+    try {
+      const source = await api.addTrustedSource({ url: trustedSourceUrl.trim(), label: trustedSourceLabel.trim(), ownership_attested: sourceOwnershipAttested });
+      setTrustedSources(current => [source, ...current]); setSelectedTrustedSources(current => [source.id, ...current]); setTrustedSourceUrl(""); setTrustedSourceLabel(""); setSourceOwnershipAttested(false);
+    } catch (reason) { setError(errorMessage(reason, "We could not add that Trusted Source.")); }
+    finally { setLoading(false); }
+  }
+
+  async function deleteTrustedSource(sourceId: string) {
+    setLoading(true); setError(undefined);
+    try { await api.deleteTrustedSource(sourceId); setTrustedSources(current => current.filter(source => source.id !== sourceId)); setSelectedTrustedSources(current => current.filter(id => id !== sourceId)); }
+    catch (reason) { setError(errorMessage(reason, "We could not remove that Trusted Source.")); }
+    finally { setLoading(false); }
+  }
+
+  function toggleTrustedSource(sourceId: string) {
+    setSelectedTrustedSources(current => current.includes(sourceId) ? current.filter(id => id !== sourceId) : [...current, sourceId]);
+  }
+
   function selectSavedResume(resumeId: string) {
     setSelectedSavedResume(resumeId || undefined);
     const saved = savedResumes.find(item => item.id === resumeId);
@@ -181,7 +211,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   }
 
   function reopenDraft(draft: SavedTailoringDraft) {
-    setResult({ tailored_resume: draft.tailored_resume, matched_keywords: [], review_items: [], truth_statement: "This is a private draft you previously saved. Review it before using it." });
+    setResult({ tailored_resume: draft.tailored_resume, matched_keywords: [], review_items: [], truth_statement: "This is a private draft you previously saved. Review it before using it.", changes: [] });
     setEditorState({ html: draft.resume_html ?? editorHtml(draft.tailored_resume), text: draft.tailored_resume }); setDraftLabel(draft.label); setDraftSaved(true); setStep(4);
   }
 
@@ -210,10 +240,10 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
 
   async function tailor() {
     setLoading(true); setIsTailoring(true); setError(undefined); setCopied(false);
-    const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined };
+    const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined, external_source_ids: selectedTrustedSources };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
-      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
+      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume, tailored.changes ?? []), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
     finally { setLoading(false); setIsTailoring(false); }
@@ -253,6 +283,13 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     saveResume(new Blob([editorState.text || result.tailored_resume], { type: "text/plain;charset=utf-8" }), "rezzie-tailored-resume.txt");
   }
 
+  function undoTailoringChange(change: TailoringChange) {
+    const nextText = editorState.text.split("\n").filter(line => line.trim() !== change.text.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const remaining = result?.changes?.filter(item => item !== change) ?? [];
+    setEditorState({ text: nextText, html: editorHtml(nextText, remaining) });
+    setResult(current => current ? { ...current, changes: remaining } : current);
+  }
+
   const creditPackPrice = import.meta.env.VITE_CREDIT_PACK_PRICE_ID;
   const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
   return (
@@ -270,6 +307,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
             {!careerRecord && <div className="upload-panel">{uploadedResumeName ? <><div className="uploaded-source-card"><span className="uploaded-source-icon" aria-hidden="true">✓</span><div><strong>{uploadedResumeName}</strong><small>Resume imported · {resume.length.toLocaleString()} characters ready for tailoring</small></div><label className="source-file-replace"><input aria-label="Replace resume file" onChange={importResume} accept={fileTypes} type="file" />Replace</label></div><details className="extracted-text-review"><summary>Review extracted text <span>Optional</span></summary><p>Only open this if you need to correct what Rezzie read from the file before tailoring.</p><label htmlFor="resume">Extracted resume text <span className="field-count">{resume.length.toLocaleString()} characters</span></label><textarea id="resume" value={resume} onChange={event => { setResume(event.target.value); setCareerRecord(undefined); }} /></details></> : <><label className="drop-zone"><input aria-label="Resume file" onChange={importResume} accept={fileTypes} type="file" /><span className="upload-icon">↑</span><strong>Upload your resume</strong><small>PDF, DOCX, Markdown, or text · maximum 5 MB</small></label><div className="divider"><span>or paste it below</span></div><label htmlFor="resume">Current resume <span className="field-count">{resume.length.toLocaleString()} characters</span></label><textarea id="resume" value={resume} onChange={event => { setResume(event.target.value); setCareerRecord(undefined); }} placeholder="Paste the complete resume you want to tailor…" /></>}</div>}
             {!careerRecord && resume.length >= minLength && !selectedSavedResume && <details className="career-option"><summary>Save this private resume for later <span>Optional</span></summary><p>It stays in your Rezzie library so you can select it on another device or in the future Chrome extension. You can delete it anytime.</p><div className="inline-form"><input aria-label="Saved resume name" value={resumeLabel} onChange={event => setResumeLabel(event.target.value)} /><button className="button button-outline" disabled={loading} onClick={() => void saveCurrentResume()} type="button">Save resume</button></div></details>}
             {!careerRecord && resume.length >= minLength && <details className="career-option"><summary>Save this as a reusable Career Record <span>Facts only</span></summary><p>Rezzie extracts individual claims for you to confirm. Future tailoring can use confirmed facts only.</p><div className="inline-form"><input aria-label="Career Record name" value={recordLabel} onChange={event => setRecordLabel(event.target.value)} /><button className="button button-outline" disabled={loading} onClick={() => void createCareerRecord()} type="button">Create record</button></div></details>}
+            {!careerRecord && <details className="trusted-sources-panel"><summary>Use Trusted Sources <span>Subscribers</span></summary><p>Add a public GitHub profile, repository, or portfolio you own. Rezzie will visibly label any source-backed resume changes for you to keep or undo.</p>{balance?.subscription_status === "active" || balance?.subscription_status === "trialing" ? <><div className="inline-form"><input aria-label="Trusted Source label" value={trustedSourceLabel} onChange={event => setTrustedSourceLabel(event.target.value)} placeholder="Project portfolio" /><input aria-label="Trusted Source URL" value={trustedSourceUrl} onChange={event => setTrustedSourceUrl(event.target.value)} placeholder="https://github.com/you" type="url" /><button className="button button-outline" disabled={loading || !trustedSourceUrl || !trustedSourceLabel || !sourceOwnershipAttested} onClick={() => void addTrustedSource()} type="button">Add source</button></div><label className="trusted-source-attestation"><input checked={sourceOwnershipAttested} onChange={event => setSourceOwnershipAttested(event.target.checked)} type="checkbox" />I own this public work or am authorized to use it as resume evidence.</label>{trustedSources.length > 0 && <div className="trusted-source-list">{trustedSources.map(source => <label key={source.id}><input checked={selectedTrustedSources.includes(source.id)} onChange={() => toggleTrustedSource(source.id)} type="checkbox" /><span><strong>{source.label}</strong><small>{source.source_type} · {new URL(source.url).hostname}</small></span><button disabled={loading} onClick={() => void deleteTrustedSource(source.id)} type="button">Remove</button></label>)}</div>}</> : <div className="trusted-source-upgrade"><strong>Available with Rezzie Monthly</strong><span>Use public work you own as grounded evidence, then review every new resume line.</span><button onClick={() => onBilling("subscription")} type="button">Upgrade to monthly</button></div>}</details>}
             {careerRecord && <CareerRecordReview record={careerRecord} reviewCount={reviewCount} confirmedCount={confirmedCount} loading={loading} newFact={newFact} setNewFact={setNewFact} onUpdate={updateFact} onAdd={addFact} />}
             <div className="step-actions"><span>{careerRecord ? `${confirmedCount} confirmed fact${confirmedCount === 1 ? "" : "s"} ready` : sourceReady ? "Resume ready" : "Add at least 50 characters to continue"}</span><button className="button button-primary" disabled={!sourceReady || loading} onClick={() => setStep(2)} type="button">Continue to the job <span>→</span></button></div>
           </>}
@@ -296,7 +334,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
             <div className="result-toolbar"><p>Make any final edits, then download.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-outline" onClick={downloadText} type="button">TXT ↓</button><button className="button button-outline" disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button></div></div>
             <div className="save-draft-panel"><div><strong>Keep this version for later</strong><small>Saved drafts stay private in your Rezzie library. You can delete them anytime.</small></div><label htmlFor="draft-label">Draft name<input id="draft-label" value={draftLabel} onChange={event => setDraftLabel(event.target.value)} disabled={draftSaved} /></label><button className="button button-outline" disabled={loading || draftSaved || draftLabel.trim().length === 0} onClick={() => void saveDraft()} type="button">{draftSaved ? "Saved" : "Save draft"}</button></div>
-            <RichResumeEditor text={result.tailored_resume} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
+            <RichResumeEditor text={result.tailored_resume} changes={result.changes ?? []} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
+            {(result.changes?.length ?? 0) > 0 && <section className="tailoring-diff" aria-label="Resume changes to review"><div><p className="eyebrow">CHANGE REVIEW</p><h2>Keep what supports you.</h2><p>Source-backed lines are highlighted in the resume and include their evidence URL. You can remove any change before downloading.</p></div>{result.changes?.map((change, index) => <article className={change.kind} key={`${change.text}-${index}`}><span>{change.kind === "source_backed" ? "Source-backed" : "Tailored"}</span><p>{change.text}</p>{change.source_url && <a href={change.source_url} rel="noreferrer" target="_blank">View source ↗</a>}<button onClick={() => undoTailoringChange(change)} type="button">Undo this change</button></article>)}</section>}
             <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
             <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>
             <div className="step-actions"><button className="back-link" onClick={() => setStep(3)} type="button">← Adjust setup</button><button className="button button-dark" onClick={() => { setJob(""); setResult(undefined); setStep(2); }} type="button">Tailor for another job <span>→</span></button></div>
