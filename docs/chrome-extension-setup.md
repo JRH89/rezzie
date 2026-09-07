@@ -21,7 +21,7 @@ VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-Then build and load `apps/extension/dist` from Chrome's `chrome://extensions` page using **Developer mode** and **Load unpacked**. Copy the generated extension ID; it changes if the extension is not built with a stable signing key, so do not configure production auth from a temporary development ID.
+Then build and load `apps/extension/dist` from Chrome's `chrome://extensions` page using **Developer mode** and **Load unpacked**. The side panel supports Google sign-in plus email/password sign-in and account creation. Copy the generated extension ID; it changes if the extension is not built with a stable signing key, so do not configure production auth from a temporary development ID.
 
 The extension asks Chrome for page access only on supported job boards and applicant-tracking systems: Indeed, LinkedIn, Built In and Built In LA, Greenhouse, Lever, Ashby, Workday, Jack and Jill Jobs, Dice, ZipRecruiter, Monster, CareerBuilder, SimplyHired, Wellfound, FlexJobs, Idealist, Jobcase, Snagajob, USAJOBS, GovernmentJobs, SmartRecruiters, iCIMS, Jobvite, BambooHR, Paylocity, Paycom, UKG, SuccessFactors, Taleo, Dayforce, Recruitee, Teamtailor, Personio, and Rippling. It reads a listing only after the user selects **Read this job page**. Accept Chrome's updated permission prompt after reloading an unpacked build; it does not receive broad access to unrelated sites.
 
@@ -38,9 +38,21 @@ After creating the production extension package and obtaining its stable ID:
 
 Never place Stripe, Anthropic, Firebase Admin, or API-secret values in the extension. Firebase's web configuration values are public identifiers; the extension's authentication token is retained only in `chrome.storage.session` and is cleared on sign-out or expiry.
 
+## Package for Chrome Web Store
+
+Chrome Web Store accepts a ZIP archive, not a `.vsix` file. Build before packaging; the ZIP must contain the contents of `dist` at its root, including `manifest.json`.
+
+```powershell
+npm.cmd --workspace @rezzie/extension run build
+New-Item -ItemType Directory -Force artifacts
+Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-chrome-extension-0.1.1.zip -Force
+```
+
+`artifacts/` is ignored by Git so the release upload is not committed. Upload that ZIP in Chrome Web Store Developer Dashboard.
+
 ## Store release checklist
 
-- Add production PNG icons and Chrome Web Store listing screenshots.
+- The production PNG icon set and Rezzie wordmark are included in the extension package. Add Chrome Web Store listing screenshots.
 - Use a stable extension ID and complete the Firebase/Worker allow-list steps above.
 - Verify extraction on at least two job boards plus a generic career page; the user must be able to review/edit all extracted text before tailoring.
 - Verify no-resume, no-credit, expired-token, API-error, and export paths.

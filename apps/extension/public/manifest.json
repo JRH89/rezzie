@@ -1,9 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Rezzie",
-  "version": "0.1.0",
-  "description": "Tailor your saved resume to the job page you are reviewing.",
-  "action": { "default_title": "Tailor this job with Rezzie" },
+  "version": "0.1.1",
+  "description": "Tailor a truthful, job-specific resume from the job page you are viewing using your saved Rezzie resumes and credits.",
+  "homepage_url": "https://rezzie.org",
+  "action": {
+    "default_title": "Tailor this job with Rezzie",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "background": { "service_worker": "background.js", "type": "module" },
   "side_panel": { "default_path": "sidepanel.html" },
   "permissions": ["activeTab", "scripting", "sidePanel", "storage", "offscreen", "downloads"],
