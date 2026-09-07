@@ -24,7 +24,7 @@ docker compose -f "$compose_file" up -d --no-deps --force-recreate api
 
 echo "Waiting for the Rezzie API health check..."
 for attempt in {1..30}; do
-  if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8000/health >/dev/null; then
+  if curl --fail --silent --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1; then
     echo "Rezzie API deployment complete."
     exit 0
   fi
