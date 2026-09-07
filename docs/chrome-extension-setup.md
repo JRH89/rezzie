@@ -53,6 +53,7 @@ Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-c
 ## Store release checklist
 
 - The production PNG icon set and Rezzie wordmark are included in the extension package. Add Chrome Web Store listing screenshots.
+- Verify the official website in Google Search Console before entering `https://rezzie.org` as the Chrome Web Store official website. The repository's verification HTML file is deployed at `https://rezzie.org/googlee90c7e6e606f221d.html`. This verifies a **URL-prefix** Search Console property; a Search Console **Domain** property instead requires its DNS TXT method. Google Analytics does not verify website ownership.
 - Use a stable extension ID and complete the Firebase/Worker allow-list steps above.
 - Verify extraction on at least two job boards plus a generic career page; the user must be able to review/edit all extracted text before tailoring.
 - Verify no-resume, no-credit, expired-token, API-error, and export paths.

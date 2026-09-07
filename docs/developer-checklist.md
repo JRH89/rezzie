@@ -22,5 +22,6 @@
 | Engineering | Chrome extension shared API shell | complete | Manifest V3 side panel reuses Firebase identity and existing resume/tailor/export routes; browser store configuration remains external |
 | Engineering | Trusted Source evidence and rate limits | complete | Subscriber-only GitHub/portfolio source store, SSRF-safe fetcher, 2-credit source-backed run, UI provenance/undo review, and SQLite-backed request limits; `docs/trusted-sources.md` |
 | Platform | Configure extension Google auth | pending | Build a production extension, add its `chrome-extension://EXTENSION_ID` Firebase authorized domain, set `VITE_CHROME_EXTENSION_IDS` in the Cloudflare Worker, and redeploy the web bridge |
+| Platform | Verify the extension official website | in progress | Google Search Console verification file is deployed from `apps/web/public`; complete the matching Search Console property verification before adding `https://rezzie.org` to the Chrome Web Store listing |
 | Engineering | Private source-file and artifact storage | pending | Current normalized source text/drafts are stored in SQLite. Define original-file retention and private object storage separately; see `docs/chrome-extension-roadmap.md` |
 | Product/Design | Replace prototype workspace UX | complete | Guided four-step responsive flow visually checked at 1280px and 390px widths |
