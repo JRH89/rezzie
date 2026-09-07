@@ -22,7 +22,7 @@ FastAPI + ClamAV (apps/api) ── Cloudflare Tunnel ── https://api.rezzie.o
 
 Firebase Authentication ── Firebase ID token ── FastAPI JWT verification
 Stripe Checkout/Webhooks ── FastAPI credit ledger in SQLite
-Anthropic Claude Haiku 4.5 ── server master key or transient user BYOK
+Anthropic Claude Sonnet 5 ── server master key or transient user BYOK
 ```
 
 The intended production target is the user's **Arch/Omarchy server** for API, ClamAV, and Cloudflare Tunnel. The development machine is not the server. The frontend deploys from Git to Cloudflare Workers static assets. Do not open the API directly to the internet; Tunnel is the sole public route.
@@ -31,7 +31,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 
 ### Implemented and locally verified
 
-- Claude provider defaults to `claude-haiku-4-5`; JSON parsing, structured-output fallback, request repair, numeric-claim fallback, server-date-based tenure handling, and source-summary preservation are tested.
+- Claude provider defaults to `claude-sonnet-5` with medium effort and a 12,288-token cap. It uses Sonnet 5's prompt-enforced JSON mode, while compatible older models retain JSON-schema output. JSON parsing, fallback, request repair, numeric-claim fallback, server-date-based tenure handling, and source-summary preservation are tested.
 - Keyword tailoring is allowed. The prior named-claim hard failure was removed because it blocked legitimate JD wording.
 - Resume/job import accepts text, Markdown, PDF, and DOCX. PDF uploads receive a session-local original preview and source page-count metadata, while exports use a best-effort page target; production upload scanning fails closed unless ClamAV is configured. Exact template-aware rewriting remains a separate private-object-storage milestone; see `docs/document-fidelity.md`.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
@@ -40,7 +40,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 58 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed on 2026-09-06. Extension checks previously passed on 2026-09-06.
+- Latest verified checks: 59 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed on 2026-09-07. Extension checks previously passed on 2026-09-06.
 
 ### Not done / external dependencies
 

@@ -83,7 +83,7 @@ Chrome MV3 extension (apps/extension) ─────► same authenticated API
 | --- | --- |
 | Web | React, TypeScript, Vite, Tailwind CSS |
 | API | Python, FastAPI, Pydantic, SQLAlchemy, Alembic |
-| AI | Anthropic Claude Haiku via a provider abstraction |
+| AI | Anthropic Claude Sonnet 5 by default, via a provider abstraction |
 | Identity | Firebase Authentication and Firebase JWT verification |
 | Billing | Stripe Checkout, Customer Portal, signed webhooks, credit ledger |
 | Documents | PDF/DOCX parsing, ClamAV scanning, TXT/PDF/DOCX export |
@@ -155,4 +155,3 @@ Production configuration uses environment variables only. The repository include
 ## Product roadmap
 
 Near-term engineering work is focused on hosted end-to-end smoke tests, Chrome Web Store publication, and private object storage for optional original-file retention. A managed Postgres migration is planned only when the single-instance SQLite deployment no longer fits concurrency or recovery needs.
-

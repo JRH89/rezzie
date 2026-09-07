@@ -3,8 +3,8 @@
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
-| Truth-preserving generation policy | done | Prompt, structured output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
-| Latest local verification | done | 58 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed 2026-09-06; extension checks previously passed |
+| Truth-preserving generation policy | done | Sonnet 5 default with medium effort, prompt-enforced JSON, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
+| Latest local verification | done | 59 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed 2026-09-07; extension checks previously passed |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
 | API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 56 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |

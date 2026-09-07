@@ -58,7 +58,15 @@ trusted_source_service = TrustedSourceService(trusted_sources, billing_repositor
 rate_limiter = RateLimiter(billing_repository.sessions, settings.rate_limit_salt)
 resume_library = ResumeLibraryService(billing_repository.sessions, billing_repository)
 billing_service = StripeBillingService(settings, billing_repository)
-importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(AnthropicProvider(settings.anthropic_model), settings, billing_repository)
+importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(
+    AnthropicProvider(
+        settings.anthropic_model,
+        max_tokens=settings.anthropic_max_tokens,
+        effort=settings.anthropic_effort,
+    ),
+    settings,
+    billing_repository,
+)
 document_service = DocumentService(settings)
 resume_export_service = ResumeExportService()
 

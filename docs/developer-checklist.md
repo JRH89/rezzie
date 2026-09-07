@@ -2,7 +2,7 @@
 
 | Owner | Item | State | Evidence |
 | --- | --- | --- | --- |
-| Engineering | Keep providers interchangeable | complete | `providers/base.py`, `providers/anthropic.py` |
+| Engineering | Keep providers interchangeable | complete | `providers/base.py`, `providers/anthropic.py`; Sonnet 5 default remains environment-configurable |
 | Engineering | Do not persist BYOK | complete | request-scoped credentials policy |
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |
 | Platform | Configure Firebase identity + verified subscription webhooks | pending | Enable Google and Email/Password, set Firebase web values and API issuer/audience/JWKS URL |
@@ -10,7 +10,7 @@
 | Platform | Protect SQLite volume/secrets/Cloudflare Tunnel | in progress | Dedicated `rezzie-api` Cloudflare Tunnel is live and API/ClamAV passed public health checks on 2026-09-06. SQLite persists in `rezzie_rezzie_api_data`; execute and record the backup/restore rehearsal in `docs/sqlite-operations.md`. |
 | Platform | Configure Cloudflare Worker frontend | in progress | Root `wrangler.jsonc` supplies static asset directory and SPA fallback; set production build variables and attach `rezzie.org` |
 | Platform | Automated API deployment | in progress | `deploy.sh` is compatible with the existing Gitea webhook service and rebuilds only Rezzie's API. Create/configure the `rezzie` Gitea repository webhook to POST push events for `main` to `http://192.168.254.54:9001/deploy`. |
-| QA | Run local API/web checks | complete | 2026-09-06: 58 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed; extension checks previously passed |
+| QA | Run local API/web checks | complete | 2026-09-07: 59 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed; extension checks previously passed |
 | Engineering | Preserve usable resume document structure | in progress | PDF source preview, read-only source review, page-count metadata, and best-effort one-page export targets are implemented. Exact template-aware rewriting remains pending private original-file storage; see `docs/document-fidelity.md` |
 | Engineering | Expose signup and managed billing paths | complete | Public pricing section and OIDC-aware account CTA lead into workspace Stripe checkout |
 | Engineering | Give signed-in users a billing destination | complete | Workspace Billing control opens account route with balance, checkout, upgrade, and portal actions |

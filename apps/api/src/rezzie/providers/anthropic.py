@@ -24,8 +24,10 @@ def parse_tailoring_payload(payload: str) -> TailoringResult:
 
 
 class AnthropicProvider:
-    def __init__(self, model: str = "claude-haiku-4-5") -> None:
+    def __init__(self, model: str = "claude-sonnet-5", *, max_tokens: int = 12_288, effort: str = "medium") -> None:
         self._model = model
+        self._max_tokens = max_tokens
+        self._effort = effort
 
     async def tailor(self, *, api_key: str, resume_text: str, job_description: str, evidence_text: str = "") -> TailoringResult:
         return await self._generate(
@@ -49,12 +51,13 @@ class AnthropicProvider:
         client = AsyncAnthropic(api_key=api_key)
         request = {
             "model": self._model,
-            "max_tokens": 8192,
+            "max_tokens": self._max_tokens,
             "system": system,
             "messages": [{"role": "user", "content": user_content}],
         }
+        output_config = self._output_config()
         try:
-            response = await client.messages.create(**request, output_config={"format": {"type": "json_schema", "schema": TailoringResult.model_json_schema()}})
+            response = await client.messages.create(**request, output_config=output_config)
         except BadRequestError:
             # Structured outputs are not enabled for every compatible account/model.
             # Prompt-only JSON remains validated locally before it can reach users.
@@ -67,3 +70,9 @@ class AnthropicProvider:
             raise ValueError("Claude declined this tailoring request.")
         payload = "".join(part.text for part in response.content if part.type == "text")
         return parse_tailoring_payload(payload)
+
+    def _output_config(self) -> dict[str, object]:
+        """Use Sonnet 5's effort control without attempting unsupported schema output."""
+        if self._model.startswith("claude-sonnet-5"):
+            return {"effort": self._effort}
+        return {"format": {"type": "json_schema", "schema": TailoringResult.model_json_schema()}}
