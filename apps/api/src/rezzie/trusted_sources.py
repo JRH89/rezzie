@@ -1,4 +1,6 @@
 """Candidate-attested public sources used as additional grounding evidence."""
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from urllib.parse import urlparse

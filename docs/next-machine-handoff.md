@@ -40,7 +40,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 51 API tests, 11 web interaction tests, 7 extension tests, Ruff, ESLint, and web/extension production builds passed on 2026-09-06.
+- Latest verified checks: 52 API tests and Ruff passed with test-safe host/origin settings on 2026-09-06. Eleven web interaction tests, seven extension tests, ESLint, and web/extension production builds previously passed on 2026-09-06.
 
 ### Not done / external dependencies
 

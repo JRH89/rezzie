@@ -4,9 +4,9 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, and numeric-claim safety guard; job-description terminology is allowed |
-| Latest local verification | done | 51 API tests, 11 web interaction tests, and 7 extension tests passed; Ruff, ESLint, and web/extension production builds passed 2026-09-06 |
+| Latest local verification | done | 52 API tests and Ruff passed 2026-09-06 using test-safe host/origin settings; 11 web interaction tests, 7 extension tests, ESLint, and web/extension production builds previously passed 2026-09-06 |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, tips, copy, and download |
-| API/security contract tests | done | `uv run --directory apps/api pytest` — 46 passed 2026-09-06 |
+| API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 52 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
 | Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
 | Signed-in billing flow | done | Account route exposes credit balance, credit-pack checkout, monthly upgrade, and Stripe portal entry point |
