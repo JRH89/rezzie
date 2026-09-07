@@ -1,4 +1,4 @@
-export type ImportResponse = { text: string; source_type: string; source_url?: string };
+export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null };
 export type TailoringChange = { text: string; kind: "source_backed" | "tailored"; source_url?: string | null };
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string; changes: TailoringChange[] };
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number };
@@ -24,12 +24,12 @@ function requestFor(accessToken?: string) {
 }
 export function createApi(accessToken?: string) {
   const request = requestFor(accessToken);
-  async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf"): Promise<Blob> {
+  async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf", targetPageCount?: number): Promise<Blob> {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     const path = format === "pdf" ? "/api/v1/resumes/export/pdf" : "/api/v1/resumes/export";
-    const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml }) });
+    const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml, target_page_count: targetPageCount }) });
     if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `We could not create the ${format.toUpperCase()} file.`); }
     return response.blob();
   }

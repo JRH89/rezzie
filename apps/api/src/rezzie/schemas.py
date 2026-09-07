@@ -21,6 +21,7 @@ class ImportResponse(BaseModel):
     text: str
     source_type: str
     source_url: str | None = None
+    page_count: int | None = Field(default=None, ge=1, le=100)
 
 
 class SavedResumeCreate(BaseModel):
@@ -119,6 +120,7 @@ class ResumeExportRequest(BaseModel):
 
     resume_text: str = Field(min_length=50, max_length=100_000)
     resume_html: str | None = Field(default=None, max_length=200_000)
+    target_page_count: int | None = Field(default=None, ge=1, le=5)
 
 
 class CreditBalance(BaseModel):

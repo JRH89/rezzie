@@ -1,6 +1,7 @@
 """Bounded document extraction with production fail-closed malware scanning."""
 import io
 import socket
+from dataclasses import dataclass
 from html.parser import HTMLParser
 
 from docx import Document
@@ -58,6 +59,12 @@ def pdf_text(reader: PdfReader) -> str:
     return "\n\n".join(pages)
 
 
+@dataclass(frozen=True)
+class ExtractedDocument:
+    text: str
+    page_count: int | None = None
+
+
 class ResumeHtmlParser(HTMLParser):
     """Allow only text and structural editor tags when preparing an export."""
 
@@ -100,7 +107,7 @@ class DocumentService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
-    async def extract(self, file: UploadFile) -> str:
+    async def extract(self, file: UploadFile) -> ExtractedDocument:
         document_type = SUPPORTED_DOCUMENT_TYPES.get(file.content_type or "")
         if not document_type:
             raise HTTPException(status_code=422, detail="Use a .txt, .md, .pdf, or .docx document.")
@@ -109,14 +116,18 @@ class DocumentService:
             raise HTTPException(status_code=413, detail="File exceeds the configured upload limit.")
         self._scan(data)
         try:
-            if document_type == "text": text = data.decode("utf-8", errors="replace")
-            elif document_type == "pdf": text = pdf_text(PdfReader(io.BytesIO(data)))
-            else: text = paragraph_text(Document(io.BytesIO(data)))
+            if document_type == "text":
+                text, page_count = data.decode("utf-8", errors="replace"), None
+            elif document_type == "pdf":
+                reader = PdfReader(io.BytesIO(data))
+                text, page_count = pdf_text(reader), len(reader.pages)
+            else:
+                text, page_count = paragraph_text(Document(io.BytesIO(data))), None
         except Exception as error:
             raise HTTPException(status_code=422, detail="That document could not be read.") from error
         text = text.strip()
         if len(text) < 50: raise HTTPException(status_code=422, detail="The document is too short or has no readable text.")
-        return text[:100_000]
+        return ExtractedDocument(text=text[:100_000], page_count=page_count)
 
     def _scan(self, data: bytes) -> None:
         if not self._settings.clamav_host:
@@ -136,7 +147,7 @@ class DocumentService:
 class ResumeExportService:
     """Render Rezzie's structured text contract as an editable ATS-friendly DOCX."""
 
-    def render_docx(self, resume_text: str) -> bytes:
+    def render_docx(self, resume_text: str, target_page_count: int | None = None) -> bytes:
         document = Document()
         section = document.sections[0]
         section.top_margin = section.bottom_margin = Inches(0.65)
@@ -144,8 +155,9 @@ class ResumeExportService:
 
         normal = document.styles["Normal"]
         normal.font.name = "Aptos"
-        normal.font.size = Pt(10.5)
-        normal.paragraph_format.space_after = Pt(4)
+        compact = target_page_count == 1
+        normal.font.size = Pt(10 if compact else 10.5)
+        normal.paragraph_format.space_after = Pt(2 if compact else 4)
 
         lines = [line.strip() for line in resume_text.splitlines()]
         content_indices = [index for index, line in enumerate(lines) if line]
@@ -167,7 +179,7 @@ class ResumeExportService:
                 paragraph.runs[0].font.size = Pt(9)
             elif is_section_heading(line):
                 paragraph = document.add_paragraph()
-                paragraph.paragraph_format.space_before = Pt(10)
+                paragraph.paragraph_format.space_before = Pt(7 if compact else 10)
                 paragraph.paragraph_format.space_after = Pt(3)
                 run = paragraph.add_run(line.upper())
                 run.bold = True
@@ -181,14 +193,26 @@ class ResumeExportService:
         document.save(output)
         return output.getvalue()
 
-    def render_pdf(self, resume_text: str) -> bytes:
+    def render_pdf(self, resume_text: str, target_page_count: int | None = None) -> bytes:
+        """Fit to the source page target when practical; never truncate resume content."""
+        scales = (1.0, 0.95, 0.9, 0.85) if target_page_count == 1 else (1.0,)
+        rendered = b""
+        for scale in scales:
+            rendered = self._render_pdf(resume_text, scale)
+            if target_page_count is None or len(PdfReader(io.BytesIO(rendered)).pages) <= target_page_count:
+                return rendered
+        return rendered
+
+    @staticmethod
+    def _render_pdf(resume_text: str, scale: float) -> bytes:
         output = io.BytesIO()
-        document = SimpleDocTemplate(output, pagesize=letter, leftMargin=0.7 * inch, rightMargin=0.7 * inch, topMargin=0.65 * inch, bottomMargin=0.65 * inch)
+        margin = 0.55 if scale < 1 else 0.7
+        document = SimpleDocTemplate(output, pagesize=letter, leftMargin=margin * inch, rightMargin=margin * inch, topMargin=margin * inch, bottomMargin=margin * inch)
         styles = getSampleStyleSheet()
-        name_style = ParagraphStyle("ResumeName", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=18, leading=21, alignment=1, spaceAfter=4)
-        contact_style = ParagraphStyle("ResumeContact", parent=styles["Normal"], fontSize=9, leading=11, alignment=1, spaceAfter=10)
-        heading_style = ParagraphStyle("ResumeHeading", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10.5, leading=13, spaceBefore=9, spaceAfter=4)
-        body_style = ParagraphStyle("ResumeBody", parent=styles["Normal"], fontSize=10, leading=13, spaceAfter=3)
+        name_style = ParagraphStyle("ResumeName", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=18 * scale, leading=21 * scale, alignment=1, spaceAfter=4 * scale)
+        contact_style = ParagraphStyle("ResumeContact", parent=styles["Normal"], fontSize=9 * scale, leading=11 * scale, alignment=1, spaceAfter=10 * scale)
+        heading_style = ParagraphStyle("ResumeHeading", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=10.5 * scale, leading=13 * scale, spaceBefore=9 * scale, spaceAfter=4 * scale)
+        body_style = ParagraphStyle("ResumeBody", parent=styles["Normal"], fontSize=10 * scale, leading=13 * scale, spaceAfter=3 * scale)
         story = []
         lines = [line.strip() for line in resume_text.splitlines() if line.strip()]
         for index, line in enumerate(lines):

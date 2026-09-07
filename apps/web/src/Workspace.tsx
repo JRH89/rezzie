@@ -64,6 +64,10 @@ function RichResumeEditor({ text, changes, onChange }: { text: string; changes: 
   return <div className="rich-editor-shell"><div className="rich-editor-toolbar" role="toolbar" aria-label="Resume formatting"><button aria-label="Bold" onClick={() => command("bold")} type="button"><b>B</b></button><button aria-label="Italic" onClick={() => command("italic")} type="button"><i>I</i></button><button aria-label="Underline" onClick={() => command("underline")} type="button"><u>U</u></button><button aria-label="Heading" onClick={() => command("formatBlock", "h3")} type="button">Heading</button><button aria-label="Bulleted list" onClick={() => command("insertUnorderedList")} type="button">• List</button><button aria-label="Align left" onClick={() => command("justifyLeft")} type="button">Left</button><button aria-label="Align center" onClick={() => command("justifyCenter")} type="button">Center</button><button aria-label="Undo" onClick={() => command("undo")} type="button">Undo</button><button aria-label="Redo" onClick={() => command("redo")} type="button">Redo</button></div><div className="resume-document rich-editor" aria-label="Tailored resume" contentEditable onInput={update} onPaste={pastePlainText} ref={editor} role="textbox" suppressContentEditableWarning /></div>;
 }
 
+function SourceReview({ text, pdfPreviewUrl, pageCount }: { text: string; pdfPreviewUrl?: string; pageCount?: number }) {
+  return <div className="source-review-options">{pageCount && <p className="source-page-target">Original source: {pageCount} page{pageCount === 1 ? "" : "s"}. Exports will aim to keep that length without cutting content.</p>}{pdfPreviewUrl && <details className="source-preview"><summary>Preview original PDF <span>Exact source layout</span></summary><iframe src={pdfPreviewUrl} title="Original resume PDF preview" /></details>}<details className="extracted-text-review"><summary>See what Rezzie will use <span>Read-only</span></summary><p>This extracted text is the factual source for tailoring. To correct it, choose a different file or use paste mode.</p><pre>{text}</pre></details></div>;
+}
+
 function TailoringProgress() {
   const [stage, setStage] = useState(0);
   useEffect(() => {
@@ -86,6 +90,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [step, setStep] = useState<Step>(1);
   const [resume, setResume] = useState("");
   const [uploadedResumeName, setUploadedResumeName] = useState<string>();
+  const [uploadedResumePreview, setUploadedResumePreview] = useState<string>();
+  const [sourcePageCount, setSourcePageCount] = useState<number>();
   const [resumeLabel, setResumeLabel] = useState("My resume");
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [savedDrafts, setSavedDrafts] = useState<SavedTailoringDraft[]>([]);
@@ -122,6 +128,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     void api.listTrustedSources().then(sources => { setTrustedSources(sources); setSelectedTrustedSources(sources.map(source => source.id)); }).catch(() => undefined);
   }, [api]);
 
+  useEffect(() => () => { if (uploadedResumePreview) URL.revokeObjectURL(uploadedResumePreview); }, [uploadedResumePreview]);
+
   const confirmedCount = careerRecord?.facts.filter(fact => fact.status === "confirmed").length ?? 0;
   const reviewCount = careerRecord?.facts.filter(fact => fact.status === "needs_review").length ?? 0;
   const sourceReady = careerRecord ? confirmedCount > 0 : resume.trim().length >= minLength;
@@ -133,7 +141,10 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     const file = event.target.files?.[0];
     if (!file) return;
     setLoading(true); setError(undefined);
-    try { setResume((await api.importResumeFile(file)).text); setUploadedResumeName(file.name); setCareerRecord(undefined); setSelectedSavedResume(undefined); }
+    try {
+      const imported = await api.importResumeFile(file);
+      setResume(imported.text); setUploadedResumeName(file.name); setUploadedResumePreview(file.type === "application/pdf" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined); setSourcePageCount(imported.page_count ?? undefined); setCareerRecord(undefined); setSelectedSavedResume(undefined);
+    }
     catch (reason) { setError(errorMessage(reason, "We could not read that resume.")); }
     finally { setLoading(false); }
   }
@@ -191,7 +202,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   function selectSavedResume(resumeId: string) {
     setSelectedSavedResume(resumeId || undefined);
     const saved = savedResumes.find(item => item.id === resumeId);
-    if (saved) { setResume(saved.source_text); setUploadedResumeName(undefined); setCareerRecord(undefined); }
+    if (saved) { setResume(saved.source_text); setUploadedResumeName(`${saved.label} (saved)`); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setCareerRecord(undefined); }
+    else { setResume(""); setUploadedResumeName(undefined); setUploadedResumePreview(undefined); setSourcePageCount(undefined); }
   }
 
   async function deleteSavedResume(resumeId: string) {
@@ -273,7 +285,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   async function downloadResult(format: "docx" | "pdf") {
     if (!result) return;
     setLoading(true); setError(undefined);
-    try { saveResume(await api.exportResume(editorState.text || result.tailored_resume, editorState.html, format), `rezzie-tailored-resume.${format}`); }
+    try { saveResume(await api.exportResume(editorState.text || result.tailored_resume, editorState.html, format, sourcePageCount), `rezzie-tailored-resume.${format}`); }
     catch (reason) { setError(errorMessage(reason, `We could not create the ${format.toUpperCase()} file.`)); }
     finally { setLoading(false); }
   }
@@ -301,6 +313,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
         <section aria-busy={isTailoring} className="workspace-content">
           {step === 1 && <>
             <div className="step-heading"><p className="eyebrow">STEP 1 OF 4</p><h1>Start with what’s true.</h1><p>Add the resume you trust. Rezzie will use it as the boundary for every suggestion.</p></div>
+            {uploadedResumePreview && <SourceReview pageCount={sourcePageCount} pdfPreviewUrl={uploadedResumePreview} text={resume} />}
             {savedResumes.length > 0 && <div className="source-switcher"><label htmlFor="saved-resume">Use a saved private resume</label><select id="saved-resume" value={selectedSavedResume ?? ""} onChange={event => selectSavedResume(event.target.value)}><option value="">Use a new resume instead</option>{savedResumes.map(saved => <option key={saved.id} value={saved.id}>{saved.label}</option>)}</select></div>}
             {(savedResumes.length > 0 || savedDrafts.length > 0) && <details className="library-manager"><summary>Manage your private library</summary><p>Only you can see these saved resumes and drafts. Deleting an item removes it from Rezzie.</p>{savedResumes.length > 0 && <section><strong>Saved resumes</strong>{savedResumes.map(saved => <div key={saved.id}><span>{saved.label}</span><button disabled={loading} onClick={() => void deleteSavedResume(saved.id)} type="button">Delete</button></div>)}</section>}{savedDrafts.length > 0 && <section><strong>Saved drafts</strong>{savedDrafts.map(draft => <div key={draft.id}><span>{draft.label}</span><button disabled={loading} onClick={() => reopenDraft(draft)} type="button">Open</button><button disabled={loading} onClick={() => void deleteSavedDraft(draft.id)} type="button">Delete</button></div>)}</section>}</details>}
             {records.length > 0 && <div className="source-switcher"><label htmlFor="saved-record">Or use a saved Career Record</label><select id="saved-record" value={careerRecord?.id ?? ""} onChange={event => { const record = records.find(item => item.id === event.target.value); setCareerRecord(record); if (record) setSelectedSavedResume(undefined); }}><option value="">Use a resume instead</option>{records.map(record => <option key={record.id} value={record.id}>{record.label}</option>)}</select></div>}

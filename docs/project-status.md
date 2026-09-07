@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Prompt, structured output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
-| Latest local verification | done | 56 API tests and Ruff passed 2026-09-06 using test-safe host/origin settings; 11 web interaction tests, 7 extension tests, ESLint, and web/extension production builds previously passed 2026-09-06 |
+| Latest local verification | done | 58 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed 2026-09-06; extension checks previously passed |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
 | API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 56 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
@@ -13,7 +13,7 @@
 | Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |
 | Authentication navigation | done | Distinct sign-in/sign-up entry points; successful auth enters workspace and sign-out returns to landing |
 | Durable billing persistence | done | SQLAlchemy ledger + Alembic migration on the persistent SQLite Docker volume; Supabase/Postgres is the documented future scale path |
-| PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning |
+| PDF/DOCX production extraction | done | PDF/DOCX import with production fail-closed ClamAV scanning; PDF page-count metadata supports export targets |
 | Deployment/CI | in progress | API, ClamAV, and a dedicated Cloudflare Tunnel are running on 2026-09-06; `https://api.rezzie.org/health` and `/ready` passed. The API uses a persistent local SQLite Docker volume; backup/restore rehearsal is documented in `docs/sqlite-operations.md`. |
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | in progress | Manifest V3 side panel builds locally with guarded active-tab JD extraction and common board selectors, Firebase email/password and Google relay authentication, session-only token storage, saved-resume selection, shared-credit or request-scoped BYOK tailoring, and TXT/PDF/DOCX export; Firebase extension-ID allow-list and Store testing remain external |
@@ -26,4 +26,4 @@
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side |
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
-| Resume document fidelity | done | Structured PDF/DOCX extraction, formatted review preview, and transient editable DOCX export |
+| Resume document fidelity | in progress | Original PDF preview in the browser session, read-only source review, and best-effort source-page targeting are implemented; exact template-aware rewriting requires private original-file storage and a document template model. See `docs/document-fidelity.md` |

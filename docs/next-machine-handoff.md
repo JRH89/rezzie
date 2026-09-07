@@ -33,14 +33,14 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 
 - Claude provider defaults to `claude-haiku-4-5`; JSON parsing, structured-output fallback, request repair, numeric-claim fallback, server-date-based tenure handling, and source-summary preservation are tested.
 - Keyword tailoring is allowed. The prior named-claim hard failure was removed because it blocked legitimate JD wording.
-- Resume/job import accepts text, Markdown, PDF, and DOCX. DOCX/PDF extraction preserves useful text structure; production upload scanning fails closed unless ClamAV is configured.
+- Resume/job import accepts text, Markdown, PDF, and DOCX. PDF uploads receive a session-local original preview and source page-count metadata, while exports use a best-effort page target; production upload scanning fails closed unless ClamAV is configured. Exact template-aware rewriting remains a separate private-object-storage milestone; see `docs/document-fidelity.md`.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
 - Firebase web auth supports Google popup sign-in, email/password signup/sign-in, password reset, session restore, and sign-out.
 - Trusted Sources are subscriber-only public GitHub/portfolio evidence. They require candidate ownership attestation, charge two credits for a source-backed tailoring run, use SSRF-safe bounded retrieval, and show source-backed changes with individual undo controls. Set `RATE_LIMIT_SALT` server-side; see `docs/trusted-sources.md`.
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 56 API tests and Ruff passed with test-safe host/origin settings on 2026-09-06. Eleven web interaction tests, seven extension tests, ESLint, and web/extension production builds previously passed on 2026-09-06.
+- Latest verified checks: 58 API tests, 12 web interaction tests, Ruff, ESLint, and the web production build passed on 2026-09-06. Extension checks previously passed on 2026-09-06.
 
 ### Not done / external dependencies
 

@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from rezzie.documents import ResumeExportService
 from rezzie.main import app
 
 client = TestClient(app)
@@ -58,6 +59,13 @@ def test_resume_file_imports_plain_text() -> None:
     assert response.json()["source_type"] == "file"
 
 
+def test_resume_pdf_import_reports_its_original_page_count() -> None:
+    content = ResumeExportService().render_pdf("Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.")
+    response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.pdf", content, "application/pdf")})
+    assert response.status_code == 200
+    assert response.json()["page_count"] == 1
+
+
 def test_resume_export_returns_an_editable_docx() -> None:
     response = client.post(
         "/api/v1/resumes/export",
@@ -79,6 +87,16 @@ def test_resume_export_returns_a_pdf() -> None:
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
     assert response.headers["cache-control"] == "no-store"
+    assert response.content.startswith(b"%PDF")
+
+
+def test_resume_export_accepts_a_one_page_target() -> None:
+    response = client.post(
+        "/api/v1/resumes/export/pdf",
+        headers=LOCAL_IDENTITY,
+        json={"resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.", "target_page_count": 1},
+    )
+    assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
 
 
