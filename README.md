@@ -156,6 +156,3 @@ Production configuration uses environment variables only. The repository include
 
 Near-term engineering work is focused on hosted end-to-end smoke tests, Chrome Web Store publication, and private object storage for optional original-file retention. A managed Postgres migration is planned only when the single-instance SQLite deployment no longer fits concurrency or recovery needs.
 
-## License
-
-This repository is published as a portfolio project. See the repository owner for licensing or reuse questions.
