@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from .auth import verified_identity, verified_user_id
+from .auth import is_configured_admin, verified_identity, verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
 from .documents import DocumentService, RichResumeExportService, editor_html_to_text
@@ -89,8 +89,7 @@ def require_admin(authorization: str | None, development_user_id: str | None, de
     identity = verified_identity(settings, authorization, development_user_id, development_user_email)
     if not identity:
         raise HTTPException(status_code=401, detail="Authentication is required.")
-    configured_email = settings.admin_email.strip().casefold() if settings.admin_email else None
-    if not configured_email or identity.email != configured_email or not identity.email_verified:
+    if not is_configured_admin(settings, identity):
         raise HTTPException(status_code=403, detail="Administrator access is required.")
     return identity.user_id
 
@@ -326,26 +325,31 @@ def add_career_fact(record_id: str, request: CareerFactCreate, authorization: st
     return CareerFactResponse(id=fact.id, fact_type=fact.fact_type, text=fact.text, source_excerpt=fact.source_excerpt, status=fact.status, evidence_note=fact.evidence_note)
 
 @app.post("/api/v1/tailor", response_model=TailoringResult)
-async def tailor(request: TailorRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> TailoringResult:
-    user_id = verified_user_id(settings, authorization, x_rezzie_user_id)
+async def tailor(request: TailorRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
+    identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
+    user_id = identity.user_id if identity else None
+    admin_override = is_configured_admin(settings, identity)
     if request.external_source_ids:
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication is required for Trusted Sources.")
         rate_limiter.enforce("source-backed-tailoring-user", user_id, limit=12, seconds=900)
         sources = trusted_sources.selected(user_id, request.external_source_ids)
-        if not billing_repository.has_active_subscription(user_id):
+        if not admin_override and not billing_repository.has_active_subscription(user_id):
             raise HTTPException(status_code=403, detail="Trusted Sources are available with an active Rezzie subscription.")
     else:
         if user_id:
             rate_limiter.enforce("tailoring-user", user_id, limit=12, seconds=900)
         sources = []
-    try: return await tailoring_service.tailor(request, user_id, sources)
+    try: return await tailoring_service.tailor(request, user_id, sources, admin_override=admin_override)
     except ValueError as error: raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @app.post("/api/v1/tailor/career-record", response_model=TailoringResult)
-async def tailor_career_record(request: TailorCareerRecordRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> TailoringResult:
-    user_id = require_user(authorization, x_rezzie_user_id)
+async def tailor_career_record(request: TailorCareerRecordRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
+    identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
+    if not identity:
+        raise HTTPException(status_code=401, detail="Authentication is required.")
+    user_id = identity.user_id
     tailoring_request = TailorRequest(
         resume_text=career_records.confirmed_source(user_id, request.record_id),
         job_description=request.job_description,
@@ -353,20 +357,30 @@ async def tailor_career_record(request: TailorCareerRecordRequest, authorization
         api_key=request.api_key,
     )
     try:
-        return await tailoring_service.tailor(tailoring_request, user_id)
+        return await tailoring_service.tailor(tailoring_request, user_id, admin_override=is_configured_admin(settings, identity))
     except ValueError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @app.post("/api/v1/billing/checkout")
-def create_checkout(request: CheckoutRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> dict[str, str]:
-    user_id = require_user(authorization, x_rezzie_user_id)
+def create_checkout(request: CheckoutRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> dict[str, str]:
+    identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
+    if not identity:
+        raise HTTPException(status_code=401, detail="Authentication is required.")
+    if is_configured_admin(settings, identity):
+        raise HTTPException(status_code=403, detail="Your administrator account has unlimited internal access and does not need checkout.")
+    user_id = identity.user_id
     return {"url": billing_service.checkout(user_id, request)}
 
 
 @app.get("/api/v1/billing/me", response_model=CreditBalance)
-def billing_balance(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> CreditBalance:
-    status, subscription_remaining, purchased_credits = billing_repository.balance(require_user(authorization, x_rezzie_user_id))
+def billing_balance(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> CreditBalance:
+    identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
+    if not identity:
+        raise HTTPException(status_code=401, detail="Authentication is required.")
+    if is_configured_admin(settings, identity):
+        return CreditBalance(subscription_status="active", subscription_remaining=0, purchased_credits=0, unlimited=True)
+    status, subscription_remaining, purchased_credits = billing_repository.balance(identity.user_id)
     return CreditBalance(subscription_status=status, subscription_remaining=subscription_remaining, purchased_credits=purchased_credits)
 
 

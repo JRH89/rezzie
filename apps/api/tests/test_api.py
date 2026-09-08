@@ -16,6 +16,14 @@ def test_health() -> None:
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_verified_administrator_has_unlimited_active_entitlement() -> None:
+    response = client.get("/api/v1/billing/me", headers=ADMIN_IDENTITY)
+    assert response.status_code == 200
+    assert response.json() == {"subscription_status": "active", "subscription_remaining": 0, "purchased_credits": 0, "unlimited": True}
+    checkout = client.post("/api/v1/billing/checkout", headers=ADMIN_IDENTITY, json={"kind": "credits", "price_id": "price_any"})
+    assert checkout.status_code == 403
+
+
 def test_support_ticket_customer_and_admin_flow() -> None:
     created = client.post("/api/v1/support/tickets", headers=LOCAL_IDENTITY, json={"subject": "Checkout did not return", "category": "checkout", "message": "The payment completed but no credits appeared."})
     assert created.status_code == 201

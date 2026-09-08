@@ -25,6 +25,19 @@ class RepairingProvider:
 
 
 @pytest.mark.asyncio
+async def test_administrator_subscription_usage_does_not_consume_credits(tmp_path: object) -> None:
+    provider = RepairingProvider()
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = TailoringService(provider, Settings(anthropic_api_key="test-key"), repository)
+    request = TailorRequest(resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.", job_description="B" * 50, credential_mode=CredentialMode.SUBSCRIPTION)
+
+    result = await service.tailor(request, "admin-user", admin_override=True)
+
+    assert "25%" in result.tailored_resume
+    assert repository.balance("admin-user") == ("none", 0, 0)
+
+
+@pytest.mark.asyncio
 async def test_truth_guard_repairs_one_unsupported_draft(tmp_path: object) -> None:
     provider = RepairingProvider()
     service = TailoringService(provider, Settings(), BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True))

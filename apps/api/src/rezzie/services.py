@@ -97,13 +97,14 @@ class TailoringService:
     def __init__(self, provider: LLMProvider, settings: Settings, billing: BillingRepository) -> None:
         self._provider, self._settings, self._billing = provider, settings, billing
 
-    async def tailor(self, request: TailorRequest, user_id: str | None = None, external_sources: list[ExternalSource] | None = None) -> TailoringResult:
+    async def tailor(self, request: TailorRequest, user_id: str | None = None, external_sources: list[ExternalSource] | None = None, *, admin_override: bool = False) -> TailoringResult:
         api_key = require_generation_key(request.credential_mode, request.api_key, self._settings.anthropic_api_key)
         credit_sources: list[str] = []
         external_sources = external_sources or []
         if request.credential_mode.value == "subscription":
             if not user_id: raise HTTPException(status_code=401, detail="Authentication is required for subscription usage.")
-            credit_sources = self._billing.consume_credits(user_id, 2 if external_sources else 1)
+            if not admin_override:
+                credit_sources = self._billing.consume_credits(user_id, 2 if external_sources else 1)
         elif external_sources:
             raise HTTPException(status_code=403, detail="Trusted Sources require subscription tailoring.")
         try:

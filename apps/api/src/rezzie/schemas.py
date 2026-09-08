@@ -143,6 +143,7 @@ class CreditBalance(BaseModel):
     subscription_status: str
     subscription_remaining: int
     purchased_credits: int
+    unlimited: bool = False
 
 
 class SupportTicketCreate(BaseModel):

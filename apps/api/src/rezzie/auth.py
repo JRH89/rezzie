@@ -20,6 +20,12 @@ class VerifiedIdentity:
     email_verified: bool
 
 
+def is_configured_admin(settings: Settings, identity: VerifiedIdentity | None) -> bool:
+    """A production privilege check backed by a verified Firebase email claim."""
+    configured_email = settings.admin_email.strip().casefold() if settings.admin_email else None
+    return bool(identity and configured_email and identity.email_verified and identity.email == configured_email)
+
+
 def verified_identity(settings: Settings, authorization: str | None, development_user_id: str | None, development_user_email: str | None = None) -> VerifiedIdentity | None:
     if settings.environment == "development":
         if development_user_id and len(development_user_id) <= 128:
