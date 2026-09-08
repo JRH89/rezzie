@@ -20,6 +20,42 @@ function articleBody(subject: string, firstStep: string, reviewQuestion: string)
 }
 
 export const blogPosts: BlogPost[] = [
+  {
+    slug: "tailor-resume-to-job-description",
+    title: "How to tailor a resume to a job description: a practical workflow",
+    description: "A step-by-step process for matching your resume to a role's priorities without overstating your experience.",
+    category: "Job search",
+    publishedAt: "2026-09-08",
+    readingMinutes: 8,
+    body: [
+      "Tailoring a resume is not the same thing as rebuilding your work history for every application. The useful goal is simpler: make it easy for a recruiter to see the connection between the work the employer needs done and the work you can honestly support. That means changing emphasis, wording, order, and examples—not adding achievements you cannot explain later.",
+      "Start with the job description before opening your resume. Read it once for the overall purpose of the role, then a second time with a pen or notes app. Mark the responsibilities that appear early, are repeated, or are described with unusually specific language. Those are usually the themes a hiring team will use to decide whether a candidate looks relevant.",
+      "Sort what you found into three groups: work the person will do, capabilities they need, and outcomes the employer cares about. For example, a product role may ask for customer research, prioritization, cross-functional delivery, and clearer adoption. A resume does not need to repeat every phrase, but it should make the strongest truthful evidence for the important groups visible.",
+      "Next, build an evidence map. For each priority, find a project, responsibility, tool, or result in your existing resume that supports it. Use the actual details you have: the team you worked with, the decision you made, the system you improved, or the audience you served. If you cannot locate evidence, do not manufacture a match. A gap is information you can address in a cover letter, interview, or future learning plan—not a reason to create a claim.",
+      "Use that map to revise the summary first. A strong summary identifies your real function, your most relevant domain or strengths, and the kind of value you have delivered. It should preview evidence that the experience section can substantiate. Avoid broad labels such as 'results-driven leader' unless the following bullets clearly show what that means in your work.",
+      "Then revise the experience section. Put the most relevant bullets first within each job, replace vague verbs with accurate ones, and add context where it helps a reader understand why the work mattered. Instead of copying a requirement such as 'stakeholder management,' describe the real collaboration you did: coordinating research findings with product and engineering partners, for example. The job-description language becomes useful only when it remains attached to your experience.",
+      "Finish with a fast quality check. Confirm that the target title, key skills, and important responsibilities are easy to find; that dates, employers, tools, and metrics still match your source resume; and that every highlighted phrase has a concrete story behind it. Save a separate version for the role so you can reuse the strongest structure for similar applications without losing your baseline resume.",
+      "Rezzie can help turn this workflow into a reviewable draft: bring the resume you trust and the job description in front of you, then decide which edits accurately represent your experience before you apply.",
+    ],
+  },
+  {
+    slug: "ai-resume-tailoring-safety-checklist",
+    title: "How to use AI to tailor a resume without lying",
+    description: "Use AI to improve resume relevance while keeping employers, dates, skills, metrics, and achievements fully supportable.",
+    category: "Resume writing",
+    publishedAt: "2026-09-08",
+    readingMinutes: 7,
+    body: [
+      "AI can make resume tailoring faster, but it cannot be the source of your career history. The safe use case is editorial: it can help identify relevant wording, tighten a bullet, reorganize supported details, and point out where the job description asks for evidence you may already have. It should not decide that you have used a tool, owned an outcome, held a title, or achieved a metric when you did not provide that information.",
+      "Give the model dependable source material. Start with the full resume you trust, not a partial list of keywords. Add the relevant job description and, when helpful, a clearly labeled project note or portfolio source you personally confirm. More context helps the model make better connections, but it does not make unverified claims acceptable.",
+      "Ask for bounded work. A useful request is 'prioritize the most relevant existing experience and use job-description terminology where it is accurate.' A risky request is 'make me the perfect candidate.' The first asks for clearer positioning; the second invites the system to close gaps that may not have a truthful answer.",
+      "Review every newly emphasized claim for source support. Check employers, titles, dates, degrees, certifications, tools, scope, metrics, and outcomes. Quantitative claims deserve special attention because a small wording change can turn a real contribution into an unsupported result. If you cannot point to the source behind a sentence, remove it or rewrite it more precisely.",
+      "Keep the difference between familiar and proficient clear. You may have collaborated with a team using a platform without operating it yourself, or participated in a launch without owning its commercial result. Good resume language can still explain adjacent experience, such as 'partnered with,' 'supported,' 'contributed to,' or 'worked alongside,' when those terms are true.",
+      "Do not let keyword matching become keyword stuffing. Repeating the employer's phrase without an example makes a resume less credible to both a recruiter and the person who interviews you. Instead, connect a term to the setting where you used it. 'Conducted customer interviews to inform product priorities' is more useful than a skills list that only says 'customer research.'",
+      "Use a final interview test: could you comfortably expand on every sentence in a conversation with the hiring manager? If not, the sentence needs more context, less certainty, or removal. This test protects the candidate as much as it protects the application; a resume should open the right conversation, not create one you have to explain away.",
+      "Rezzie is designed around this review step. It can surface a focused draft and its changes, but you keep the decision about what stays. The strongest AI-assisted resume is not the one that sounds most impressive—it is the one that makes your real experience easiest to understand.",
+    ],
+  },
   { slug: "keyword-tailoring", title: "How to tailor resume keywords without keyword stuffing", description: "Match a resume to a job description while keeping every claim accurate and readable.", category: "Keyword strategy", publishedAt: "2026-09-05", readingMinutes: 5, body: articleBody("Keyword tailoring", "Group the posting into responsibilities, tools, and outcomes, then find the evidence already present in your resume.", "could you point to a project, responsibility, or result behind every emphasized phrase?") },
   { slug: "honest-resume-tailoring", title: "What honest AI resume tailoring should and should not change", description: "The line between clearer positioning and invented experience in an AI-tailored resume.", category: "Resume writing", publishedAt: "2026-09-04", readingMinutes: 6, body: articleBody("Honest AI resume tailoring", "Change emphasis, order, headings, and phrasing before you ever consider adding new language.", "would this statement still be true if a hiring manager asked for an example?") },
   { slug: "job-description", title: "A simple way to read a job description before rewriting your resume", description: "Break a job description into priorities before you start editing.", category: "Job search", publishedAt: "2026-09-03", readingMinutes: 4, body: articleBody("Reading a job description", "Separate must-have requirements from preferred qualifications and recurring themes.", "have you made the role's most important supported requirement easy to notice?") },
