@@ -27,6 +27,8 @@ Anthropic Claude Sonnet 5 ── server master key or transient user BYOK
 
 The intended production target is the user's **Arch/Omarchy server** for API, ClamAV, and Cloudflare Tunnel. The development machine is not the server. The frontend deploys from Git to Cloudflare Workers static assets. Do not open the API directly to the internet; Tunnel is the sole public route.
 
+`wrangler.jsonc` uses `apps/web/seo-worker.ts` in front of the static asset binding. It rewrites canonical, title, description, Open Graph, Twitter, and article metadata for public routes before the SPA loads. Keep that worker and `apps/web/src/MarketingPages.tsx` metadata aligned when adding a new public page.
+
 ## Current state
 
 ### Implemented and locally verified

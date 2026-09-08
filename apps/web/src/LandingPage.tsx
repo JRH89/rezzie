@@ -1,5 +1,6 @@
 import heroImage from "./assets/rezzie-hero-editorial.png";
 import { PricingCards } from "./PricingCards";
+import { Seo } from "./MarketingPages";
 import { PublicFooter, PublicHeader } from "./SiteChrome";
 
 type LandingPageProps = { isAuthenticated: boolean; onBuyCredits: () => void; onSignIn?: () => void; onSignUp?: () => void; onStart: () => void; onSubscribe: () => void };
@@ -8,13 +9,14 @@ export function LandingPage({ isAuthenticated, onBuyCredits, onSignIn, onSignUp,
   const startAction = isAuthenticated ? onStart : onSignUp;
   return (
     <div className="landing">
+      <Seo title="AI Resume Tailoring That Keeps Your Experience True" description="Tailor your resume to each job description with accurate keywords, reviewable edits, and PDF or DOCX exports—without making up experience." />
       <PublicHeader isAuthenticated={isAuthenticated} onSignIn={onSignIn} onStart={startAction ?? onStart} />
       <main id="top">
         <section className="hero">
           <div className="hero-copy">
             <p className="kicker"><span /> AI RESUME TAILORING, GROUNDED IN YOU</p>
             <h1>A stronger match.<br /><em>Still your story.</em></h1>
-            <p className="hero-lede">Turn one honest resume into a focused application for every role. Rezzie finds the signal, mirrors the right language, and never invents experience.</p>
+            <p className="hero-lede">Tailor the resume you already trust to each job description. Rezzie surfaces the right keywords, strengthens relevance, and keeps every claim grounded in your experience.</p>
             <div className="hero-actions"><button className="button button-primary" onClick={startAction} type="button">Tailor my resume <span aria-hidden="true">→</span></button><a className="text-link" href="#how-it-works">See the 3-minute flow <span aria-hidden="true">↓</span></a></div>
             <div className="trust-row"><span>✓ No credit card to try with your key</span><span>✓ Your claims stay yours</span></div>
           </div>

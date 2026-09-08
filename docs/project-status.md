@@ -18,7 +18,7 @@
 | Hosted Stripe/OIDC/Cloudflare smoke test | blocked | Requires client-controlled domains, provider values, and Stripe test mode |
 | Chrome extension | in progress | Manifest V3 side panel includes Rezzie PNG branding, email/password sign-up/sign-in, Google relay authentication, guarded active-tab JD extraction, direct user-selected resume upload, saved-resume selection, shared-credit or request-scoped BYOK tailoring, and TXT/PDF/DOCX export; Firebase extension-ID allow-list, Chrome Web Store screenshots, and Store testing remain external |
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
-| Public SEO content | done | About, Features, FAQ, 23 categorized resume guides, searchable blog, route metadata, structured data, social preview, sitemap, and robots policy |
+| Public SEO content | done | About, Features, FAQ, 23 categorized resume guides, searchable blog, sitemap, robots policy, 10 page-specific social covers, and Cloudflare edge-rewritten canonical, Open Graph, Twitter, and structured-data metadata |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Trusted Sources and rate limits | done | Subscriber-only public GitHub/portfolio evidence, source-backed 2-credit tailoring, per-line undo/provenance review, SSRF-safe import, and persistent SQLite rate limits; see `docs/trusted-sources.md` |

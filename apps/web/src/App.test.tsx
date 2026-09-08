@@ -159,7 +159,9 @@ describe("guided tailoring workspace", () => {
     window.history.pushState({}, "", "/chrome-extension");
     render(<App />);
     expect(screen.getByRole("heading", { name: /tailor from the job page/i })).toBeTruthy();
-    expect(document.title).toBe("Chrome extension for job-page resume tailoring | Rezzie");
+    expect(document.title).toBe("Chrome Extension for AI Resume Tailoring | Rezzie");
+    expect(document.head.querySelector('meta[property="og:image"]')?.getAttribute("content")).toBe("https://rezzie.org/social/chrome-extension.png");
+    expect(document.head.querySelector('meta[name="twitter:description"]')?.getAttribute("content")).toMatch(/tailor your resume beside a job listing/i);
   });
 
   it("links from the features page to the Chrome extension page", () => {

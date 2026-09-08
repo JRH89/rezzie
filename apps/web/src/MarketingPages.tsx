@@ -8,18 +8,49 @@ type StartProps = { onStart: () => void };
 type PricingPageProps = StartProps & { onBuyCredits: () => void; onSubscribe: () => void };
 type Tile = { title: string; body: string };
 
-function Seo({ post, title, description }: { post?: BlogPost; title: string; description: string }) {
+const socialPreviewPathByTitle: Record<string, string> = {
+  "About Rezzie — Truthful AI Resume Tailoring": "/social/about.png",
+  "AI Resume Tailoring That Keeps Your Experience True": "/social/home.png",
+  "Chrome Extension for AI Resume Tailoring": "/social/chrome-extension.png",
+  "How to Tailor Your Resume to a Job Description": "/social/how-it-works.png",
+  "AI Resume Tailoring Pricing": "/social/pricing.png",
+  "AI Resume Tailoring FAQ": "/social/faq.png",
+  "AI Resume Tailoring Features": "/social/features.png",
+  "Resume Tailoring Tips and Job Search Guides": "/social/blog.png",
+  "Truthful AI Resume Tailoring": "/social/safety.png",
+  "Privacy policy": "/social/privacy.png",
+};
+
+const pageMetaByTitle: Record<string, { description: string; title: string }> = {
+  "About Rezzie": { title: "About Rezzie — Truthful AI Resume Tailoring", description: "Learn how Rezzie helps job seekers tailor resumes to each role with accurate keywords and clear positioning—without inventing experience." },
+  "Chrome extension for job-page resume tailoring": { title: "Chrome Extension for AI Resume Tailoring", description: "Tailor your resume beside a job listing. Rezzie reads the page only when you ask, uses your saved resume, and keeps every claim grounded." },
+  "How Rezzie works": { title: "How to Tailor Your Resume to a Job Description", description: "See how to tailor a resume in three clear steps: add your experience, add the job description, then review and export a truthful draft." },
+  "Rezzie pricing": { title: "AI Resume Tailoring Pricing", description: "Use your own Anthropic key free, buy 20 resume-tailoring credits for $5, or get 50 monthly credits for $9.99." },
+  "Resume tailoring FAQ": { title: "AI Resume Tailoring FAQ", description: "Get answers about truthful AI resume tailoring, file imports, editing, exports, credits, and using your own Anthropic key." },
+  "Resume tailoring features": { title: "AI Resume Tailoring Features", description: "Import your resume and a job description, match the right keywords to real experience, edit with confidence, and export PDF or DOCX." },
+  "Resume tailoring guides": { title: "Resume Tailoring Tips and Job Search Guides", description: "Practical resume tailoring tips, job-description guidance, and keyword strategies to help you make a stronger, truthful case for each role." },
+  "Truth-preserving resume tailoring": { title: "Truthful AI Resume Tailoring", description: "Learn how Rezzie keeps AI resume tailoring grounded in your supplied experience, with review controls that prevent made-up claims." },
+};
+
+export function Seo({ post, title, description }: { post?: BlogPost; title: string; description: string }) {
   useEffect(() => {
+    const pageMeta = pageMetaByTitle[title];
+    const resolvedTitle = pageMeta?.title ?? title;
+    const resolvedDescription = pageMeta?.description ?? description;
     const url = `https://rezzie.org${window.location.pathname}`;
-    document.title = `${title} | Rezzie`;
-    const set = (key: string, value: string) => { let node = document.head.querySelector(`meta[property="${key}"],meta[name="${key}"]`) as HTMLMetaElement | null; if (!node) { node = document.createElement("meta"); node.setAttribute(key.includes(":") ? "property" : "name", key); document.head.append(node); } node.content = value; };
-    set("description", description); set("og:title", title); set("og:description", description); set("og:url", url); set("og:image", "https://rezzie.org/social-preview.svg"); set("twitter:card", "summary_large_image");
+    const socialPreviewUrl = `https://rezzie.org${socialPreviewPathByTitle[resolvedTitle] ?? "/social-preview.svg"}`;
+    const socialPreviewAlt = post ? `Rezzie guide: ${post.title}` : `Rezzie: ${resolvedTitle}`;
+    document.title = `${resolvedTitle} | Rezzie`;
+    const set = (key: string, value: string) => { const attribute = key.startsWith("og:") || key.startsWith("article:") ? "property" : "name"; let node = document.head.querySelector(`meta[${attribute}="${key}"]`) as HTMLMetaElement | null; if (!node) { node = document.createElement("meta"); node.setAttribute(attribute, key); document.head.append(node); } node.content = value; };
+    const remove = (key: string) => document.head.querySelector(`meta[property="${key}"]`)?.remove();
+    set("description", resolvedDescription); set("robots", "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"); set("author", "Rezzie"); set("og:type", post ? "article" : "website"); set("og:site_name", "Rezzie"); set("og:locale", "en_US"); set("og:title", resolvedTitle); set("og:description", resolvedDescription); set("og:url", url); set("og:image", socialPreviewUrl); set("og:image:alt", socialPreviewAlt); set("twitter:card", "summary_large_image"); set("twitter:title", resolvedTitle); set("twitter:description", resolvedDescription); set("twitter:image", socialPreviewUrl); set("twitter:image:alt", socialPreviewAlt);
+    if (post) { set("article:published_time", `${post.publishedAt}T12:00:00Z`); set("article:author", "Rezzie"); set("article:section", post.category); } else { remove("article:published_time"); remove("article:author"); remove("article:section"); }
     let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonical) { canonical = document.createElement("link"); canonical.rel = "canonical"; document.head.append(canonical); }
     canonical.href = url;
     let script = document.head.querySelector("script[data-rezzie-schema]");
     if (!script) { script = document.createElement("script"); script.setAttribute("data-rezzie-schema", ""); script.setAttribute("type", "application/ld+json"); document.head.append(script); }
-    script.textContent = JSON.stringify(post ? { "@context": "https://schema.org", "@type": "BlogPosting", headline: post.title, description: post.description, datePublished: post.publishedAt, author: { "@type": "Organization", name: "Rezzie" }, mainEntityOfPage: url } : { "@context": "https://schema.org", "@type": "WebPage", name: title, description, url });
+    script.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": [{ "@type": "Organization", name: "Rezzie", url: "https://rezzie.org", logo: "https://rezzie.org/favicon.svg" }, post ? { "@type": "BlogPosting", headline: post.title, description: post.description, datePublished: post.publishedAt, author: { "@type": "Organization", name: "Rezzie" }, publisher: { "@type": "Organization", name: "Rezzie" }, image: socialPreviewUrl, mainEntityOfPage: url } : { "@type": "WebPage", name: resolvedTitle, description: resolvedDescription, url, primaryImageOfPage: socialPreviewUrl }] });
   }, [description, post, title]);
   return null;
 }
