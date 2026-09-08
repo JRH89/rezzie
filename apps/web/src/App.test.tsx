@@ -48,6 +48,7 @@ describe("guided tailoring workspace", () => {
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Blog" }).getAttribute("href")).toBe("/blog");
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Support" }).getAttribute("href")).toBe("/#support");
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Chrome extension" }).getAttribute("href")).toBe("/chrome-extension");
+    expect(screen.getByRole("link", { name: /explore the chrome extension/i }).getAttribute("href")).toBe("/chrome-extension");
     expect(screen.getByRole("heading", { name: /bring your key/i })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to Rezzie home" }));
@@ -159,6 +160,12 @@ describe("guided tailoring workspace", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: /tailor from the job page/i })).toBeTruthy();
     expect(document.title).toBe("Chrome extension for job-page resume tailoring | Rezzie");
+  });
+
+  it("links from the features page to the Chrome extension page", () => {
+    window.history.pushState({}, "", "/features");
+    render(<App />);
+    expect(screen.getByRole("link", { name: /explore the chrome extension/i }).getAttribute("href")).toBe("/chrome-extension");
   });
 
   it("exposes a searchable category-based blog library", () => {
