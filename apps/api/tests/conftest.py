@@ -9,3 +9,4 @@ os.close(descriptor)
 test_database = Path(database_path).as_posix()
 os.environ["DATABASE_URL"] = f"sqlite:///{test_database}"
 os.environ["ANTHROPIC_API_KEY"] = ""
+os.environ["ADMIN_EMAIL"] = "jaredroberthooker@gmail.com"

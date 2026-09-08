@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     clamav_host: str | None = None
     clamav_port: int = 3310
     rate_limit_salt: str = "development-rate-limit-salt"
+    admin_email: str | None = None
 
     @property
     def cors_origins(self) -> list[str]:

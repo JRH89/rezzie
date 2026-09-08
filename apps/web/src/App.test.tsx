@@ -46,6 +46,7 @@ describe("guided tailoring workspace", () => {
     expect(screen.getAllByRole("link", { name: "FAQ" })[0].getAttribute("href")).toBe("/faq");
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe("/privacy");
     expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Blog" }).getAttribute("href")).toBe("/blog");
+    expect(within(screen.getByRole("navigation", { name: "Footer navigation" })).getByRole("link", { name: "Support" }).getAttribute("href")).toBe("/#support");
     expect(screen.getByRole("heading", { name: /bring your key/i })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open workspace" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to Rezzie home" }));

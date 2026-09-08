@@ -3,12 +3,14 @@ import { LandingPage } from "./LandingPage";
 import { BillingPage } from "./BillingPage";
 import { MarketingPage } from "./MarketingPages";
 import { Workspace } from "./Workspace";
+import { SupportPage } from "./SupportPage";
 
-type View = "landing" | "workspace" | "account" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "privacy" | "blog" | "blog-post";
+type View = "landing" | "workspace" | "account" | "support" | "admin" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "privacy" | "blog" | "blog-post";
 type PurchaseIntent = "credits" | "subscription";
 
 function viewFromHash(): View {
   if (window.location.hash === "#workspace") return "workspace"; if (window.location.hash.startsWith("#account")) return "account";
+  if (window.location.hash === "#support") return "support"; if (window.location.hash === "#admin") return "admin";
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/privacy": "privacy", "/blog": "blog" };
   return path.startsWith("/blog/") ? "blog-post" : (routes[path] ?? "landing");
@@ -30,14 +32,14 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignUp, o
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated && (view === "workspace" || view === "account")) {
+    if (!isAuthenticated && (view === "workspace" || view === "account" || view === "support" || view === "admin")) {
       window.location.hash = "top";
       setView("landing");
     }
   }, [isAuthenticated, view]);
 
   function navigate(next: View, purchaseIntent?: PurchaseIntent) {
-    if (next === "workspace" && !isAuthenticated) {
+    if ((next === "workspace" || next === "support" || next === "admin") && !isAuthenticated) {
       onSignIn?.();
       return;
     }
@@ -48,7 +50,9 @@ export function App({ accessToken, isAuthenticated = true, onSignIn, onSignUp, o
 
   return view === "landing"
     ? <LandingPage isAuthenticated={isAuthenticated} onBuyCredits={() => isAuthenticated ? navigate("account", "credits") : (onSignUp ?? onSignIn)?.()} onSignIn={onSignIn} onSignUp={onSignUp ?? onSignIn} onStart={() => navigate("workspace")} onSubscribe={() => isAuthenticated ? navigate("account", "subscription") : (onSignUp ?? onSignIn)?.()} />
-    : view === "workspace" ? <Workspace accessToken={accessToken} onBilling={intent => navigate("account", intent)} onHome={() => navigate("landing")} onSignOut={onSignOut} />
+    : view === "workspace" ? <Workspace accessToken={accessToken} onBilling={intent => navigate("account", intent)} onHome={() => navigate("landing")} onSignOut={onSignOut} onSupport={() => navigate("support")} />
     : view === "account" ? <BillingPage accessToken={accessToken} onBack={() => navigate("workspace")} purchaseIntent={purchaseIntentFromHash()} />
+      : view === "support" ? <SupportPage accessToken={accessToken} onBack={() => navigate("workspace")} />
+      : view === "admin" ? <SupportPage accessToken={accessToken} admin onBack={() => navigate("workspace")} />
       : <MarketingPage isAuthenticated={isAuthenticated} kind={view} onBuyCredits={() => isAuthenticated ? navigate("account", "credits") : (onSignUp ?? onSignIn)?.()} onSignIn={onSignIn} onStart={() => isAuthenticated ? navigate("workspace") : (onSignUp ?? onSignIn)?.()} onSubscribe={() => isAuthenticated ? navigate("account", "subscription") : (onSignUp ?? onSignIn)?.()} />;
 }

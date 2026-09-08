@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from .auth import verified_user_id
+from .auth import verified_identity, verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
 from .documents import DocumentService, RichResumeExportService, editor_html_to_text
@@ -31,6 +31,11 @@ from .schemas import (
     SavedResumeResponse,
     SavedTailoringDraftCreate,
     SavedTailoringDraftResponse,
+    SupportMessageResponse,
+    SupportTicketCreate,
+    SupportTicketReplyCreate,
+    SupportTicketResponse,
+    SupportTicketStatusUpdate,
     TailorCareerRecordRequest,
     TailoringResult,
     TailorRequest,
@@ -40,6 +45,7 @@ from .schemas import (
     UrlImportRequest,
 )
 from .services import JobDescriptionImporter, TailoringService
+from .support import SupportRepository, SupportTicket
 from .trusted_sources import (
     ExternalSource,
     TrustedSourceRepository,
@@ -57,6 +63,7 @@ trusted_sources = TrustedSourceRepository(billing_repository.sessions)
 trusted_source_service = TrustedSourceService(trusted_sources, billing_repository)
 rate_limiter = RateLimiter(billing_repository.sessions, settings.rate_limit_salt)
 resume_library = ResumeLibraryService(billing_repository.sessions, billing_repository)
+support_tickets = SupportRepository(billing_repository.sessions)
 billing_service = StripeBillingService(settings, billing_repository)
 importer, tailoring_service = JobDescriptionImporter(settings), TailoringService(
     AnthropicProvider(
@@ -76,6 +83,16 @@ def require_user(authorization: str | None, development_user_id: str | None) -> 
     if not user_id:
         raise HTTPException(status_code=401, detail="Authentication is required.")
     return user_id
+
+
+def require_admin(authorization: str | None, development_user_id: str | None, development_user_email: str | None) -> str:
+    identity = verified_identity(settings, authorization, development_user_id, development_user_email)
+    if not identity:
+        raise HTTPException(status_code=401, detail="Authentication is required.")
+    configured_email = settings.admin_email.strip().casefold() if settings.admin_email else None
+    if not configured_email or identity.email != configured_email or not identity.email_verified:
+        raise HTTPException(status_code=403, detail="Administrator access is required.")
+    return identity.user_id
 
 
 def career_record_response(user_id: str, record: CareerRecord) -> CareerRecordResponse:
@@ -123,6 +140,15 @@ def saved_draft_response(draft: SavedTailoringDraft) -> SavedTailoringDraftRespo
 
 def trusted_source_response(source: ExternalSource) -> TrustedSourceResponse:
     return TrustedSourceResponse(id=source.id, label=source.label, url=source.url, source_type=source.source_type, fetched_at=source.fetched_at)
+
+
+def support_ticket_response(ticket: SupportTicket, *, include_messages: bool = False) -> SupportTicketResponse:
+    messages = support_tickets.messages(ticket.id) if include_messages else []
+    return SupportTicketResponse(
+        id=ticket.id, subject=ticket.subject, category=ticket.category, status=ticket.status,
+        created_at=ticket.created_at, updated_at=ticket.updated_at,
+        messages=[SupportMessageResponse(id=message.id, author_role=message.author_role, body=message.body, created_at=message.created_at) for message in messages],
+    )
 
 
 @app.middleware("http")
@@ -353,3 +379,52 @@ def billing_portal(authorization: str | None = Header(default=None), x_rezzie_us
 async def stripe_webhook(request: Request, stripe_signature: str | None = Header(default=None)) -> dict[str, bool]:
     billing_service.webhook(await request.body(), stripe_signature)
     return {"received": True}
+
+
+@app.post("/api/v1/support/tickets", response_model=SupportTicketResponse, status_code=201)
+def create_support_ticket(request: SupportTicketCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SupportTicketResponse:
+    user_id = require_user(authorization, x_rezzie_user_id)
+    rate_limiter.enforce("support-ticket-user", user_id, limit=10, seconds=3_600)
+    return support_ticket_response(support_tickets.create(user_id, subject=request.subject, category=request.category, message=request.message), include_messages=True)
+
+
+@app.get("/api/v1/support/tickets", response_model=list[SupportTicketResponse])
+def list_support_tickets(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> list[SupportTicketResponse]:
+    return [support_ticket_response(ticket) for ticket in support_tickets.list_for_user(require_user(authorization, x_rezzie_user_id))]
+
+
+@app.get("/api/v1/support/tickets/{ticket_id}", response_model=SupportTicketResponse)
+def get_support_ticket(ticket_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SupportTicketResponse:
+    return support_ticket_response(support_tickets.get_for_user(require_user(authorization, x_rezzie_user_id), ticket_id), include_messages=True)
+
+
+@app.post("/api/v1/support/tickets/{ticket_id}/messages", response_model=SupportTicketResponse)
+def reply_to_support_ticket(ticket_id: str, request: SupportTicketReplyCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> SupportTicketResponse:
+    user_id = require_user(authorization, x_rezzie_user_id)
+    support_tickets.get_for_user(user_id, ticket_id)
+    rate_limiter.enforce("support-message-user", user_id, limit=30, seconds=3_600)
+    return support_ticket_response(support_tickets.reply(ticket_id, author_id=user_id, author_role="customer", body=request.message), include_messages=True)
+
+
+@app.get("/api/v1/admin/support/tickets", response_model=list[SupportTicketResponse])
+def list_admin_support_tickets(authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> list[SupportTicketResponse]:
+    require_admin(authorization, x_rezzie_user_id, x_rezzie_user_email)
+    return [support_ticket_response(ticket) for ticket in support_tickets.list_all()]
+
+
+@app.get("/api/v1/admin/support/tickets/{ticket_id}", response_model=SupportTicketResponse)
+def get_admin_support_ticket(ticket_id: str, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> SupportTicketResponse:
+    require_admin(authorization, x_rezzie_user_id, x_rezzie_user_email)
+    return support_ticket_response(support_tickets.get_any(ticket_id), include_messages=True)
+
+
+@app.post("/api/v1/admin/support/tickets/{ticket_id}/messages", response_model=SupportTicketResponse)
+def reply_to_admin_support_ticket(ticket_id: str, request: SupportTicketReplyCreate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> SupportTicketResponse:
+    admin_id = require_admin(authorization, x_rezzie_user_id, x_rezzie_user_email)
+    return support_ticket_response(support_tickets.reply(ticket_id, author_id=admin_id, author_role="staff", body=request.message), include_messages=True)
+
+
+@app.patch("/api/v1/admin/support/tickets/{ticket_id}", response_model=SupportTicketResponse)
+def update_admin_support_ticket(ticket_id: str, request: SupportTicketStatusUpdate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> SupportTicketResponse:
+    require_admin(authorization, x_rezzie_user_id, x_rezzie_user_email)
+    return support_ticket_response(support_tickets.update_status(ticket_id, request.status), include_messages=True)

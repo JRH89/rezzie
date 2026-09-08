@@ -8,6 +8,8 @@ export type CareerRecord = { id: string; label: string; created_at: string; upda
 export type SavedResume = { id: string; version_id: string; label: string; source_text: string; created_at: string; updated_at: string };
 export type SavedTailoringDraft = { id: string; resume_id?: string | null; label: string; tailored_resume: string; resume_html?: string | null; created_at: string };
 export type TrustedSource = { id: string; label: string; url: string; source_type: "github" | "portfolio"; fetched_at: string };
+export type SupportMessage = { id: string; author_role: "customer" | "staff"; body: string; created_at: string };
+export type SupportTicket = { id: string; subject: string; category: "checkout" | "billing" | "account" | "technical" | "other"; status: "open" | "in_progress" | "resolved" | "closed"; created_at: string; updated_at: string; messages: SupportMessage[] };
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
@@ -16,6 +18,7 @@ function requestFor(accessToken?: string) {
   return async function request<T>(path: string, options: RequestInit): Promise<T> {
   const headers = new Headers(options.headers);
   if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
+  if (import.meta.env.DEV && import.meta.env.VITE_DEVELOPMENT_USER_EMAIL) headers.set("X-Rezzie-User-Email", import.meta.env.VITE_DEVELOPMENT_USER_EMAIL);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(apiUrl(path), { ...options, headers });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "Request failed."); }
@@ -28,6 +31,7 @@ export function createApi(accessToken?: string) {
   async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf", targetPageCount?: number, templateId = "professional", styleProfile?: ResumeStyleProfile): Promise<Blob> {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
+    if (import.meta.env.DEV && import.meta.env.VITE_DEVELOPMENT_USER_EMAIL) headers.set("X-Rezzie-User-Email", import.meta.env.VITE_DEVELOPMENT_USER_EMAIL);
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     const path = format === "pdf" ? "/api/v1/resumes/export/pdf" : "/api/v1/resumes/export";
     const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml, target_page_count: targetPageCount, template_id: templateId, style_profile: styleProfile }) });
@@ -59,5 +63,13 @@ export function createApi(accessToken?: string) {
     balance: () => request<CreditBalance>("/api/v1/billing/me", { method: "GET" }),
     checkout: (kind: "credits" | "subscription", priceId: string, quantity = 1) => request<{ url: string }>("/api/v1/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, price_id: priceId, quantity }) }),
     portal: () => request<{ url: string }>("/api/v1/billing/portal", { method: "POST" }),
+    listSupportTickets: () => request<SupportTicket[]>("/api/v1/support/tickets", { method: "GET" }),
+    getSupportTicket: (ticketId: string) => request<SupportTicket>(`/api/v1/support/tickets/${ticketId}`, { method: "GET" }),
+    createSupportTicket: (body: { subject: string; category: SupportTicket["category"]; message: string }) => request<SupportTicket>("/api/v1/support/tickets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    replyToSupportTicket: (ticketId: string, message: string) => request<SupportTicket>(`/api/v1/support/tickets/${ticketId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) }),
+    listAdminSupportTickets: () => request<SupportTicket[]>("/api/v1/admin/support/tickets", { method: "GET" }),
+    getAdminSupportTicket: (ticketId: string) => request<SupportTicket>(`/api/v1/admin/support/tickets/${ticketId}`, { method: "GET" }),
+    replyToAdminSupportTicket: (ticketId: string, message: string) => request<SupportTicket>(`/api/v1/admin/support/tickets/${ticketId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) }),
+    updateAdminSupportTicket: (ticketId: string, status: SupportTicket["status"]) => request<SupportTicket>(`/api/v1/admin/support/tickets/${ticketId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }),
   };
 }

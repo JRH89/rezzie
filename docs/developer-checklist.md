@@ -3,6 +3,7 @@
 | Owner | Item | State | Evidence |
 | --- | --- | --- | --- |
 | Engineering | Keep providers interchangeable | complete | `providers/base.py`, `providers/anthropic.py`; Sonnet 5 default remains environment-configurable |
+| Platform | Configure private support administration | pending | Set `ADMIN_EMAIL=jaredroberthooker@gmail.com` in the server API environment and rebuild the API container; its startup runs Alembic migration `0006_support_tickets` automatically. |
 | Engineering | Do not persist BYOK | complete | request-scoped credentials policy |
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |
 | Platform | Configure Firebase identity + verified subscription webhooks | pending | Enable Google and Email/Password, set Firebase web values and API issuer/audience/JWKS URL |

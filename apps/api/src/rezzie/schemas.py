@@ -145,6 +145,37 @@ class CreditBalance(BaseModel):
     purchased_credits: int
 
 
+class SupportTicketCreate(BaseModel):
+    subject: str = Field(min_length=3, max_length=160)
+    category: str = Field(pattern="^(checkout|billing|account|technical|other)$")
+    message: str = Field(min_length=2, max_length=5_000)
+
+
+class SupportTicketReplyCreate(BaseModel):
+    message: str = Field(min_length=2, max_length=5_000)
+
+
+class SupportTicketStatusUpdate(BaseModel):
+    status: str = Field(pattern="^(open|in_progress|resolved|closed)$")
+
+
+class SupportMessageResponse(BaseModel):
+    id: str
+    author_role: str
+    body: str
+    created_at: datetime
+
+
+class SupportTicketResponse(BaseModel):
+    id: str
+    subject: str
+    category: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    messages: list[SupportMessageResponse] = Field(default_factory=list)
+
+
 class CareerRecordCreate(BaseModel):
     label: str = Field(default="My Career Record", min_length=1, max_length=160)
     source_text: str = Field(min_length=50, max_length=100_000)

@@ -27,3 +27,4 @@
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
 | Resume document fidelity | in progress | Rich-editor formatting survives DOCX/PDF exports; DOCX imports supply a bounded portable style profile for a matching editor/DOCX/PDF output option. Exact template-aware rewriting and source-style persistence for saved resumes still require private original-file storage. See `docs/document-fidelity.md` |
+| Private support tickets | done | Authenticated users can create, view, and reply to private tickets; the configured verified Firebase admin email can manage status and respond. No transactional email notifications are sent. |

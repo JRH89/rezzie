@@ -9,10 +9,32 @@ from rezzie.main import app
 
 client = TestClient(app)
 LOCAL_IDENTITY = {"X-Rezzie-User-Id": "test-user"}
+ADMIN_IDENTITY = {"X-Rezzie-User-Id": "admin-user", "X-Rezzie-User-Email": "jaredroberthooker@gmail.com"}
 
 
 def test_health() -> None:
     assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_support_ticket_customer_and_admin_flow() -> None:
+    created = client.post("/api/v1/support/tickets", headers=LOCAL_IDENTITY, json={"subject": "Checkout did not return", "category": "checkout", "message": "The payment completed but no credits appeared."})
+    assert created.status_code == 201
+    ticket_id = created.json()["id"]
+    assert client.get("/api/v1/support/tickets", headers=LOCAL_IDENTITY).json()[0]["id"] == ticket_id
+    assert client.get(f"/api/v1/support/tickets/{ticket_id}", headers={"X-Rezzie-User-Id": "someone-else"}).status_code == 404
+    assert client.get("/api/v1/admin/support/tickets", headers=LOCAL_IDENTITY).status_code == 403
+    admin_list = client.get("/api/v1/admin/support/tickets", headers=ADMIN_IDENTITY)
+    assert admin_list.status_code == 200
+    assert any(ticket["id"] == ticket_id for ticket in admin_list.json())
+    replied = client.post(f"/api/v1/admin/support/tickets/{ticket_id}/messages", headers=ADMIN_IDENTITY, json={"message": "We are checking the Stripe event now."})
+    assert replied.status_code == 200
+    assert replied.json()["messages"][-1]["author_role"] == "staff"
+    resolved = client.patch(f"/api/v1/admin/support/tickets/{ticket_id}", headers=ADMIN_IDENTITY, json={"status": "resolved"})
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+    reopened = client.post(f"/api/v1/support/tickets/{ticket_id}/messages", headers=LOCAL_IDENTITY, json={"message": "Thank you, it is now fixed."})
+    assert reopened.status_code == 200
+    assert reopened.json()["status"] == "open"
 
 
 def test_health_emits_security_headers() -> None:

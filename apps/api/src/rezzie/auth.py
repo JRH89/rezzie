@@ -1,4 +1,5 @@
 """Production OIDC access-token verification; local headers are development-only."""
+from dataclasses import dataclass
 from functools import lru_cache
 
 import jwt
@@ -12,9 +13,18 @@ def _jwks_client(url: str) -> jwt.PyJWKClient:
     return jwt.PyJWKClient(url, cache_keys=True, lifespan=3600)
 
 
-def verified_user_id(settings: Settings, authorization: str | None, development_user_id: str | None) -> str | None:
+@dataclass(frozen=True)
+class VerifiedIdentity:
+    user_id: str
+    email: str | None
+    email_verified: bool
+
+
+def verified_identity(settings: Settings, authorization: str | None, development_user_id: str | None, development_user_email: str | None = None) -> VerifiedIdentity | None:
     if settings.environment == "development":
-        if development_user_id and len(development_user_id) <= 128: return development_user_id
+        if development_user_id and len(development_user_id) <= 128:
+            email = development_user_email.strip().casefold() if development_user_email and len(development_user_email) <= 320 else None
+            return VerifiedIdentity(user_id=development_user_id, email=email, email_verified=bool(email))
         return None
     if not all((settings.oidc_issuer, settings.oidc_audience, settings.oidc_jwks_url)):
         raise HTTPException(status_code=503, detail="OIDC is not configured.")
@@ -29,4 +39,11 @@ def verified_user_id(settings: Settings, authorization: str | None, development_
     subject = claims.get("sub")
     if not isinstance(subject, str) or not subject:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has no subject.")
-    return subject
+    email_claim = claims.get("email")
+    email = email_claim.strip().casefold() if isinstance(email_claim, str) and len(email_claim) <= 320 else None
+    return VerifiedIdentity(user_id=subject, email=email, email_verified=claims.get("email_verified") is True)
+
+
+def verified_user_id(settings: Settings, authorization: str | None, development_user_id: str | None) -> str | None:
+    identity = verified_identity(settings, authorization, development_user_id)
+    return identity.user_id if identity else None

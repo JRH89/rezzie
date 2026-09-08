@@ -87,7 +87,7 @@ function TailoringProgress() {
   </section>;
 }
 
-export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { accessToken?: string; onBilling: (intent?: "credits" | "subscription") => void; onHome: () => void; onSignOut?: () => void }) {
+export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport }: { accessToken?: string; onBilling: (intent?: "credits" | "subscription") => void; onHome: () => void; onSignOut?: () => void; onSupport: () => void }) {
   const api = useMemo(() => createApi(accessToken), [accessToken]);
   const [step, setStep] = useState<Step>(1);
   const [resume, setResume] = useState("");
@@ -310,7 +310,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
   return (
     <div className="workspace-shell">
-      <header className="workspace-header"><button className="brand-button" onClick={onHome} type="button" aria-label="Back to Rezzie home"><BrandMark /></button><div className="workspace-header-actions"><span className="privacy-badge"><i /> Private workspace</span>{balance && <button className="credit-badge" onClick={() => onBilling()} type="button">{balance.subscription_remaining + balance.purchased_credits} credits · Manage</button>}<button className="icon-button" onClick={() => onBilling()} type="button">Billing</button>{onSignOut && <button className="icon-button" onClick={onSignOut} type="button">Sign out</button>}<button className="icon-button" onClick={onHome} type="button">Exit</button></div></header>
+      <header className="workspace-header"><button className="brand-button" onClick={onHome} type="button" aria-label="Back to Rezzie home"><BrandMark /></button><div className="workspace-header-actions"><span className="privacy-badge"><i /> Private workspace</span>{balance && <button className="credit-badge" onClick={() => onBilling()} type="button">{balance.subscription_remaining + balance.purchased_credits} credits · Manage</button>}<button className="icon-button" onClick={() => onBilling()} type="button">Billing</button><button className="icon-button" onClick={onSupport} type="button">Support</button>{onSignOut && <button className="icon-button" onClick={onSignOut} type="button">Sign out</button>}<button className="icon-button" onClick={onHome} type="button">Exit</button></div></header>
       <nav className="stepper" aria-label="Tailoring progress">{stepLabels.map((label, index) => { const number = (index + 1) as Step; const available = number <= step || (number === 2 && sourceReady) || (number === 3 && sourceReady && jobReady) || (number === 4 && Boolean(result)); return <button key={label} className={number === step ? "current" : number < step ? "complete" : ""} disabled={!available} onClick={() => setStep(number)} type="button"><span>{number < step ? "✓" : number}</span><small>{label}</small></button>; })}</nav>
 
       <main className="workspace-main">
