@@ -10,6 +10,7 @@ import "./sidepanel.css";
 type AuthMode = "sign-in" | "sign-up";
 type CredentialMode = "byok" | "subscription";
 type Resume = { id: string; label: string; source_text: string };
+type ResumeImport = { text: string };
 type Result = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string };
 
 const firebaseConfig = {
@@ -149,6 +150,30 @@ function App() {
     }
   }
 
+  async function uploadResume(file: File) {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const base = (import.meta.env.VITE_API_BASE_URL ?? "https://api.rezzie.org").replace(/\/$/, "");
+      const importedResponse = await fetch(`${base}/api/v1/resumes/file`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+      if (!importedResponse.ok) {
+        const body = await importedResponse.json().catch(() => ({}));
+        throw new Error(body.detail ?? "Could not read that resume file.");
+      }
+      const imported = await importedResponse.json() as ResumeImport;
+      const label = file.name.replace(/\.[^.]+$/, "").trim() || "My resume";
+      const saved = await api<Resume>("/api/v1/resumes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label, source_text: imported.text }) });
+      setResumes(current => [saved, ...current]);
+      setResumeId(saved.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not upload that resume.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function download(format: "txt" | "pdf" | "docx") {
     if (!result) return;
     setBusy(true);
@@ -194,11 +219,12 @@ function App() {
   return <main className="panel">
     <header><Brand /><button className="text-button" onClick={() => { setToken(undefined); void clearSessionToken(); if (auth) void signOut(auth); }} type="button">Sign out</button></header>
     <section className="intro"><span className="eyebrow">TAILOR THIS ROLE</span><h1>Start from what is already true.</h1><p>Read the job page, choose a saved resume, then review the tailored draft.</p></section>
+    <section className="resume-library-card"><div><span className="eyebrow">YOUR RESUMES</span><h2>Bring your source.</h2><p>Upload a PDF, DOCX, Markdown, or text resume here. You can manage, edit, and save versions in the workspace.</p></div><div className="resume-library-actions"><label className="button secondary">{busy ? "Working..." : "Upload resume"}<input accept=".pdf,.docx,.md,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadResume(file); }} type="file" /></label><a className="text-link" href="https://rezzie.org/#workspace" rel="noreferrer" target="_blank">Manage resumes in Rezzie ↗</a></div></section>
     <button className="button" disabled={busy} onClick={() => void extract()} type="button">{busy ? "Reading page..." : job ? "Refresh job text" : "Read this job page"}</button>
     {job && <section className="workflow">
       <label>Job description<textarea onChange={event => setJob({ ...job, text: event.target.value })} value={job.text} /></label>
       <label>Saved resume<select onChange={event => setResumeId(event.target.value)} value={resumeId}>{resumes.map(resume => <option key={resume.id} value={resume.id}>{resume.label}</option>)}</select></label>
-      {!resumes.length && <p className="hint">Save a resume in Rezzie first, then reopen this panel.</p>}
+      {!resumes.length && <p className="hint">Upload a resume above, or use the workspace link to manage an existing one.</p>}
       <label>Tailoring access<select onChange={event => setCredentialMode(event.target.value as CredentialMode)} value={credentialMode}><option value="subscription">Use a Rezzie credit</option><option value="byok">Use my Anthropic key</option></select></label>
       {credentialMode === "byok" && <label>Anthropic API key<input autoComplete="off" onChange={event => setApiKey(event.target.value)} type="password" value={apiKey} /><span className="hint">Used for this request only. It is never saved.</span></label>}
       <button className="button" disabled={busy || !resumeId || job.text.length < 50 || (credentialMode === "byok" && !apiKey.trim())} onClick={() => void tailor()} type="button">{busy ? "Tailoring..." : credentialMode === "byok" ? "Tailor with my key" : "Tailor with a credit"}</button>

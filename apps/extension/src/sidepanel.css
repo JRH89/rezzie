@@ -21,6 +21,9 @@ input, textarea, select { background: #fffaf4; border: 1px solid #d8c1ae; border
 input:focus, textarea:focus, select:focus { border-color: #9a6347; box-shadow: 0 0 0 3px #eadccf; outline: none; }
 textarea { line-height: 1.45; min-height: 160px; resize: vertical; }
 .workflow, .result-card { border-top: 1px solid #ddcabc; display: grid; gap: 15px; padding-top: 18px; }
+.resume-library-card { background: #fffaf4; border: 1px solid #ddcabc; border-radius: 14px; display: grid; gap: 14px; padding: 16px; }
+.resume-library-card h2 { font-size: 1.25rem; margin: 3px 0 6px; }.resume-library-card p { color: #675a51; font-size: .82rem; }
+.resume-library-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }.resume-library-actions label { display: inline-flex; font-size: .82rem; min-height: 40px; width: auto; }.resume-library-actions input { display: none; }.text-link { color: #755342; font-size: .78rem; font-weight: 700; text-decoration: none; }.text-link:hover { text-decoration: underline; }
 label { display: grid; font-size: .76rem; font-weight: 800; gap: 7px; letter-spacing: .02em; }
 .hint { color: #6c5a4d; font-size: .78rem; }
 .auth-switch { align-items: center; color: #6c5a4d; display: flex; font-size: .8rem; gap: .15rem; justify-content: center; }

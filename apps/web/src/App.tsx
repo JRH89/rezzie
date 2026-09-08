@@ -5,14 +5,14 @@ import { MarketingPage } from "./MarketingPages";
 import { Workspace } from "./Workspace";
 import { SupportPage } from "./SupportPage";
 
-type View = "landing" | "workspace" | "account" | "support" | "admin" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "privacy" | "blog" | "blog-post";
+type View = "landing" | "workspace" | "account" | "support" | "admin" | "about" | "features" | "how-it-works" | "safety" | "pricing" | "faq" | "privacy" | "chrome-extension" | "blog" | "blog-post";
 type PurchaseIntent = "credits" | "subscription";
 
 function viewFromHash(): View {
   if (window.location.hash === "#workspace") return "workspace"; if (window.location.hash.startsWith("#account")) return "account";
   if (window.location.hash === "#support") return "support"; if (window.location.hash === "#admin") return "admin";
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/privacy": "privacy", "/blog": "blog" };
+  const routes: Record<string, View> = { "/about": "about", "/features": "features", "/how-it-works": "how-it-works", "/safety": "safety", "/pricing": "pricing", "/faq": "faq", "/privacy": "privacy", "/chrome-extension": "chrome-extension", "/blog": "blog" };
   return path.startsWith("/blog/") ? "blog-post" : (routes[path] ?? "landing");
 }
 

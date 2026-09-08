@@ -1,6 +1,6 @@
 # Chrome extension setup
 
-The extension is a Manifest V3 side panel. It reads the active job-description page only after the user clicks **Read this job page**, then sends the extracted text to the same Rezzie API used by the web app. Saved resumes, credits, and subscriptions stay account-scoped because the API remains the authority.
+The extension is a Manifest V3 side panel. It reads the active job-description page only after the user clicks **Read this job page**, then sends the extracted text to the same Rezzie API used by the web app. Users can upload a PDF, DOCX, Markdown, or text resume from the side panel, or open the workspace to manage saved versions. Saved resumes, credits, and subscriptions stay account-scoped because the API remains the authority.
 
 ## Build locally
 
@@ -45,7 +45,7 @@ Chrome Web Store accepts a ZIP archive, not a `.vsix` file. Build before packagi
 ```powershell
 npm.cmd --workspace @rezzie/extension run build
 New-Item -ItemType Directory -Force artifacts
-Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-chrome-extension-0.1.1.zip -Force
+Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-chrome-extension-0.1.2.zip -Force
 ```
 
 `artifacts/` is ignored by Git so the release upload is not committed. Upload that ZIP in Chrome Web Store Developer Dashboard.
