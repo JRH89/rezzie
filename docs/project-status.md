@@ -26,4 +26,4 @@
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side |
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |
 | Guided workspace UX redesign | done | Responsive four-step workspace, working home navigation, source review, contextual guidance, and result actions |
-| Resume document fidelity | in progress | Original PDF preview in the browser session, read-only source review, and best-effort source-page targeting are implemented; exact template-aware rewriting requires private original-file storage and a document template model. See `docs/document-fidelity.md` |
+| Resume document fidelity | in progress | Rich-editor formatting survives DOCX/PDF exports; DOCX imports supply a bounded portable style profile for a matching editor/DOCX/PDF output option. Exact template-aware rewriting and source-style persistence for saved resumes still require private original-file storage. See `docs/document-fidelity.md` |

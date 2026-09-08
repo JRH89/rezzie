@@ -1,10 +1,11 @@
 import { ChangeEvent, ClipboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
-import { CareerFact, CareerRecord, createApi, CreditBalance, SavedResume, SavedTailoringDraft, TailoringChange, TailoringResult, TrustedSource } from "./api";
+import { CareerFact, CareerRecord, createApi, CreditBalance, ResumeStyleProfile, SavedResume, SavedTailoringDraft, TailoringChange, TailoringResult, TrustedSource } from "./api";
 
 type ImportMode = "paste" | "url" | "file";
 type CredentialMode = "byok" | "subscription";
 type Step = 1 | 2 | 3 | 4;
+type ResumeTemplateId = "source" | "professional" | "modern" | "classic" | "compact";
 const minLength = 50;
 const fileTypes = ".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -32,7 +33,7 @@ function isResumeHeading(line: string) {
   return ["SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING"].includes(line.replace(":", "").trim().toUpperCase());
 }
 
-function editorHtml(text: string, changes: TailoringChange[] = []) {
+function editorHtml(text: string, changes: TailoringChange[] = [], styleProfile?: ResumeStyleProfile) {
   const sourceBacked = new Set(changes.filter(change => change.kind === "source_backed").map(change => change.text.trim()));
   return text.split("\n").map((rawLine, index) => {
     const line = rawLine.trim();
@@ -41,17 +42,18 @@ function editorHtml(text: string, changes: TailoringChange[] = []) {
     const rendered = sourceBacked.has(line) ? `<mark class="source-backed-highlight">${escaped}</mark>` : escaped;
     if (index === 0) return `<h1>${rendered}</h1>`;
     if (index === 1) return `<p>${rendered}</p>`;
-    if (isResumeHeading(line)) return `<h3>${rendered.replace(/:$/, "")}</h3>`;
-    if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return `<div>${escaped.slice(2)}</div>`;
+    if (isResumeHeading(line)) return `<h3>${styleProfile?.heading_uppercase ? rendered.replace(/:$/, "").toUpperCase() : rendered.replace(/:$/, "")}</h3>`;
+    if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return `<ul><li>${escaped.slice(2)}</li></ul>`;
+    if (styleProfile?.emphasize_role_lines && /[|—–]/.test(line)) return `<p><strong>${rendered}</strong></p>`;
     return `<p>${rendered}</p>`;
   }).join("");
 }
 
-function RichResumeEditor({ text, changes, onChange }: { text: string; changes: TailoringChange[]; onChange: (html: string, plainText: string) => void }) {
+function RichResumeEditor({ text, changes, styleProfile, templateId, onChange }: { text: string; changes: TailoringChange[]; styleProfile?: ResumeStyleProfile; templateId: ResumeTemplateId; onChange: (html: string, plainText: string) => void }) {
   const editor = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (editor.current) editor.current.innerHTML = editorHtml(text, changes);
-  }, [changes, text]);
+    if (editor.current) { editor.current.innerHTML = editorHtml(text, changes, styleProfile); editor.current.dataset.template = templateId; editor.current.style.setProperty("--resume-font", styleProfile?.font_family ?? "Arial"); editor.current.style.setProperty("--resume-body-size", `${styleProfile?.body_size ?? 10.5}pt`); editor.current.style.setProperty("--resume-line-height", `${styleProfile?.line_height ?? 13}pt`); editor.current.style.setProperty("--resume-name-size", `${styleProfile?.name_size ?? 18}pt`); editor.current.style.setProperty("--resume-heading-size", `${styleProfile?.heading_size ?? 11}pt`); }
+  }, [changes, styleProfile, templateId, text]);
   function update() {
     if (editor.current) onChange(editor.current.innerHTML, editor.current.innerText);
   }
@@ -92,6 +94,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [uploadedResumeName, setUploadedResumeName] = useState<string>();
   const [uploadedResumePreview, setUploadedResumePreview] = useState<string>();
   const [sourcePageCount, setSourcePageCount] = useState<number>();
+  const [sourceStyleProfile, setSourceStyleProfile] = useState<ResumeStyleProfile>();
   const [resumeLabel, setResumeLabel] = useState("My resume");
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [savedDrafts, setSavedDrafts] = useState<SavedTailoringDraft[]>([]);
@@ -116,6 +119,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TailoringResult>();
   const [editorState, setEditorState] = useState({ html: "", text: "" });
+  const [resumeTemplate, setResumeTemplate] = useState<ResumeTemplateId>("professional");
   const [copied, setCopied] = useState(false);
   const [draftLabel, setDraftLabel] = useState("Tailored resume");
   const [draftSaved, setDraftSaved] = useState(false);
@@ -143,7 +147,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     setLoading(true); setError(undefined);
     try {
       const imported = await api.importResumeFile(file);
-      setResume(imported.text); setUploadedResumeName(file.name); setUploadedResumePreview(file.type === "application/pdf" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined); setSourcePageCount(imported.page_count ?? undefined); setCareerRecord(undefined); setSelectedSavedResume(undefined);
+      setResume(imported.text); setUploadedResumeName(file.name); setUploadedResumePreview(file.type === "application/pdf" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined); setSourcePageCount(imported.page_count ?? undefined); setSourceStyleProfile(imported.style_profile ?? undefined); setResumeTemplate(imported.style_profile ? "source" : "professional"); setCareerRecord(undefined); setSelectedSavedResume(undefined);
     }
     catch (reason) { setError(errorMessage(reason, "We could not read that resume.")); }
     finally { setLoading(false); }
@@ -202,8 +206,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   function selectSavedResume(resumeId: string) {
     setSelectedSavedResume(resumeId || undefined);
     const saved = savedResumes.find(item => item.id === resumeId);
-    if (saved) { setResume(saved.source_text); setUploadedResumeName(`${saved.label} (saved)`); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setCareerRecord(undefined); }
-    else { setResume(""); setUploadedResumeName(undefined); setUploadedResumePreview(undefined); setSourcePageCount(undefined); }
+    if (saved) { setResume(saved.source_text); setUploadedResumeName(`${saved.label} (saved)`); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setResumeTemplate("professional"); setCareerRecord(undefined); }
+    else { setResume(""); setUploadedResumeName(undefined); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setResumeTemplate("professional"); }
   }
 
   async function deleteSavedResume(resumeId: string) {
@@ -255,7 +259,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
     const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined, external_source_ids: selectedTrustedSources };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
-      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume, tailored.changes ?? []), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
+      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume, tailored.changes ?? [], sourceStyleProfile), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
     finally { setLoading(false); setIsTailoring(false); }
@@ -285,7 +289,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
   async function downloadResult(format: "docx" | "pdf") {
     if (!result) return;
     setLoading(true); setError(undefined);
-    try { saveResume(await api.exportResume(editorState.text || result.tailored_resume, editorState.html, format, sourcePageCount), `rezzie-tailored-resume.${format}`); }
+    try { saveResume(await api.exportResume(editorState.text || result.tailored_resume, editorState.html, format, sourcePageCount, resumeTemplate, sourceStyleProfile), `rezzie-tailored-resume.${format}`); }
     catch (reason) { setError(errorMessage(reason, `We could not create the ${format.toUpperCase()} file.`)); }
     finally { setLoading(false); }
   }
@@ -347,7 +351,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut }: { acces
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
             <div className="result-toolbar"><p>Make any final edits, then download.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-outline" onClick={downloadText} type="button">TXT ↓</button><button className="button button-outline" disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button></div></div>
             <div className="save-draft-panel"><div><strong>Keep this version for later</strong><small>Saved drafts stay private in your Rezzie library. You can delete them anytime.</small></div><label htmlFor="draft-label">Draft name<input id="draft-label" value={draftLabel} onChange={event => setDraftLabel(event.target.value)} disabled={draftSaved} /></label><button className="button button-outline" disabled={loading || draftSaved || draftLabel.trim().length === 0} onClick={() => void saveDraft()} type="button">{draftSaved ? "Saved" : "Save draft"}</button></div>
-            <RichResumeEditor text={result.tailored_resume} changes={result.changes ?? []} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
+            <div className="resume-template-control"><label htmlFor="resume-template">Document template</label><select id="resume-template" value={resumeTemplate} onChange={event => setResumeTemplate(event.target.value as ResumeTemplateId)}>{sourceStyleProfile && <option value="source">Match uploaded DOCX</option>}<option value="professional">Professional</option><option value="modern">Modern</option><option value="classic">Classic</option><option value="compact">Compact</option></select><small>Your preview and DOCX/PDF downloads use this same template.</small></div>
+            <RichResumeEditor text={result.tailored_resume} changes={result.changes ?? []} styleProfile={resumeTemplate === "source" ? sourceStyleProfile : undefined} templateId={resumeTemplate} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
             {(result.changes?.length ?? 0) > 0 && <section className="tailoring-diff" aria-label="Resume changes to review"><div><p className="eyebrow">CHANGE REVIEW</p><h2>Keep what supports you.</h2><p>Source-backed lines are highlighted in the resume and include their evidence URL. You can remove any change before downloading.</p></div>{result.changes?.map((change, index) => <article className={change.kind} key={`${change.text}-${index}`}><span>{change.kind === "source_backed" ? "Source-backed" : "Tailored"}</span><p>{change.text}</p>{change.source_url && <a href={change.source_url} rel="noreferrer" target="_blank">View source ↗</a>}<button onClick={() => undoTailoringChange(change)} type="button">Undo this change</button></article>)}</section>}
             <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
             <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>

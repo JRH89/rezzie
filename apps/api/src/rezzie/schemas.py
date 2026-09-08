@@ -13,6 +13,19 @@ class TextImportRequest(BaseModel):
     text: str = Field(min_length=50, max_length=100_000)
 
 
+class ResumeStyleProfile(BaseModel):
+    """Bounded source-document styling that can be safely re-applied after tailoring."""
+
+    font_family: str = Field(default="Aptos", pattern="^(Aptos|Arial|Calibri|Georgia|Times New Roman)$")
+    body_size: float = Field(default=10.5, ge=8, le=14)
+    line_height: float = Field(default=13, ge=10, le=20)
+    name_size: float = Field(default=18, ge=12, le=28)
+    heading_size: float = Field(default=11, ge=9, le=16)
+    heading_uppercase: bool = True
+    emphasize_role_lines: bool = False
+    italic_metadata: bool = False
+
+
 class UrlImportRequest(BaseModel):
     url: HttpUrl
 
@@ -22,6 +35,7 @@ class ImportResponse(BaseModel):
     source_type: str
     source_url: str | None = None
     page_count: int | None = Field(default=None, ge=1, le=100)
+    style_profile: ResumeStyleProfile | None = None
 
 
 class SavedResumeCreate(BaseModel):
@@ -121,6 +135,8 @@ class ResumeExportRequest(BaseModel):
     resume_text: str = Field(min_length=50, max_length=100_000)
     resume_html: str | None = Field(default=None, max_length=200_000)
     target_page_count: int | None = Field(default=None, ge=1, le=5)
+    template_id: str = Field(default="professional", pattern="^(source|professional|modern|classic|compact)$")
+    style_profile: ResumeStyleProfile | None = None
 
 
 class CreditBalance(BaseModel):

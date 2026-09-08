@@ -1,3 +1,7 @@
+import io
+
+from docx import Document
+from docx.shared import Pt
 from fastapi.testclient import TestClient
 
 from rezzie.documents import ResumeExportService
@@ -57,6 +61,27 @@ def test_resume_file_imports_plain_text() -> None:
     response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.txt", b"Experienced engineer with measurable delivery experience." * 2, "text/plain")})
     assert response.status_code == 200
     assert response.json()["source_type"] == "file"
+
+
+def test_docx_resume_import_returns_a_safe_style_profile() -> None:
+    source = Document()
+    source.styles["Normal"].font.name = "Georgia"
+    source.styles["Normal"].font.size = Pt(11)
+    source.add_paragraph("Taylor Example")
+    source.add_paragraph("taylor@example.com")
+    source.add_paragraph("EXPERIENCE")
+    role = source.add_paragraph(); role.add_run("Acme Corp | Engineer").bold = True
+    source.add_paragraph("Delivered reliable systems and improved team workflows.")
+    content = io.BytesIO(); source.save(content)
+
+    response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.docx", content.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
+
+    assert response.status_code == 200
+    assert response.json()["style_profile"] == {
+        "font_family": "Georgia", "body_size": 10.5, "line_height": 13.1,
+        "name_size": 18.0, "heading_size": 10.5, "heading_uppercase": True,
+        "emphasize_role_lines": True, "italic_metadata": False,
+    }
 
 
 def test_resume_pdf_import_reports_its_original_page_count() -> None:

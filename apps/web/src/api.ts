@@ -1,4 +1,5 @@
-export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null };
+export type ResumeStyleProfile = { font_family: "Aptos" | "Arial" | "Calibri" | "Georgia" | "Times New Roman"; body_size: number; line_height: number; name_size: number; heading_size: number; heading_uppercase: boolean; emphasize_role_lines: boolean; italic_metadata: boolean };
+export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null; style_profile?: ResumeStyleProfile | null };
 export type TailoringChange = { text: string; kind: "source_backed" | "tailored"; source_url?: string | null };
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string; changes: TailoringChange[] };
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number };
@@ -24,12 +25,12 @@ function requestFor(accessToken?: string) {
 }
 export function createApi(accessToken?: string) {
   const request = requestFor(accessToken);
-  async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf", targetPageCount?: number): Promise<Blob> {
+  async function exportResume(resumeText: string, resumeHtml: string, format: "docx" | "pdf", targetPageCount?: number, templateId = "professional", styleProfile?: ResumeStyleProfile): Promise<Blob> {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     const path = format === "pdf" ? "/api/v1/resumes/export/pdf" : "/api/v1/resumes/export";
-    const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml, target_page_count: targetPageCount }) });
+    const response = await fetch(apiUrl(path), { method: "POST", headers, body: JSON.stringify({ resume_text: resumeText, resume_html: resumeHtml, target_page_count: targetPageCount, template_id: templateId, style_profile: styleProfile }) });
     if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `We could not create the ${format.toUpperCase()} file.`); }
     return response.blob();
   }

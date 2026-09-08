@@ -6,7 +6,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .auth import verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
-from .documents import DocumentService, ResumeExportService, editor_html_to_text
+from .documents import DocumentService, RichResumeExportService, editor_html_to_text
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .rate_limits import RateLimiter
@@ -68,7 +68,7 @@ importer, tailoring_service = JobDescriptionImporter(settings), TailoringService
     billing_repository,
 )
 document_service = DocumentService(settings)
-resume_export_service = ResumeExportService()
+resume_export_service = RichResumeExportService()
 
 
 def require_user(authorization: str | None, development_user_id: str | None) -> str:
@@ -160,14 +160,14 @@ async def import_url(request: UrlImportRequest, authorization: str | None = Head
 async def import_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count)
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile)
 
 
 @app.post("/api/v1/resumes/file", response_model=ImportResponse)
 async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count)
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile)
 
 
 @app.post("/api/v1/resumes", response_model=SavedResumeResponse, status_code=201)
@@ -249,7 +249,7 @@ def delete_tailoring_draft(draft_id: str, authorization: str | None = Header(def
 def export_resume(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     """Create an editable DOCX without persisting the candidate's document."""
     require_user(authorization, x_rezzie_user_id)
-    content = resume_export_service.render_docx(editor_html_to_text(request.resume_html, request.resume_text), request.target_page_count)
+    content = resume_export_service.render_docx(editor_html_to_text(request.resume_html, request.resume_text), request.resume_html, request.target_page_count, request.template_id, request.style_profile)
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -264,7 +264,7 @@ def export_resume(request: ResumeExportRequest, authorization: str | None = Head
 def export_resume_pdf(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     """Create a printable PDF without persisting the candidate's document."""
     require_user(authorization, x_rezzie_user_id)
-    content = resume_export_service.render_pdf(editor_html_to_text(request.resume_html, request.resume_text), request.target_page_count)
+    content = resume_export_service.render_pdf(editor_html_to_text(request.resume_html, request.resume_text), request.resume_html, request.target_page_count, request.template_id, request.style_profile)
     return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="rezzie-tailored-resume.pdf"', "Cache-Control": "no-store"})
 
 
