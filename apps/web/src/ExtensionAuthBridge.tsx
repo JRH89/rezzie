@@ -8,7 +8,14 @@ const allowedIds = (import.meta.env.VITE_CHROME_EXTENSION_IDS ?? "").split(",").
 
 function extensionOrigin(origin: string) {
   const match = /^chrome-extension:\/\/([a-p]{32})$/.exec(origin);
-  return match && allowedIds.includes(match[1]);
+  return Boolean(match && (import.meta.env.DEV || allowedIds.includes(match[1])));
+}
+
+function authenticationErrorMessage(error: unknown) {
+  if (typeof error === "object" && error && "code" in error && typeof error.code === "string") {
+    return `Google sign-in failed: ${error.code.replace("auth/", "").replaceAll("-", " ")}.`;
+  }
+  return "Google sign-in was unavailable. Please try again.";
 }
 
 export function ExtensionAuthBridge() {
@@ -24,12 +31,14 @@ export function ExtensionAuthBridge() {
         const credential = await signInWithPopup(auth, new GoogleAuthProvider());
         destination?.postMessage({ type: "rezzie-extension-auth-result", token: await credential.user.getIdToken() }, { targetOrigin: event.origin });
         setMessage("Signed in. You can return to the extension.");
-      } catch {
-        destination?.postMessage({ type: "rezzie-extension-auth-result", error: "Google sign-in was cancelled or unavailable." }, { targetOrigin: event.origin });
-        setMessage("Google sign-in did not complete. Return to the extension and try again.");
+      } catch (error) {
+        const message = authenticationErrorMessage(error);
+        destination?.postMessage({ type: "rezzie-extension-auth-result", error: message }, { targetOrigin: event.origin });
+        setMessage(message);
       }
     }
     window.addEventListener("message", receive);
+    window.parent.postMessage({ type: "rezzie-extension-auth-ready" }, "*");
     return () => window.removeEventListener("message", receive);
   }, []);
   return <main className="auth-screen"><div className="auth-card"><p className="eyebrow">REZZIE EXTENSION</p><h1>Connect your account.</h1><p>{message}</p></div></main>;

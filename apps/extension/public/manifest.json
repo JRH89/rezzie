@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rezzie",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Tailor a truthful, job-specific resume from the job page you are viewing using your saved Rezzie resumes and credits.",
   "homepage_url": "https://rezzie.org",
   "action": {
