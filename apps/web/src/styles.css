@@ -39,7 +39,8 @@ a { color: inherit; }
 .hero-copy { align-self: center; max-width: 650px; padding-right: 3rem; position: relative; z-index: 2; }
 .kicker { align-items: center; display: flex; font-size: .66rem; font-weight: 800; gap: .55rem; letter-spacing: .14em; margin: 0 0 1.7rem; }
 .kicker span { background: #e86645; border-radius: 50%; height: .58rem; width: .58rem; }
-.hero h1, .landing h2 { font: 500 clamp(3.8rem, 6vw, 6.2rem)/.87 Georgia, "Times New Roman", serif; letter-spacing: -.075em; margin: 0; }
+.hero h1 { font: 500 clamp(3.8rem, 6vw, 5.2rem)/.87 Georgia, "Times New Roman", serif; letter-spacing: -.075em; margin: 0; }
+.landing h2 { font: 500 clamp(3.8rem, 6vw, 6.2rem)/.87 Georgia, "Times New Roman", serif; letter-spacing: -.075em; margin: 0; }
 .hero h1 em, .landing h2 em { color: #e86645; font-weight: 400; }
 .hero-lede { font-size: 1.07rem; line-height: 1.55; margin: 2rem 0; max-width: 31rem; }
 .hero-actions { align-items: center; display: flex; gap: 1.6rem; }
@@ -406,6 +407,7 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
 .hero-frame img { filter: sepia(.18) saturate(.72) hue-rotate(330deg); }
 .proof-card { background: #fffaf4; box-shadow: 10px 12px 0 #4b3428; }
 .proof-number, .feature-copy article > span, .price-card .eyebrow { color: #8e5b43; }
+@media (min-width: 1100px) { .hero .kicker { margin-bottom: 1.25rem; }.hero .hero-lede { margin: 1.5rem 0; }.hero .trust-row { margin-top: 1rem; } }
 .proof-line { background: #8e5b43; }
 .fit-stamp, .status-pill, .career-option summary span { background: #ead8c7; }
 .signal-strip, .method-section { background: #2c211b; color: #fbf5ed; }
