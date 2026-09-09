@@ -45,7 +45,7 @@ Chrome Web Store accepts a ZIP archive, not a `.vsix` file. Build before packagi
 ```powershell
 npm.cmd --workspace @rezzie/extension run build
 New-Item -ItemType Directory -Force artifacts
-Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-chrome-extension-0.1.2.zip -Force
+Compress-Archive -Path apps/extension/dist/* -DestinationPath artifacts/rezzie-chrome-extension-0.1.3.zip -Force
 ```
 
 `artifacts/` is ignored by Git so the release upload is not committed. Upload that ZIP in Chrome Web Store Developer Dashboard.

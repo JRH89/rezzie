@@ -34,6 +34,18 @@ describe("visible job extraction", () => {
     expect(snapshot.text).not.toContain("Search results and filters");
   });
 
+  it("prefers the visible Indeed detail panel when stale job panels remain in the page", () => {
+    const snapshot = extractJobFromPage(page(`<main><aside>Other jobs</aside><section id="jobDescriptionText" hidden>${"First job description that must not be used. ".repeat(20)}</section><section id="jobDescriptionText">${"Selected job description that should be used. ".repeat(20)}</section></main>`), "https://www.indeed.com/jobs?q=engineer");
+    expect(snapshot.text).toContain("Selected job description");
+    expect(snapshot.text).not.toContain("First job description");
+  });
+
+  it("uses the selected Indeed job header instead of account or unrelated company chrome", () => {
+    const snapshot = extractJobFromPage(page(`<main><h1>Welcome, Jared</h1><aside><span class="company">Zimmermann Associates, Inc.</span></aside><section id="jobsearch-ViewJobPaneWrapper"><h2 data-testid="jobsearch-JobInfoHeader-title">Platform Engineer</h2><div data-testid="jobsearch-JobInfoHeader-companyName">Current Company</div><section id="jobDescriptionText">${"Build reliable platform services with an engineering team. ".repeat(20)}</section></section></main>`), "https://www.indeed.com/jobs?q=engineer");
+    expect(snapshot.title).toBe("Platform Engineer");
+    expect(snapshot.company).toBe("Current Company");
+  });
+
   it("reads the LinkedIn description pane instead of feed content", () => {
     const snapshot = extractJobFromPage(page(`<main><h1>Software Engineer</h1><section class="feed">People you may know and recommended posts</section><section class="jobs-description__content">${"Design, build, test, and improve secure services used by customers every day. ".repeat(20)}</section></main>`), "https://example.test/job");
     expect(snapshot.text).toContain("Design, build, test, and improve secure services");

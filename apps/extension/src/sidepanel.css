@@ -21,9 +21,8 @@ input, textarea, select { background: #fffaf4; border: 1px solid #d8c1ae; border
 input:focus, textarea:focus, select:focus { border-color: #9a6347; box-shadow: 0 0 0 3px #eadccf; outline: none; }
 textarea { line-height: 1.45; min-height: 160px; resize: vertical; }
 .workflow, .result-card { border-top: 1px solid #ddcabc; display: grid; gap: 15px; padding-top: 18px; }
-.resume-library-card { background: #fffaf4; border: 1px solid #ddcabc; border-radius: 14px; display: grid; gap: 14px; padding: 16px; }
-.resume-library-card h2 { font-size: 1.25rem; margin: 3px 0 6px; }.resume-library-card p { color: #675a51; font-size: .82rem; }
-.resume-library-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }.resume-library-actions label { display: inline-flex; font-size: .82rem; min-height: 40px; width: auto; }.resume-library-actions input { display: none; }.text-link { color: #755342; font-size: .78rem; font-weight: 700; text-decoration: none; }.text-link:hover { text-decoration: underline; }
+.resume-library-card { align-items: center; background: #fffaf4; border: 1px solid #ddcabc; border-radius: 12px; display: flex; gap: 12px; justify-content: space-between; padding: 12px; }.resume-library-card > div:first-child { display: grid; gap: 3px; }.resume-library-card strong { font-size: .88rem; }
+.resume-library-actions { align-items: center; display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }.resume-library-actions label { display: inline-flex; font-size: .76rem; min-height: 34px; padding: 7px 10px; width: auto; }.resume-library-actions input { display: none; }.text-link { color: #755342; font-size: .74rem; font-weight: 700; text-decoration: none; }.text-link:hover { text-decoration: underline; }
 label { display: grid; font-size: .76rem; font-weight: 800; gap: 7px; letter-spacing: .02em; }
 .hint { color: #6c5a4d; font-size: .78rem; }
 .auth-switch { align-items: center; color: #6c5a4d; display: flex; font-size: .8rem; gap: .15rem; justify-content: center; }
@@ -31,6 +30,8 @@ label { display: grid; font-size: .76rem; font-weight: 800; gap: 7px; letter-spa
 .result-card textarea { background: #f8f1e9; min-height: 210px; }
 .download-actions { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .download-actions .button { font-size: .78rem; min-height: 38px; padding: 7px; }
+.job-read-status { align-items: center; background: #f8f1e9; border: 1px solid #ddcabc; border-radius: 10px; display: grid; gap: 3px; grid-template-columns: 1fr auto; padding: 11px; }.job-read-status .eyebrow, .job-read-status strong, .job-read-status small { grid-column: 1; }.job-read-status strong { font-size: .92rem; }.job-read-status small { color: #675a51; font-size: .76rem; }.job-read-status .text-button { grid-column: 2; grid-row: 1 / span 3; }.draft-review { border-top: 1px solid #ddcabc; padding-top: 12px; }.draft-review summary { color: #755342; cursor: pointer; font-size: .82rem; font-weight: 800; }.draft-review textarea { box-sizing: border-box; margin-top: 12px; }
+.manual-job-entry { border-top: 1px solid #ddcabc; padding-top: 11px; }.manual-job-entry summary { color: #755342; cursor: pointer; font-size: .8rem; font-weight: 800; }.manual-job-entry label { margin-top: 10px; }.manual-job-entry textarea { box-sizing: border-box; min-height: 130px; }.manual-job-entry .hint { margin: 8px 0 0; }
 [role=alert] { background: #fff0eb; border: 1px solid #eab29d; border-radius: 8px; color: #9d321d; font-size: .82rem; margin: 0; padding: 10px; }
 .auth-panel { padding-top: 30px; }
 @media (max-width: 340px) { .panel { padding: 18px 13px; } .download-actions { grid-template-columns: 1fr; } .brand-logo { max-width: 122px; } }
