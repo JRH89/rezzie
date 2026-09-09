@@ -36,12 +36,14 @@ export function LandingPage({ isAuthenticated, onBuyCredits, onSignIn, onSignUp,
             <h2 id="extension-promo-title">Tailor while the job is open.</h2>
             <p>Use Rezzie alongside supported job pages. Read the listing only when you ask, select a saved resume, and take the same truthful workflow with you.</p>
           </div>
-          <ol>
-            <li><span>01</span><strong>Open the job page</strong></li>
-            <li><span>02</span><strong>Read it with Rezzie</strong></li>
-            <li><span>03</span><strong>Review your draft</strong></li>
-          </ol>
-          <a className="button button-coral" href="/chrome-extension">Explore the Chrome extension <span aria-hidden="true">→</span></a>
+          <div className="extension-promo-actions">
+            <ol>
+              <li><span>01</span><strong>Open the job page</strong></li>
+              <li><span>02</span><strong>Read it with Rezzie</strong></li>
+              <li><span>03</span><strong>Review your draft</strong></li>
+            </ol>
+            <a className="button button-dark" href="/chrome-extension">Explore the Chrome extension <span aria-hidden="true">→</span></a>
+          </div>
         </section>
         <section className="method-section" id="how-it-works"><div className="section-intro compact"><p className="section-label light">ONE CLEAR FLOW / NO PROMPT WRITING</p><h2>From application<br />to <em>ready.</em></h2></div><ol className="method-list"><li><span>1</span><div><strong>Add your resume</strong><p>Paste or upload the version you trust.</p></div></li><li><span>2</span><div><strong>Add the job</strong><p>Use text, a file, or a public link.</p></div></li><li><span>3</span><div><strong>Review and download</strong><p>Keep control of every final word.</p></div></li></ol><button className="button button-coral" onClick={startAction} type="button">Start the guided flow <span aria-hidden="true">→</span></button></section>
         <section className="safety-section" id="safety"><div><p className="section-label">THE LINE REZZIE WILL NOT CROSS</p><h2>Your career is<br />not a prompt.</h2></div><div className="safety-copy"><p>AI should help you communicate the truth—not improvise a more convenient version of it.</p><ul><li><span>✓</span><div><strong>No invented credentials</strong><small>Employers, dates, metrics, tools, and achievements must come from you.</small></div></li><li><span>✓</span><div><strong>Review gates for saved facts</strong><small>Imported Career Record facts remain off-limits until you confirm them.</small></div></li><li><span>✓</span><div><strong>Transparent review notes</strong><small>Uncertain or unsupported requirements stay visible for your judgment.</small></div></li></ul></div></section>
