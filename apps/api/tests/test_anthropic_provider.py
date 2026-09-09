@@ -42,7 +42,10 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
     assert captured["model"] == "claude-haiku-4-5"
     assert "temperature" not in captured
     assert captured["max_tokens"] == 8192
-    assert "The authoritative current date is 2026-09-06" in str(captured["system"])
+    system = captured["system"]
+    assert isinstance(system, list)
+    assert system[0]["cache_control"] == {"type": "ephemeral"}
+    assert "The authoritative current date is 2026-09-06" in str(system)
     output_config = captured["output_config"]
     assert isinstance(output_config, dict)
     assert output_config["format"]["type"] == "json_schema"

@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     environment: str = "development"
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-sonnet-5"
-    anthropic_max_tokens: int = Field(default=12_288, ge=1_024, le=32_768)
+    anthropic_model: str = "claude-haiku-4-5"
+    anthropic_max_tokens: int = Field(default=4_096, ge=1_024, le=32_768)
     anthropic_effort: Literal["low", "medium", "high"] = "medium"
     allowed_origins: str = "http://localhost:5173"
     allowed_hosts: str = "localhost,127.0.0.1,testserver"

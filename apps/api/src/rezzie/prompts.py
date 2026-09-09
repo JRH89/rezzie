@@ -54,3 +54,16 @@ def prompt_with_reference_date(reference_date: str) -> str:
 # TIME REFERENCE
 The authoritative current date is {reference_date}. Do not use your training-data cutoff or an assumed current year.
 You may state a whole-number duration in years only when it is directly calculable from an explicit employment date range in ORIGINAL_RESUME. For a year-only range such as `2020–Present`, use the difference between the stated start year and this reference year. Do not calculate tenure from an isolated year, an ambiguous date, or external evidence."""
+
+
+def cached_prompt_with_reference_date(reference_date: str) -> list[dict[str, object]]:
+    """Keep stable instructions cacheable while retaining the server's current date."""
+    time_reference = prompt_with_reference_date(reference_date).removeprefix(f"{RESUME_TAILORING_MASTER_PROMPT}\n\n")
+    return [
+        {
+            "type": "text",
+            "text": RESUME_TAILORING_MASTER_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        },
+        {"type": "text", "text": time_reference},
+    ]
