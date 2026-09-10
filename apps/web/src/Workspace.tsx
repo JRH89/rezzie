@@ -1,5 +1,6 @@
 import { ChangeEvent, ClipboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
+import { MobileMenu } from "./MobileMenu";
 import { CareerFact, CareerRecord, createApi, CreditBalance, ResumeStyleProfile, SavedResume, SavedTailoringDraft, TailoringChange, TailoringResult, TrustedSource } from "./api";
 import { resumeEditorHtml } from "./resumeFormatting";
 
@@ -73,6 +74,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   const api = useMemo(() => createApi(accessToken), [accessToken]);
   const [step, setStep] = useState<Step>(1);
   const [resume, setResume] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [uploadedResumeName, setUploadedResumeName] = useState<string>();
   const [uploadedResumePreview, setUploadedResumePreview] = useState<string>();
   const [sourcePageCount, setSourcePageCount] = useState<number>();
@@ -293,7 +295,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   const subscriptionPrice = import.meta.env.VITE_SUBSCRIPTION_PRICE_ID;
   return (
     <div className="workspace-shell">
-      <header className="workspace-header"><button className="brand-button" onClick={onHome} type="button" aria-label="Back to Rezzie home"><BrandMark /></button><div className="workspace-header-actions"><span className="privacy-badge"><i /> Private workspace</span>{balance && <button className="credit-badge" onClick={() => onBilling()} type="button">{balance.unlimited ? "Unlimited access" : `${balance.subscription_remaining + balance.purchased_credits} credits · Manage`}</button>}<button className="icon-button" onClick={() => onBilling()} type="button">Billing</button><button className="icon-button" onClick={onSupport} type="button">Support</button>{onSignOut && <button className="icon-button" onClick={onSignOut} type="button">Sign out</button>}<button className="icon-button" onClick={onHome} type="button">Exit</button></div></header>
+      <header className="workspace-header"><button className="brand-button" onClick={onHome} type="button" aria-label="Back to Rezzie home"><BrandMark /></button><div className="workspace-header-actions"><span className="privacy-badge"><i /> Private workspace</span>{balance ? <button className="credit-badge" onClick={() => onBilling()} type="button">{balance.unlimited ? "Unlimited access" : `${balance.subscription_remaining + balance.purchased_credits} credits · Manage`}</button> : <button className="icon-button" onClick={() => onBilling()} type="button">Billing</button>}<button className="icon-button" onClick={onSupport} type="button">Support</button>{onSignOut && <button className="icon-button" onClick={onSignOut} type="button">Sign out</button>}<button className="icon-button" onClick={onHome} type="button">Exit</button></div><MobileMenu isOpen={menuOpen} label="Workspace menu" onClose={() => setMenuOpen(false)} onToggle={() => setMenuOpen(current => !current)}><span className="mobile-menu-status"><i /> Private workspace</span><button onClick={() => { setMenuOpen(false); onBilling(); }} type="button">Billing and credits</button><button onClick={() => { setMenuOpen(false); onSupport(); }} type="button">Support</button>{onSignOut && <button onClick={() => { setMenuOpen(false); onSignOut(); }} type="button">Sign out</button>}<button className="mobile-menu-primary" onClick={() => { setMenuOpen(false); onHome(); }} type="button">Exit workspace</button></MobileMenu></header>
       <nav className="stepper" aria-label="Tailoring progress">{stepLabels.map((label, index) => { const number = (index + 1) as Step; const available = number <= step || (number === 2 && sourceReady) || (number === 3 && sourceReady && jobReady) || (number === 4 && Boolean(result)); return <button key={label} className={number === step ? "current" : number < step ? "complete" : ""} disabled={!available} onClick={() => setStep(number)} type="button"><span>{number < step ? "✓" : number}</span><small>{label}</small></button>; })}</nav>
 
       <main className={`workspace-main${step === 4 ? " workspace-main-result" : ""}`}>

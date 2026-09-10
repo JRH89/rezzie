@@ -56,6 +56,15 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
       flushBullets();
       continue;
     }
+    if (isResumeHeading(line)) {
+      flushBullets();
+      const rendered = render(line);
+      blocks.push(`<h3>${styleProfile?.heading_uppercase ? rendered.replace(/:$/, "").toUpperCase() : rendered.replace(/:$/, "")}</h3>`);
+      achievementSection = isAchievementSection(line);
+      hasEntryLine = false;
+      contentIndex += 1;
+      continue;
+    }
     if (isBullet(line)) {
       bullets.push(`<li>${escapeHtml(bulletText(line))}</li>`);
       contentIndex += 1;
@@ -70,11 +79,7 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
     const rendered = render(line);
     if (contentIndex === 0) blocks.push(`<h1>${rendered}</h1>`);
     else if (contentIndex === 1) blocks.push(`<p>${rendered}</p>`);
-    else if (isResumeHeading(line)) {
-      blocks.push(`<h3>${styleProfile?.heading_uppercase ? rendered.replace(/:$/, "").toUpperCase() : rendered.replace(/:$/, "")}</h3>`);
-      achievementSection = isAchievementSection(line);
-      hasEntryLine = false;
-    } else if (isRoleLine(line) || (styleProfile?.emphasize_role_lines && /\s[|–—]\s/u.test(line))) {
+    else if (isRoleLine(line) || (styleProfile?.emphasize_role_lines && /\s[|–—]\s/u.test(line))) {
       blocks.push(`<p><strong>${rendered}</strong></p>`);
       hasEntryLine = true;
     } else if (achievementSection) {

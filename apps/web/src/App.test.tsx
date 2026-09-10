@@ -187,7 +187,7 @@ describe("guided tailoring workspace", () => {
   it("exposes a searchable category-based blog library", () => {
     window.history.pushState({}, "", "/blog");
     render(<App />);
-    expect(blogPosts).toHaveLength(25);
+    expect(blogPosts).toHaveLength(26);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search guides" }), { target: { value: "transferable" } });
     expect(screen.getByRole("heading", { name: /transferable skills/i })).toBeTruthy();
   });

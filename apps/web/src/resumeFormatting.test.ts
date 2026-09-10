@@ -20,4 +20,10 @@ describe("resume formatting", () => {
 
     expect(html).toContain("<ul><li>Built reliable systems.</li><li>Improved deployment flow.</li></ul>");
   });
+
+  it("starts projects as a new section after experience bullets", () => {
+    const html = resumeEditorHtml("Taylor Example\ntaylor@example.com\n\nEXPERIENCE\nSoftware Engineer - Acme (2022 - Present)\nBuilt reliable systems.\nPROJECTS\nRezzie - Resume tailoring tool\nBuilt a truthful resume workflow.");
+
+    expect(html).toContain("<ul><li>Built reliable systems.</li></ul><h3>PROJECTS</h3><p><strong>Rezzie - Resume tailoring tool</strong></p><ul><li>Built a truthful resume workflow.</li></ul>");
+  });
 });

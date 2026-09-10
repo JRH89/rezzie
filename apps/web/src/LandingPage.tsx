@@ -7,6 +7,7 @@ type LandingPageProps = { isAuthenticated: boolean; onBuyCredits: () => void; on
 
 export function LandingPage({ isAuthenticated, onBuyCredits, onSignIn, onSignUp, onStart, onSubscribe }: LandingPageProps) {
   const startAction = isAuthenticated ? onStart : onSignUp;
+  const signals = ["Grounded in your resume", "Keywords in context", "Always yours to review", "Ready to download", "No invented claims", "Edit every word", "PDF and DOCX exports", "Save private versions", "Job language, real evidence", "One clear workflow", "Your key stays yours", "Built from your source"];
   return (
     <div className="landing">
       <Seo title="AI Resume Tailoring That Keeps Your Experience True" description="Tailor your resume to each job description with accurate keywords, reviewable edits, and PDF or DOCX exports—without making up experience." />
@@ -22,7 +23,7 @@ export function LandingPage({ isAuthenticated, onBuyCredits, onSignIn, onSignUp,
           </div>
           <div className="hero-art"><div className="hero-frame"><img src={heroImage} alt="Resume pages arranged with warm stationery" /></div><aside className="proof-card"><span className="proof-number">SOURCE 01</span><p>Every edit traces back to <strong>experience you supplied.</strong></p><span className="proof-line" /></aside><aside className="fit-stamp" aria-hidden="true"><strong>ROLE FIT</strong><span>without fiction</span></aside></div>
         </section>
-        <div className="signal-strip"><span>Grounded in your resume</span><b>✦</b><span>Keywords in context</span><b>✦</b><span>Always yours to review</span><b>✦</b><span>Ready to download</span></div>
+        <div aria-label="Rezzie benefits" className="signal-strip"><div className="signal-strip-track">{Array.from({ length: 3 }, (_, groupIndex) => <div aria-hidden={groupIndex > 0} className="signal-strip-group" key={groupIndex}>{signals.map((signal, index) => <span key={signal}>{index > 0 && <b aria-hidden="true">✦</b>}{signal}</span>)}</div>)}</div></div>
         <section className="product-section" id="product">
           <div className="section-intro"><p className="section-label">BUILT FOR THE APPLICATION IN FRONT OF YOU</p><h2>Less rewriting.<br /><em>More relevance.</em></h2><a className="section-page-link" href="/features">Explore all features →</a></div>
           <div className="feature-stage">
