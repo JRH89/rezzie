@@ -505,10 +505,10 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .page-hero .content-page > .eyebrow { color: #e4b997; top: clamp(4.5rem, 8vw, 7rem); }
 .page-hero .content-page > h1 { color: #fffaf4; font-size: clamp(3rem, 5vw, 5rem); margin: 0; max-width: 16ch; top: clamp(6.5rem, 11vw, 9rem); }
 .page-hero .content-page > .page-lede { color: #f3dfcf; font-size: clamp(1rem, 1.45vw, 1.25rem); margin: 0; max-width: 43rem; top: clamp(16.5rem, 25vw, 21rem); }
-.page-hero .article-page > .post-meta { color: #ead7c5; left: clamp(1.25rem, 5vw, 3rem); position: absolute; right: clamp(1.25rem, 5vw, 3rem); top: clamp(6.3rem, 10vw, 8.25rem); z-index: 1; }
+.page-hero .article-page > .post-meta { color: #ead7c5; left: clamp(1.25rem, 5vw, 3rem); position: absolute; right: clamp(1.25rem, 5vw, 3rem); top: clamp(5.5rem, 8vw, 6.5rem); z-index: 1; }
 .page-hero .article-page > .post-meta span:first-child { color: #e4b997; }
-.page-hero .article-page > h1 { font-size: clamp(2.9rem, 4.25vw, 4.4rem); line-height: .96; max-width: 18ch; top: clamp(8rem, 13vw, 10.5rem); }
-.page-hero .article-page > .page-lede { top: clamp(24rem, 31vw, 27rem); }
+.page-hero .article-page > h1 { font-size: clamp(2.9rem, 4.25vw, 4.4rem); line-height: .96; max-width: 18ch; top: clamp(10rem, 14vw, 12rem); }
+.page-hero .article-page > .page-lede { top: clamp(25.5rem, 33vw, 28.5rem); }
 @media (max-width: 640px) {
   .page-hero { background-size: auto 31rem; }
   .page-hero .content-page { padding-top: 33rem; }
