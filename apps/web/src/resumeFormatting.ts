@@ -25,6 +25,10 @@ function isRoleLine(line: string) {
   return /(?:\b(?:19|20)\d{2}\b|\bpresent\b)/i.test(line) && /(?:\s[-|–—]\s|\(|\))/u.test(line);
 }
 
+function isProjectEntryLine(line: string) {
+  return /\|\s*(?:https?:\/\/|www\.)/i.test(line) || /^[A-Z][^-\n]{1,90}\s[-–—]\s.+\([^)]{2,}\)/u.test(line);
+}
+
 export function isResumeHeading(line: string) {
   return sectionHeadings.has(line.replace(":", "").trim().replace(/\s+/g, " ").toUpperCase());
 }
@@ -34,7 +38,7 @@ function isAchievementSection(line: string) {
   return normalized.includes("EXPERIENCE") || normalized.includes("PROJECT") || normalized.includes("VOLUNTEER");
 }
 
-export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], styleProfile?: ResumeStyleProfile) {
+export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], styleProfile?: ResumeStyleProfile, entryLines: string[] = []) {
   const sourceBacked = new Set(changes.filter(change => change.kind === "source_backed").map(change => change.text.trim()));
   const blocks: string[] = [];
   let bullets: string[] = [];
@@ -70,7 +74,7 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
       contentIndex += 1;
       continue;
     }
-    if (achievementSection && hasEntryLine && !isRoleLine(line)) {
+    if (achievementSection && hasEntryLine && !isRoleLine(line) && !isProjectEntryLine(line) && !entryLines.includes(line)) {
       bullets.push(`<li>${render(line)}</li>`);
       contentIndex += 1;
       continue;

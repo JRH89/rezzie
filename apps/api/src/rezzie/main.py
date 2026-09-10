@@ -185,14 +185,14 @@ async def import_url(request: UrlImportRequest, authorization: str | None = Head
 async def import_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile)
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [])
 
 
 @app.post("/api/v1/resumes/file", response_model=ImportResponse)
 async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile)
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [])
 
 
 @app.post("/api/v1/resumes", response_model=SavedResumeResponse, status_code=201)

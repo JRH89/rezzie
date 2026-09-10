@@ -1,5 +1,5 @@
 export type ResumeStyleProfile = { font_family: "Aptos" | "Arial" | "Calibri" | "Georgia" | "Times New Roman"; body_size: number; line_height: number; name_size: number; heading_size: number; heading_uppercase: boolean; emphasize_role_lines: boolean; italic_metadata: boolean };
-export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null; style_profile?: ResumeStyleProfile | null };
+export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null; style_profile?: ResumeStyleProfile | null; entry_lines?: string[] };
 export type TailoringChange = { text: string; kind: "source_backed" | "tailored"; source_url?: string | null };
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string; changes: TailoringChange[] };
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number; unlimited: boolean };

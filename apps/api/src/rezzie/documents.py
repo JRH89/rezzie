@@ -103,11 +103,23 @@ def docx_style_profile(document: Document) -> dict[str, str | float | bool]:
     }
 
 
+def docx_entry_lines(document: Document) -> list[str]:
+    """Return bold DOCX entry paragraphs so the editor can preserve semantic boundaries."""
+    entries: list[str] = []
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        bold_characters = sum(len(run.text) for run in paragraph.runs if run.bold)
+        if text and not is_section_heading(text) and bold_characters >= len(text) * 0.6:
+            entries.append(text)
+    return entries[:500]
+
+
 @dataclass(frozen=True)
 class ExtractedDocument:
     text: str
     page_count: int | None = None
     style_profile: dict[str, str | float | bool] | None = None
+    entry_lines: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -236,6 +248,7 @@ class DocumentService:
         self._scan(data)
         try:
             style_profile = None
+            entry_lines = None
             if document_type == "text":
                 text, page_count = data.decode("utf-8", errors="replace"), None
             elif document_type == "pdf":
@@ -243,12 +256,12 @@ class DocumentService:
                 text, page_count = pdf_text(reader), len(reader.pages)
             else:
                 document = Document(io.BytesIO(data))
-                text, page_count, style_profile = paragraph_text(document), None, docx_style_profile(document)
+                text, page_count, style_profile, entry_lines = paragraph_text(document), None, docx_style_profile(document), docx_entry_lines(document)
         except Exception as error:
             raise HTTPException(status_code=422, detail="That document could not be read.") from error
         text = text.strip()
         if len(text) < 50: raise HTTPException(status_code=422, detail="The document is too short or has no readable text.")
-        return ExtractedDocument(text=text[:100_000], page_count=page_count, style_profile=style_profile)
+        return ExtractedDocument(text=text[:100_000], page_count=page_count, style_profile=style_profile, entry_lines=entry_lines)
 
     def _scan(self, data: bytes) -> None:
         if not self._settings.clamav_host:

@@ -507,8 +507,8 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .page-hero .content-page > .page-lede { color: #f3dfcf; font-size: clamp(1rem, 1.45vw, 1.25rem); margin: 0; max-width: 43rem; top: clamp(16.5rem, 25vw, 21rem); }
 .page-hero .article-page > .post-meta { color: #ead7c5; left: clamp(1.25rem, 5vw, 3rem); position: absolute; right: clamp(1.25rem, 5vw, 3rem); top: clamp(6.3rem, 10vw, 8.25rem); z-index: 1; }
 .page-hero .article-page > .post-meta span:first-child { color: #e4b997; }
-.page-hero .article-page > h1 { top: clamp(8rem, 13vw, 10.5rem); }
-.page-hero .article-page > .page-lede { top: clamp(18.5rem, 27vw, 22.5rem); }
+.page-hero .article-page > h1 { font-size: clamp(2.9rem, 4.25vw, 4.4rem); line-height: .96; max-width: 18ch; top: clamp(8rem, 13vw, 10.5rem); }
+.page-hero .article-page > .page-lede { top: clamp(24rem, 31vw, 27rem); }
 @media (max-width: 640px) {
   .page-hero { background-size: auto 31rem; }
   .page-hero .content-page { padding-top: 33rem; }
@@ -516,8 +516,8 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
   .page-hero .content-page > h1 { font-size: clamp(2.8rem, 13vw, 4rem); top: 4.75rem; }
   .page-hero .content-page > .page-lede { font-size: 1rem; top: 15.5rem; }
   .page-hero .article-page > .post-meta { top: 4.8rem; }
-  .page-hero .article-page > h1 { top: 6.8rem; }
-  .page-hero .article-page > .page-lede { top: 17.5rem; }
+  .page-hero .article-page > h1 { font-size: clamp(2.55rem, 11vw, 3.4rem); top: 6.8rem; }
+  .page-hero .article-page > .page-lede { top: 19.5rem; }
 }
 .product-section { padding-bottom: 7rem; padding-top: 7rem; }
 .product-section .section-intro { align-items: flex-start; flex-direction: column; margin: 0 0 3rem; max-width: 48rem; }
