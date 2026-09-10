@@ -1,11 +1,13 @@
 import { ChangeEvent, ClipboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "./BrandMark";
 import { CareerFact, CareerRecord, createApi, CreditBalance, ResumeStyleProfile, SavedResume, SavedTailoringDraft, TailoringChange, TailoringResult, TrustedSource } from "./api";
+import { resumeEditorHtml } from "./resumeFormatting";
 
 type ImportMode = "paste" | "url" | "file";
 type CredentialMode = "byok" | "subscription";
 type Step = 1 | 2 | 3 | 4;
 type ResumeTemplateId = "source" | "professional" | "modern" | "classic" | "compact";
+type ResultTab = "draft" | "changes" | "checks";
 const minLength = 50;
 const fileTypes = ".txt,.md,.pdf,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -29,30 +31,10 @@ function saveResume(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function isResumeHeading(line: string) {
-  return ["SUMMARY", "PROFESSIONAL SUMMARY", "PROFILE", "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT", "PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING"].includes(line.replace(":", "").trim().toUpperCase());
-}
-
-function editorHtml(text: string, changes: TailoringChange[] = [], styleProfile?: ResumeStyleProfile) {
-  const sourceBacked = new Set(changes.filter(change => change.kind === "source_backed").map(change => change.text.trim()));
-  return text.split("\n").map((rawLine, index) => {
-    const line = rawLine.trim();
-    const escaped = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    if (!line) return "<div><br></div>";
-    const rendered = sourceBacked.has(line) ? `<mark class="source-backed-highlight">${escaped}</mark>` : escaped;
-    if (index === 0) return `<h1>${rendered}</h1>`;
-    if (index === 1) return `<p>${rendered}</p>`;
-    if (isResumeHeading(line)) return `<h3>${styleProfile?.heading_uppercase ? rendered.replace(/:$/, "").toUpperCase() : rendered.replace(/:$/, "")}</h3>`;
-    if (["- ", "* ", "• "].some(prefix => line.startsWith(prefix))) return `<ul><li>${escaped.slice(2)}</li></ul>`;
-    if (styleProfile?.emphasize_role_lines && /[|—–]/.test(line)) return `<p><strong>${rendered}</strong></p>`;
-    return `<p>${rendered}</p>`;
-  }).join("");
-}
-
 function RichResumeEditor({ text, changes, styleProfile, templateId, onChange }: { text: string; changes: TailoringChange[]; styleProfile?: ResumeStyleProfile; templateId: ResumeTemplateId; onChange: (html: string, plainText: string) => void }) {
   const editor = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (editor.current) { editor.current.innerHTML = editorHtml(text, changes, styleProfile); editor.current.dataset.template = templateId; editor.current.style.setProperty("--resume-font", styleProfile?.font_family ?? "Arial"); editor.current.style.setProperty("--resume-body-size", `${styleProfile?.body_size ?? 10.5}pt`); editor.current.style.setProperty("--resume-line-height", `${styleProfile?.line_height ?? 13}pt`); editor.current.style.setProperty("--resume-name-size", `${styleProfile?.name_size ?? 18}pt`); editor.current.style.setProperty("--resume-heading-size", `${styleProfile?.heading_size ?? 11}pt`); }
+    if (editor.current) { editor.current.innerHTML = resumeEditorHtml(text, changes, styleProfile); editor.current.dataset.template = templateId; editor.current.style.setProperty("--resume-font", styleProfile?.font_family ?? "Arial"); editor.current.style.setProperty("--resume-body-size", `${styleProfile?.body_size ?? 10.5}pt`); editor.current.style.setProperty("--resume-line-height", `${styleProfile?.line_height ?? 13}pt`); editor.current.style.setProperty("--resume-name-size", `${styleProfile?.name_size ?? 18}pt`); editor.current.style.setProperty("--resume-heading-size", `${styleProfile?.heading_size ?? 11}pt`); }
   }, [changes, styleProfile, templateId, text]);
   function update() {
     if (editor.current) onChange(editor.current.innerHTML, editor.current.innerText);
@@ -123,6 +105,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   const [copied, setCopied] = useState(false);
   const [draftLabel, setDraftLabel] = useState("Tailored resume");
   const [draftSaved, setDraftSaved] = useState(false);
+  const [resultTab, setResultTab] = useState<ResultTab>("draft");
 
   useEffect(() => {
     void api.balance().then(setBalance).catch(() => undefined);
@@ -228,7 +211,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
 
   function reopenDraft(draft: SavedTailoringDraft) {
     setResult({ tailored_resume: draft.tailored_resume, matched_keywords: [], review_items: [], truth_statement: "This is a private draft you previously saved. Review it before using it.", changes: [] });
-    setEditorState({ html: draft.resume_html ?? editorHtml(draft.tailored_resume), text: draft.tailored_resume }); setDraftLabel(draft.label); setDraftSaved(true); setStep(4);
+    setEditorState({ html: draft.resume_html ?? resumeEditorHtml(draft.tailored_resume), text: draft.tailored_resume }); setDraftLabel(draft.label); setDraftSaved(true); setResultTab("draft"); setStep(4);
   }
 
   async function updateFact(fact: CareerFact, changes: Partial<Pick<CareerFact, "text" | "status" | "evidence_note">>) {
@@ -259,7 +242,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
     const body = { job_description: job, credential_mode: credentialMode, api_key: credentialMode === "byok" ? apiKey : undefined, external_source_ids: selectedTrustedSources };
     try {
       const tailored = careerRecord ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id }) : await api.tailor({ ...body, resume_text: resume });
-      setResult(tailored); setEditorState({ html: editorHtml(tailored.tailored_resume, tailored.changes ?? [], sourceStyleProfile), text: tailored.tailored_resume }); setDraftSaved(false); setStep(4);
+      setResult(tailored); setEditorState({ html: resumeEditorHtml(tailored.tailored_resume, tailored.changes ?? [], sourceStyleProfile), text: tailored.tailored_resume }); setDraftSaved(false); setResultTab("draft"); setStep(4);
       if (credentialMode === "subscription") setBalance(await api.balance());
     } catch (reason) { setError(errorMessage(reason, "Tailoring failed. Your credit was not kept if the model failed.")); }
     finally { setLoading(false); setIsTailoring(false); }
@@ -302,7 +285,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   function undoTailoringChange(change: TailoringChange) {
     const nextText = editorState.text.split("\n").filter(line => line.trim() !== change.text.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
     const remaining = result?.changes?.filter(item => item !== change) ?? [];
-    setEditorState({ text: nextText, html: editorHtml(nextText, remaining) });
+    setEditorState({ text: nextText, html: resumeEditorHtml(nextText, remaining) });
     setResult(current => current ? { ...current, changes: remaining } : current);
   }
 
@@ -313,7 +296,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
       <header className="workspace-header"><button className="brand-button" onClick={onHome} type="button" aria-label="Back to Rezzie home"><BrandMark /></button><div className="workspace-header-actions"><span className="privacy-badge"><i /> Private workspace</span>{balance && <button className="credit-badge" onClick={() => onBilling()} type="button">{balance.unlimited ? "Unlimited access" : `${balance.subscription_remaining + balance.purchased_credits} credits · Manage`}</button>}<button className="icon-button" onClick={() => onBilling()} type="button">Billing</button><button className="icon-button" onClick={onSupport} type="button">Support</button>{onSignOut && <button className="icon-button" onClick={onSignOut} type="button">Sign out</button>}<button className="icon-button" onClick={onHome} type="button">Exit</button></div></header>
       <nav className="stepper" aria-label="Tailoring progress">{stepLabels.map((label, index) => { const number = (index + 1) as Step; const available = number <= step || (number === 2 && sourceReady) || (number === 3 && sourceReady && jobReady) || (number === 4 && Boolean(result)); return <button key={label} className={number === step ? "current" : number < step ? "complete" : ""} disabled={!available} onClick={() => setStep(number)} type="button"><span>{number < step ? "✓" : number}</span><small>{label}</small></button>; })}</nav>
 
-      <main className="workspace-main">
+      <main className={`workspace-main${step === 4 ? " workspace-main-result" : ""}`}>
         <section aria-busy={isTailoring} className="workspace-content">
           {step === 1 && <>
             <div className="step-heading"><p className="eyebrow">STEP 1 OF 4</p><h1>Start with what’s true.</h1><p>Add the resume you trust. Rezzie will use it as the boundary for every suggestion.</p></div>
@@ -350,12 +333,10 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
           {step === 4 && result && <>
             <div className="step-heading result-heading"><div><p className="eyebrow">YOUR TAILORED DRAFT</p><h1>Sharper, grounded, ready to review.</h1></div><span className="complete-badge">✓ Complete</span></div>
             <div className="result-toolbar"><p>Make any final edits, then download.</p><div><button className="button button-outline" onClick={() => void copyResult()} type="button">{copied ? "Copied" : "Copy text"}</button><button className="button button-outline" onClick={downloadText} type="button">TXT ↓</button><button className="button button-outline" disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button><button className="button button-primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button></div></div>
-            <div className="save-draft-panel"><div><strong>Keep this version for later</strong><small>Saved drafts stay private in your Rezzie library. You can delete them anytime.</small></div><label htmlFor="draft-label">Draft name<input id="draft-label" value={draftLabel} onChange={event => setDraftLabel(event.target.value)} disabled={draftSaved} /></label><button className="button button-outline" disabled={loading || draftSaved || draftLabel.trim().length === 0} onClick={() => void saveDraft()} type="button">{draftSaved ? "Saved" : "Save draft"}</button></div>
-            <div className="resume-template-control"><label htmlFor="resume-template">Document template</label><select id="resume-template" value={resumeTemplate} onChange={event => setResumeTemplate(event.target.value as ResumeTemplateId)}>{sourceStyleProfile && <option value="source">Match uploaded DOCX</option>}<option value="professional">Professional</option><option value="modern">Modern</option><option value="classic">Classic</option><option value="compact">Compact</option></select><small>Your preview and DOCX/PDF downloads use this same template.</small></div>
-            <RichResumeEditor text={result.tailored_resume} changes={result.changes ?? []} styleProfile={resumeTemplate === "source" ? sourceStyleProfile : undefined} templateId={resumeTemplate} onChange={(html, plainText) => setEditorState({ html, text: plainText })} />
-            {(result.changes?.length ?? 0) > 0 && <section className="tailoring-diff" aria-label="Resume changes to review"><div><p className="eyebrow">CHANGE REVIEW</p><h2>Keep what supports you.</h2><p>Source-backed lines are highlighted in the resume and include their evidence URL. You can remove any change before downloading.</p></div>{result.changes?.map((change, index) => <article className={change.kind} key={`${change.text}-${index}`}><span>{change.kind === "source_backed" ? "Source-backed" : "Tailored"}</span><p>{change.text}</p>{change.source_url && <a href={change.source_url} rel="noreferrer" target="_blank">View source ↗</a>}<button onClick={() => undoTailoringChange(change)} type="button">Undo this change</button></article>)}</section>}
-            <div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div>
-            <div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div>
+            <div className="result-tabs" role="tablist" aria-label="Tailored resume review"><button aria-controls="result-draft" aria-selected={resultTab === "draft"} className={resultTab === "draft" ? "active" : ""} onClick={() => setResultTab("draft")} role="tab" type="button">Draft</button><button aria-controls="result-changes" aria-selected={resultTab === "changes"} className={resultTab === "changes" ? "active" : ""} onClick={() => setResultTab("changes")} role="tab" type="button">Changes <span>{result.changes?.length ?? 0}</span></button><button aria-controls="result-checks" aria-selected={resultTab === "checks"} className={resultTab === "checks" ? "active" : ""} onClick={() => setResultTab("checks")} role="tab" type="button">Checks <span>{result.review_items.length}</span></button></div>
+            {resultTab === "draft" && <section id="result-draft" role="tabpanel"><div className="save-draft-panel"><div><strong>Keep this version for later</strong><small>Saved drafts stay private in your Rezzie library. You can delete them anytime.</small></div><label htmlFor="draft-label">Draft name<input id="draft-label" value={draftLabel} onChange={event => setDraftLabel(event.target.value)} disabled={draftSaved} /></label><button className="button button-outline" disabled={loading || draftSaved || draftLabel.trim().length === 0} onClick={() => void saveDraft()} type="button">{draftSaved ? "Saved" : "Save draft"}</button></div><div className="resume-template-control"><label htmlFor="resume-template">Document template</label><select id="resume-template" value={resumeTemplate} onChange={event => setResumeTemplate(event.target.value as ResumeTemplateId)}>{sourceStyleProfile && <option value="source">Match uploaded DOCX</option>}<option value="professional">Professional</option><option value="modern">Modern</option><option value="classic">Classic</option><option value="compact">Compact</option></select><small>Your preview and DOCX/PDF downloads use this same template.</small></div><RichResumeEditor text={result.tailored_resume} changes={result.changes ?? []} styleProfile={resumeTemplate === "source" ? sourceStyleProfile : undefined} templateId={resumeTemplate} onChange={(html, plainText) => setEditorState({ html, text: plainText })} /></section>}
+            {resultTab === "changes" && <section className="tailoring-diff" id="result-changes" role="tabpanel"><div><p className="eyebrow">CHANGE REVIEW</p><h2>Keep what supports you.</h2><p>Review the focused edits separately from the full document. Undo removes that exact line from your draft.</p></div>{result.changes?.length ? result.changes.map((change, index) => <article className={change.kind} key={`${change.text}-${index}`}><div><span>{change.kind === "source_backed" ? "Source-backed" : "Tailored"}</span><p>{change.text}</p>{change.source_url && <a href={change.source_url} rel="noreferrer" target="_blank">View source ↗</a>}</div><button onClick={() => undoTailoringChange(change)} type="button">Undo change</button></article>) : <p className="empty-review">No tracked line-level changes were returned for this draft.</p>}</section>}
+            {resultTab === "checks" && <section className="result-checks" id="result-checks" role="tabpanel"><div className="result-insights"><section><p className="eyebrow">GROUNDED KEYWORDS</p><div className="keyword-list">{result.matched_keywords.length ? result.matched_keywords.map(keyword => <span key={keyword}>{keyword}</span>) : <p>No keywords returned.</p>}</div></section><section><p className="eyebrow">YOUR REVIEW QUEUE</p>{result.review_items.length ? <ul>{result.review_items.map(item => <li key={item}><span>!</span>{item}</li>)}</ul> : <p className="success-message">✓ No extra review items returned.</p>}</section></div><div className="truth-check"><span>✓</span><p>{result.truth_statement}</p></div></section>}
             <div className="step-actions"><button className="back-link" onClick={() => setStep(3)} type="button">← Adjust setup</button><button className="button button-dark" onClick={() => { setJob(""); setResult(undefined); setStep(2); }} type="button">Tailor for another job <span>→</span></button></div>
           </>}
           {error && <div className="error-banner" role="alert"><span>!</span><p>{error}</p><button onClick={() => setError(undefined)} aria-label="Dismiss error" type="button">×</button></div>}

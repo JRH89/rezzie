@@ -9,7 +9,7 @@ function mockBootstrapRequests() {
     const body = path.includes("/billing/me")
       ? { subscription_status: "none", subscription_remaining: 0, purchased_credits: 0 }
       : path.includes("/api/v1/tailor")
-        ? { tailored_resume: "A grounded tailored resume that is deliberately long enough to review and download.", matched_keywords: ["TypeScript"], review_items: ["Check final tone"], truth_statement: "Every claim is grounded." }
+        ? { tailored_resume: "A grounded tailored resume that is deliberately long enough to review and download.", matched_keywords: ["TypeScript"], review_items: ["Check final tone"], truth_statement: "Every claim is grounded.", changes: [{ text: "A grounded tailored resume that is deliberately long enough to review and download.", kind: "tailored" }] }
         : [];
     return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }));
   }));
@@ -103,6 +103,21 @@ describe("guided tailoring workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
     expect(await screen.findByRole("button", { name: /docx/i })).toBeTruthy();
     expect(screen.getByLabelText("Tailored resume")).toBeTruthy();
+  });
+
+  it("keeps the long draft and change review in separate result tabs", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /continue to the job/i }));
+    fireEvent.change(screen.getByLabelText(/job description text/i), { target: { value: "b".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /review setup/i }));
+    fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
+    fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
+    expect(await screen.findByLabelText("Tailored resume")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /changes 1/i }));
+    expect(screen.getByRole("button", { name: "Undo change" })).toBeTruthy();
+    expect(screen.queryByLabelText("Tailored resume")).toBeNull();
   });
 
   it("shows visible progress while a tailoring request is in flight", async () => {

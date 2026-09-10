@@ -34,6 +34,7 @@ def test_exported_docx_has_resume_structure() -> None:
     assert "EXPERIENCE" in [paragraph.text for paragraph in rendered.paragraphs]
     assert any(paragraph.text == "Delivered reliable systems." for paragraph in rendered.paragraphs)
     assert is_section_heading("Experience:")
+    assert is_section_heading("Professional Experience")
 
 
 def test_rich_editor_formatting_survives_docx_and_pdf_exports() -> None:

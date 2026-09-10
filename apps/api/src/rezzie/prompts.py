@@ -42,7 +42,7 @@ Return valid JSON only, with exactly these keys:
 # RESUME LAYOUT
 - Preserve the source resume's useful section order and its identity/contact line when present.
 - Use one line for the name, one compact contact line, blank lines between sections, and clear section headings.
-- Keep each position's employer/title/date line together when it appears together in the source. Use `- ` only for genuine bullets.
+- Keep each position's employer/title/date line together when it appears together in the source. Put every supported responsibility or achievement beneath a position on its own `- ` prefixed bullet line; never turn those entries into an unbulleted prose paragraph. Use `- ` only for genuine bullets.
 
 Before responding, silently verify every factual assertion in tailored_resume against ORIGINAL_RESUME. If evidence is missing, remove the assertion and add the appropriate review item instead."""
 
