@@ -92,7 +92,7 @@ def test_cors_headers_are_preserved_for_tailoring_errors(monkeypatch: pytest.Mon
         headers={**LOCAL_IDENTITY, "Origin": "http://localhost:5173"},
         json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "byok", "api_key": "test-key" * 3},
     )
-    assert response.status_code == 502
+    assert response.status_code == 503
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 

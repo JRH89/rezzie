@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -53,6 +55,7 @@ from .trusted_sources import (
 )
 
 settings = Settings()
+logger = logging.getLogger(__name__)
 app = FastAPI(title="Rezzie API", version="v1")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
@@ -347,8 +350,11 @@ async def tailor(request: TailorRequest, http_request: Request, authorization: s
         if user_id:
             rate_limiter.enforce("tailoring-user", user_id, limit=12, seconds=900)
         sources = []
-    try: return await tailoring_service.tailor(request, user_id, sources, admin_override=admin_override)
-    except ValueError as error: raise HTTPException(status_code=502, detail=str(error), headers=cors_error_headers(http_request)) from error
+    try:
+        return await tailoring_service.tailor(request, user_id, sources, admin_override=admin_override)
+    except ValueError as error:
+        logger.warning("Tailoring provider request failed: %s", error)
+        return JSONResponse(status_code=503, content={"detail": str(error)}, headers=cors_error_headers(http_request))
 
 
 @app.post("/api/v1/tailor/career-record", response_model=TailoringResult)
@@ -366,7 +372,8 @@ async def tailor_career_record(request: TailorCareerRecordRequest, http_request:
     try:
         return await tailoring_service.tailor(tailoring_request, user_id, admin_override=is_configured_admin(settings, identity))
     except ValueError as error:
-        raise HTTPException(status_code=502, detail=str(error), headers=cors_error_headers(http_request)) from error
+        logger.warning("Career-record tailoring provider request failed: %s", error)
+        return JSONResponse(status_code=503, content={"detail": str(error)}, headers=cors_error_headers(http_request))
 
 
 @app.post("/api/v1/billing/checkout")

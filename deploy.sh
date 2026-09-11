@@ -25,13 +25,29 @@ docker compose -f "$compose_file" up -d --no-deps --force-recreate api
 echo "Waiting for the Rezzie API health check..."
 for attempt in {1..30}; do
   if curl --fail --silent --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+if ! curl --fail --silent --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+  echo "Rezzie API did not become healthy after deployment."
+  exit 1
+fi
+
+echo "Refreshing the Rezzie Cloudflare Tunnel origin..."
+docker compose -f "$compose_file" restart cloudflared
+
+echo "Waiting for the public Rezzie API health check..."
+for attempt in {1..30}; do
+  if curl --fail --silent --max-time 5 https://api.rezzie.org/health >/dev/null 2>&1; then
     echo "Rezzie API deployment complete."
     exit 0
   fi
   sleep 2
 done
 
-echo "Rezzie API did not become healthy after deployment."
+echo "Rezzie public API did not become healthy after deployment."
 echo "API container status:"
 docker compose -f "$compose_file" ps api
 
