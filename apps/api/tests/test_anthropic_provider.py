@@ -111,6 +111,34 @@ def test_parser_extracts_json_from_prose_and_discards_extra_fields() -> None:
 
 
 @pytest.mark.asyncio
+async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    payload = {
+        "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
+        "matched_keywords": [],
+        "review_items": [],
+        "truth_statement": "Every claim is grounded.",
+    }
+
+    class Messages:
+        async def create(self, **_: object) -> object:
+            nonlocal calls
+            calls += 1
+            text = "not valid JSON" if calls == 1 else json.dumps(payload)
+            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=text)])
+
+    class Client:
+        def __init__(self, **_: object) -> None:
+            self.messages = Messages()
+
+    monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
+    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+
+    assert result.truth_statement == "Every claim is grounded."
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_provider_falls_back_when_structured_outputs_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[dict[str, object]] = []
     payload = {"tailored_resume": "A grounded resume result that is long enough to pass response validation safely.", "matched_keywords": [], "review_items": [], "truth_statement": "Every claim is grounded."}

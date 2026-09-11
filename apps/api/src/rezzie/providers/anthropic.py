@@ -9,6 +9,7 @@ from ..prompts import cached_prompt_with_reference_date
 from ..schemas import TailoringResult
 
 _MAX_PROVIDER_ATTEMPTS = 3
+_MAX_RESULT_ATTEMPTS = 2
 _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504, 529})
 _RETRY_BASE_DELAY_SECONDS = 0.75
 
@@ -79,20 +80,26 @@ class AnthropicProvider:
             "messages": [{"role": "user", "content": user_content}],
         }
         output_config = self._output_config()
-        try:
-            response = await self._create_with_retries(client, request, output_config)
-        except BadRequestError:
-            # Structured outputs are not enabled for every compatible account/model.
-            # Prompt-only JSON remains validated locally before it can reach users.
-            response = await self._create_with_retries(client, request)
-        except AuthenticationError as error:
-            raise ValueError("Anthropic rejected the API key. Check the key and try again.") from error
-        except APIError as error:
-            raise ValueError("Claude could not complete the request. Try again in a moment.") from error
-        if response.stop_reason == "refusal":
-            raise ValueError("Claude declined this tailoring request.")
-        payload = "".join(part.text for part in response.content if part.type == "text")
-        return parse_tailoring_payload(payload)
+        for result_attempt in range(_MAX_RESULT_ATTEMPTS):
+            try:
+                response = await self._create_with_retries(client, request, output_config)
+            except BadRequestError:
+                # Structured outputs are not enabled for every compatible account/model.
+                # Prompt-only JSON remains validated locally before it can reach users.
+                response = await self._create_with_retries(client, request)
+            except AuthenticationError as error:
+                raise ValueError("Anthropic rejected the API key. Check the key and try again.") from error
+            except APIError as error:
+                raise ValueError("Claude could not complete the request. Try again in a moment.") from error
+            if response.stop_reason == "refusal":
+                raise ValueError("Claude declined this tailoring request.")
+            payload = "".join(part.text for part in response.content if part.type == "text")
+            try:
+                return parse_tailoring_payload(payload)
+            except ValueError:
+                if result_attempt == _MAX_RESULT_ATTEMPTS - 1:
+                    raise
+        raise RuntimeError("Model result retry loop exited unexpectedly.")
 
     @staticmethod
     async def _create_with_retries(
