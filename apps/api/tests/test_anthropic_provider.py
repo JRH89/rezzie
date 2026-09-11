@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from anthropic import BadRequestError
+from anthropic import BadRequestError, InternalServerError
 
 from rezzie.providers.anthropic import AnthropicProvider, parse_tailoring_payload
 
@@ -27,7 +27,7 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
             )
 
     class Client:
-        def __init__(self, *, api_key: str) -> None:
+        def __init__(self, *, api_key: str, **_: object) -> None:
             assert api_key == "test-api-key"
             self.messages = Messages()
 
@@ -68,7 +68,7 @@ async def test_sonnet_five_uses_configured_effort_without_schema_output(monkeypa
             return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
 
     class Client:
-        def __init__(self, *, api_key: str) -> None:
+        def __init__(self, *, api_key: str, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
@@ -105,7 +105,7 @@ async def test_provider_falls_back_when_structured_outputs_are_rejected(monkeypa
             return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
 
     class Client:
-        def __init__(self, *, api_key: str) -> None:
+        def __init__(self, *, api_key: str, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
@@ -114,3 +114,39 @@ async def test_provider_falls_back_when_structured_outputs_are_rejected(monkeypa
     assert len(calls) == 2
     assert "output_config" in calls[0]
     assert "output_config" not in calls[1]
+
+
+@pytest.mark.asyncio
+async def test_provider_retries_a_transient_upstream_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    delays: list[float] = []
+    payload = {
+        "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
+        "matched_keywords": [],
+        "review_items": [],
+        "truth_statement": "Every claim is grounded.",
+    }
+
+    class Messages:
+        async def create(self, **_: object) -> object:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                request = httpx.Request("POST", "https://api.anthropic.com")
+                raise InternalServerError("Temporary overload", response=httpx.Response(529, request=request), body=None)
+            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+
+    class Client:
+        def __init__(self, **_: object) -> None:
+            self.messages = Messages()
+
+    async def record_delay(seconds: float) -> None:
+        delays.append(seconds)
+
+    monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
+    monkeypatch.setattr("rezzie.providers.anthropic.asyncio.sleep", record_delay)
+    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+
+    assert result.truth_statement == "Every claim is grounded."
+    assert calls == 2
+    assert delays == [0.75]

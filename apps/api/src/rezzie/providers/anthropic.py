@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import UTC, datetime
 
@@ -6,6 +7,10 @@ from pydantic import ValidationError
 
 from ..prompts import cached_prompt_with_reference_date
 from ..schemas import TailoringResult
+
+_MAX_PROVIDER_ATTEMPTS = 3
+_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504, 529})
+_RETRY_BASE_DELAY_SECONDS = 0.75
 
 
 def parse_tailoring_payload(payload: str) -> TailoringResult:
@@ -51,7 +56,10 @@ class AnthropicProvider:
         return datetime.now(UTC).date().isoformat()
 
     async def _generate(self, *, api_key: str, system: list[dict[str, object]], user_content: str) -> TailoringResult:
-        client = AsyncAnthropic(api_key=api_key)
+        # Own the retry policy here so one tailoring operation has a predictable
+        # upper bound. The SDK's automatic retries are disabled to avoid stacking
+        # separate retry policies.
+        client = AsyncAnthropic(api_key=api_key, max_retries=0)
         request = {
             "model": self._model,
             "max_tokens": self._max_tokens,
@@ -60,11 +68,11 @@ class AnthropicProvider:
         }
         output_config = self._output_config()
         try:
-            response = await client.messages.create(**request, output_config=output_config)
+            response = await self._create_with_retries(client, request, output_config)
         except BadRequestError:
             # Structured outputs are not enabled for every compatible account/model.
             # Prompt-only JSON remains validated locally before it can reach users.
-            response = await client.messages.create(**request)
+            response = await self._create_with_retries(client, request)
         except AuthenticationError as error:
             raise ValueError("Anthropic rejected the API key. Check the key and try again.") from error
         except APIError as error:
@@ -73,6 +81,26 @@ class AnthropicProvider:
             raise ValueError("Claude declined this tailoring request.")
         payload = "".join(part.text for part in response.content if part.type == "text")
         return parse_tailoring_payload(payload)
+
+    @staticmethod
+    async def _create_with_retries(
+        client: AsyncAnthropic,
+        request: dict[str, object],
+        output_config: dict[str, object] | None = None,
+    ) -> object:
+        """Retry only temporary provider/network failures, never credentials or input errors."""
+        for attempt in range(_MAX_PROVIDER_ATTEMPTS):
+            try:
+                if output_config is None:
+                    return await client.messages.create(**request)
+                return await client.messages.create(**request, output_config=output_config)
+            except APIError as error:
+                status_code = getattr(error, "status_code", None)
+                transient = status_code is None or status_code in _RETRYABLE_STATUS_CODES
+                if not transient or attempt == _MAX_PROVIDER_ATTEMPTS - 1:
+                    raise
+                await asyncio.sleep(_RETRY_BASE_DELAY_SECONDS * (2**attempt))
+        raise RuntimeError("Provider retry loop exited unexpectedly.")
 
     def _output_config(self) -> dict[str, object]:
         """Use Sonnet 5's effort control without attempting unsupported schema output."""
