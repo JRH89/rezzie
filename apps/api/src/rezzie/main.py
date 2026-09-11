@@ -93,6 +93,14 @@ def require_admin(authorization: str | None, development_user_id: str | None, de
     return identity.user_id
 
 
+def cors_error_headers(request: Request) -> dict[str, str]:
+    """Preserve an allowed browser origin on sanitized generation failures."""
+    origin = request.headers.get("origin")
+    if origin in settings.cors_origins:
+        return {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
+    return {}
+
+
 def career_record_response(user_id: str, record: CareerRecord) -> CareerRecordResponse:
     facts = career_records.facts(user_id, record.id)
     return CareerRecordResponse(
@@ -324,7 +332,7 @@ def add_career_fact(record_id: str, request: CareerFactCreate, authorization: st
     return CareerFactResponse(id=fact.id, fact_type=fact.fact_type, text=fact.text, source_excerpt=fact.source_excerpt, status=fact.status, evidence_note=fact.evidence_note)
 
 @app.post("/api/v1/tailor", response_model=TailoringResult)
-async def tailor(request: TailorRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
+async def tailor(request: TailorRequest, http_request: Request, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
     identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
     user_id = identity.user_id if identity else None
     admin_override = is_configured_admin(settings, identity)
@@ -340,11 +348,11 @@ async def tailor(request: TailorRequest, authorization: str | None = Header(defa
             rate_limiter.enforce("tailoring-user", user_id, limit=12, seconds=900)
         sources = []
     try: return await tailoring_service.tailor(request, user_id, sources, admin_override=admin_override)
-    except ValueError as error: raise HTTPException(status_code=502, detail=str(error)) from error
+    except ValueError as error: raise HTTPException(status_code=502, detail=str(error), headers=cors_error_headers(http_request)) from error
 
 
 @app.post("/api/v1/tailor/career-record", response_model=TailoringResult)
-async def tailor_career_record(request: TailorCareerRecordRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
+async def tailor_career_record(request: TailorCareerRecordRequest, http_request: Request, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> TailoringResult:
     identity = verified_identity(settings, authorization, x_rezzie_user_id, x_rezzie_user_email)
     if not identity:
         raise HTTPException(status_code=401, detail="Authentication is required.")
@@ -358,7 +366,7 @@ async def tailor_career_record(request: TailorCareerRecordRequest, authorization
     try:
         return await tailoring_service.tailor(tailoring_request, user_id, admin_override=is_configured_admin(settings, identity))
     except ValueError as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
+        raise HTTPException(status_code=502, detail=str(error), headers=cors_error_headers(http_request)) from error
 
 
 @app.post("/api/v1/billing/checkout")
