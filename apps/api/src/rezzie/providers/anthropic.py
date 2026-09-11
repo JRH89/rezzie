@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from datetime import UTC, datetime
 
 from anthropic import APIError, AsyncAnthropic, AuthenticationError, BadRequestError
@@ -12,6 +13,16 @@ _MAX_PROVIDER_ATTEMPTS = 3
 _MAX_RESULT_ATTEMPTS = 2
 _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504, 529})
 _RETRY_BASE_DELAY_SECONDS = 0.75
+logger = logging.getLogger(__name__)
+
+
+class InvalidTailoringResultError(ValueError):
+    """A privacy-safe description of a model response that missed our contract."""
+
+    def __init__(self, reason: str, fields: tuple[str, ...] = ()) -> None:
+        super().__init__("The model returned an invalid tailoring result.")
+        self.reason = reason
+        self.fields = fields
 
 
 def strict_json_schema(value: object) -> object:
@@ -29,16 +40,32 @@ def strict_json_schema(value: object) -> object:
 def parse_tailoring_payload(payload: str) -> TailoringResult:
     """Extract the required JSON object without retaining model response text."""
     decoder = json.JSONDecoder()
+    saw_malformed_json = False
+    validation_fields: set[str] = set()
     for start in (index for index, character in enumerate(payload) if character == "{"):
         try:
             parsed, _ = decoder.raw_decode(payload[start:])
         except json.JSONDecodeError:
+            saw_malformed_json = True
             continue
         try:
             return TailoringResult.model_validate(parsed)
-        except ValidationError:
+        except ValidationError as error:
+            validation_fields.update(_validation_field(error) for error in error.errors())
             continue
-    raise ValueError("The model returned an invalid tailoring result.")
+    if validation_fields:
+        raise InvalidTailoringResultError("schema_validation", tuple(sorted(validation_fields))[:8])
+    if saw_malformed_json:
+        raise InvalidTailoringResultError("malformed_json")
+    raise InvalidTailoringResultError("no_json_object")
+
+
+def _validation_field(error: dict[str, object]) -> str:
+    """Keep only schema field paths; never emit invalid values or model content."""
+    location = error.get("loc", ())
+    if not isinstance(location, tuple):
+        return "unknown"
+    return ".".join("*" if isinstance(part, int) else str(part) for part in location) or "root"
 
 
 class AnthropicProvider:
@@ -93,10 +120,21 @@ class AnthropicProvider:
                 raise ValueError("Claude could not complete the request. Try again in a moment.") from error
             if response.stop_reason == "refusal":
                 raise ValueError("Claude declined this tailoring request.")
-            payload = "".join(part.text for part in response.content if part.type == "text")
+            content_types = tuple(str(getattr(part, "type", "unknown")) for part in response.content)
+            payload = "".join(str(getattr(part, "text", "")) for part in response.content if getattr(part, "type", None) == "text")
             try:
                 return parse_tailoring_payload(payload)
-            except ValueError:
+            except InvalidTailoringResultError as error:
+                logger.warning(
+                    "Anthropic tailoring result failed validation: model=%s result_attempt=%d stop_reason=%s content_types=%s text_characters=%d diagnostic=%s fields=%s",
+                    self._model,
+                    result_attempt + 1,
+                    getattr(response, "stop_reason", "unknown"),
+                    content_types,
+                    len(payload),
+                    error.reason,
+                    error.fields,
+                )
                 if result_attempt == _MAX_RESULT_ATTEMPTS - 1:
                     raise
         raise RuntimeError("Model result retry loop exited unexpectedly.")

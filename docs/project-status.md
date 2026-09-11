@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Haiku 4.5 default with a 4,096-token ceiling, cached stable instructions, JSON-schema output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
-| Latest local verification | done | 59 API tests, 12 web interaction tests, and 7 extension tests passed; Ruff, extension/web ESLint, and both production builds passed 2026-09-07 |
+| Latest local verification | done | 2026-09-10: 73 API tests and `uv run --directory apps/api ruff check src tests/test_anthropic_provider.py` passed after privacy-safe invalid-model-result diagnostics were added. |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
 | API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 56 passed 2026-09-06 |
 | Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
@@ -20,6 +20,7 @@
 | Brand and landing page | done | Native Rezzie mark, responsive conversion landing page, editorial hero asset, and brand system |
 | Public SEO content | done | About, Features, FAQ, 23 categorized resume guides, searchable blog, sitemap, robots policy, 10 page-specific social covers, and Cloudflare edge-rewritten canonical, Open Graph, Twitter, and structured-data metadata |
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
+| Model-result diagnostics | done | Provider logs only model name, attempt, stop reason, content block types, text length, and contract field categories when Claude returns invalid JSON; no resume, job description, key, or model text is logged. |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
 | Trusted Sources and rate limits | done | Subscriber-only public GitHub/portfolio evidence, source-backed 2-credit tailoring, per-line undo/provenance review, SSRF-safe import, and persistent SQLite rate limits; see `docs/trusted-sources.md` |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |

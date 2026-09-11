@@ -4,8 +4,10 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from anthropic import BadRequestError, InternalServerError
+
 from rezzie.providers.anthropic import (
     AnthropicProvider,
+    InvalidTailoringResultError,
     parse_tailoring_payload,
     strict_json_schema,
 )
@@ -110,6 +112,15 @@ def test_parser_extracts_json_from_prose_and_discards_extra_fields() -> None:
     assert parse_tailoring_payload(payload).truth_statement == "Every claim is grounded."
 
 
+def test_parser_reports_schema_field_names_without_response_content() -> None:
+    with pytest.raises(InvalidTailoringResultError) as error:
+        parse_tailoring_payload('{"tailored_resume":"too short","matched_keywords":[]}')
+
+    assert error.value.reason == "schema_validation"
+    assert error.value.fields == ("review_items", "tailored_resume", "truth_statement")
+    assert str(error.value) == "The model returned an invalid tailoring result."
+
+
 @pytest.mark.asyncio
 async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = 0
@@ -136,6 +147,25 @@ async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.Monk
 
     assert result.truth_statement == "Every claim is grounded."
     assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_provider_logs_only_safe_invalid_result_metadata(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    class Messages:
+        async def create(self, **_: object) -> object:
+            return SimpleNamespace(stop_reason="max_tokens", content=[SimpleNamespace(type="text", text='{"tailored_resume":"secret resume content"')])
+
+    class Client:
+        def __init__(self, **_: object) -> None:
+            self.messages = Messages()
+
+    monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
+    with pytest.raises(InvalidTailoringResultError):
+        await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+
+    assert "stop_reason=max_tokens" in caplog.text
+    assert "diagnostic=malformed_json" in caplog.text
+    assert "secret resume content" not in caplog.text
 
 
 @pytest.mark.asyncio
