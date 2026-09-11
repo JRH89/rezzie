@@ -4,8 +4,26 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from anthropic import BadRequestError, InternalServerError
+from rezzie.providers.anthropic import (
+    AnthropicProvider,
+    parse_tailoring_payload,
+    strict_json_schema,
+)
+from rezzie.schemas import TailoringResult
 
-from rezzie.providers.anthropic import AnthropicProvider, parse_tailoring_payload
+
+def test_strict_json_schema_closes_every_object() -> None:
+    schema = strict_json_schema(TailoringResult.model_json_schema())
+
+    def object_schemas(value: object) -> list[dict[str, object]]:
+        if isinstance(value, dict):
+            nested = [value, *(item for child in value.values() for item in object_schemas(child))]
+            return nested
+        if isinstance(value, list):
+            return [item for child in value for item in object_schemas(child)]
+        return []
+
+    assert all(item.get("additionalProperties") is False for item in object_schemas(schema) if item.get("type") == "object")
 
 
 @pytest.mark.asyncio

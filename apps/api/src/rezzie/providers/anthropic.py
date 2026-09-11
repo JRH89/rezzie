@@ -13,6 +13,18 @@ _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504, 529})
 _RETRY_BASE_DELAY_SECONDS = 0.75
 
 
+def strict_json_schema(value: object) -> object:
+    """Return an Anthropic-compatible schema with every object closed."""
+    if isinstance(value, dict):
+        strict = {key: strict_json_schema(child) for key, child in value.items()}
+        if strict.get("type") == "object":
+            strict["additionalProperties"] = False
+        return strict
+    if isinstance(value, list):
+        return [strict_json_schema(child) for child in value]
+    return value
+
+
 def parse_tailoring_payload(payload: str) -> TailoringResult:
     """Extract the required JSON object without retaining model response text."""
     decoder = json.JSONDecoder()
@@ -106,4 +118,6 @@ class AnthropicProvider:
         """Use Sonnet 5's effort control without attempting unsupported schema output."""
         if self._model.startswith("claude-sonnet-5"):
             return {"effort": self._effort}
-        return {"format": {"type": "json_schema", "schema": TailoringResult.model_json_schema()}}
+        schema = strict_json_schema(TailoringResult.model_json_schema())
+        assert isinstance(schema, dict)
+        return {"format": {"type": "json_schema", "schema": schema}}
