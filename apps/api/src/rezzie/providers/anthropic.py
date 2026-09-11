@@ -48,6 +48,8 @@ def parse_tailoring_payload(payload: str) -> TailoringResult:
         except json.JSONDecodeError:
             saw_malformed_json = True
             continue
+        if isinstance(parsed, dict):
+            _remove_null_optional_metadata(parsed)
         try:
             return TailoringResult.model_validate(parsed)
         except ValidationError as error:
@@ -58,6 +60,16 @@ def parse_tailoring_payload(payload: str) -> TailoringResult:
     if saw_malformed_json:
         raise InvalidTailoringResultError("malformed_json")
     raise InvalidTailoringResultError("no_json_object")
+
+
+def _remove_null_optional_metadata(payload: dict[str, object]) -> None:
+    """Let the schema defaults handle null supplemental UI metadata.
+
+    The resume itself and all factual content remain subject to normal validation.
+    """
+    for field in ("matched_keywords", "review_items", "truth_statement", "changes"):
+        if payload.get(field) is None:
+            payload.pop(field, None)
 
 
 def _validation_field(error: dict[str, object]) -> str:

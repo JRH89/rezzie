@@ -130,6 +130,18 @@ def test_parser_defaults_omitted_ui_metadata() -> None:
     assert result.truth_statement == "Review the tailored draft against your source resume before using it."
 
 
+def test_parser_defaults_null_ui_metadata() -> None:
+    result = parse_tailoring_payload(
+        '{"tailored_resume":"A grounded resume result that is long enough to pass response validation safely.",'
+        '"matched_keywords":null,"review_items":null,"truth_statement":null,"changes":null}'
+    )
+
+    assert result.matched_keywords == []
+    assert result.review_items == []
+    assert result.changes == []
+    assert result.truth_statement == "Review the tailored draft against your source resume before using it."
+
+
 @pytest.mark.asyncio
 async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = 0
