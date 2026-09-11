@@ -110,6 +110,7 @@ class AnthropicProvider:
             api_key=api_key,
             system=cached_prompt_with_reference_date(self._reference_date()),
             user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nCANDIDATE-ATTESTED_EXTERNAL_EVIDENCE:\n{evidence_text or 'None supplied.'}\n\nJOB_DESCRIPTION:\n{job_description}",
+            max_resume_length=max(12_000, len(resume_text) * 2),
         )
 
     async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult:
@@ -120,13 +121,14 @@ class AnthropicProvider:
                 {"type": "text", "text": "# REQUIRED CORRECTION\nThe prior draft was rejected because it introduced an unsupported claim. Rewrite it now. Remove or replace every unsupported number, metric, date, tool, employer, title, credential, or named claim. Do not mention this correction. Return only the required JSON object."},
             ],
             user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nJOB_DESCRIPTION:\n{job_description}\n\nREJECTED_DRAFT_TO_CORRECT:\n{rejected_draft}",
+            max_resume_length=max(12_000, len(resume_text) * 2),
         )
 
     @staticmethod
     def _reference_date() -> str:
         return datetime.now(UTC).date().isoformat()
 
-    async def _generate(self, *, api_key: str, system: list[dict[str, object]], user_content: str) -> TailoringResult:
+    async def _generate(self, *, api_key: str, system: list[dict[str, object]], user_content: str, max_resume_length: int) -> TailoringResult:
         # Own the retry policy here so one tailoring operation has a predictable
         # upper bound. The SDK's automatic retries are disabled to avoid stacking
         # separate retry policies.
@@ -154,7 +156,10 @@ class AnthropicProvider:
             content_types = tuple(str(getattr(part, "type", "unknown")) for part in response.content)
             payload = "".join(str(getattr(part, "text", "")) for part in response.content if getattr(part, "type", None) == "text")
             try:
-                return parse_tailoring_payload(payload)
+                result = parse_tailoring_payload(payload)
+                if len(result.tailored_resume) > max_resume_length:
+                    raise InvalidTailoringResultError("tailored_resume_too_long", ("tailored_resume",))
+                return result
             except InvalidTailoringResultError as error:
                 logger.warning(
                     "Anthropic tailoring result failed validation: model=%s result_attempt=%d stop_reason=%s content_types=%s text_characters=%d diagnostic=%s fields=%s",

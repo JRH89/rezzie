@@ -90,6 +90,10 @@ def test_normalizes_a_bulleted_selected_projects_heading() -> None:
     assert result == "EXPERIENCE\n- Delivered a feature.\nSELECTED PROJECTS\nTruss - Agentic Coding Harness"
 
 
+def test_change_review_skips_an_oversized_line() -> None:
+    assert TailoringService._changes("Source resume text", "A" * 10_001, []) == []
+
+
 @pytest.mark.asyncio
 async def test_job_importer_follows_and_validates_a_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
     checked_urls: list[str] = []

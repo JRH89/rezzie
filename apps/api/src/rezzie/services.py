@@ -11,6 +11,7 @@ from .security import assert_safe_public_url, require_generation_key
 from .trusted_sources import ExternalSource
 
 SUMMARY_HEADINGS = {"SUMMARY", "PROFESSIONAL SUMMARY", "CAREER SUMMARY", "PROFILE", "PROFESSIONAL PROFILE", "CAREER PROFILE", "OBJECTIVE"}
+_MAX_CHANGE_TEXT_LENGTH = 10_000
 _BULLET_PREFIXES = ("- ", "* ", "• ", "‣ ", "◦ ", "– ")
 
 
@@ -158,7 +159,7 @@ class TailoringService:
         changes: list[TailoringChange] = []
         for line in tailored_resume.splitlines():
             normalized = line.strip()
-            if len(normalized) < 12 or normalized.casefold() in original_lines:
+            if len(normalized) < 12 or len(normalized) > _MAX_CHANGE_TEXT_LENGTH or normalized.casefold() in original_lines:
                 continue
             words = {token.strip(".,:;()[]{}!?\"'").casefold() for token in normalized.split() if len(token) > 4}
             source_url = next((url for url, tokens in source_tokens if len(words & tokens) >= 2), None)

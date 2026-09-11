@@ -185,6 +185,34 @@ async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
+async def test_provider_retries_an_oversized_tailored_resume(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    valid_payload = {
+        "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
+        "matched_keywords": [],
+        "review_items": [],
+        "truth_statement": "Every claim is grounded.",
+    }
+
+    class Messages:
+        async def create(self, **_: object) -> object:
+            nonlocal calls
+            calls += 1
+            payload = {**valid_payload, "tailored_resume": "A" * 12_001} if calls == 1 else valid_payload
+            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+
+    class Client:
+        def __init__(self, **_: object) -> None:
+            self.messages = Messages()
+
+    monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
+    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+
+    assert result.truth_statement == "Every claim is grounded."
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_provider_logs_only_safe_invalid_result_metadata(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
     class Messages:
         async def create(self, **_: object) -> object:
