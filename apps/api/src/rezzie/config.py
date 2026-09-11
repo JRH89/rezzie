@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-haiku-4-5"
-    anthropic_max_tokens: int = Field(default=8_192, ge=1_024, le=32_768)
+    anthropic_max_tokens: int = Field(default=16_384, ge=1_024, le=32_768)
     anthropic_effort: Literal["low", "medium", "high"] = "medium"
     allowed_origins: str = "http://localhost:5173"
     allowed_hosts: str = "localhost,127.0.0.1,testserver"
