@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from anthropic import BadRequestError, InternalServerError
+
 from rezzie.providers.anthropic import (
     AnthropicProvider,
     InvalidTailoringResultError,
@@ -140,6 +141,19 @@ def test_parser_defaults_null_ui_metadata() -> None:
     assert result.review_items == []
     assert result.changes == []
     assert result.truth_statement == "Review the tailored draft against your source resume before using it."
+
+
+def test_parser_discards_invalid_ui_metadata_but_requires_the_resume() -> None:
+    result = parse_tailoring_payload(
+        '{"tailored_resume":"A grounded resume result that is long enough to pass response validation safely.",'
+        '"matched_keywords":"Python, FastAPI","review_items":{"review":true}}'
+    )
+
+    assert result.matched_keywords == []
+    assert result.review_items == []
+
+    with pytest.raises(InvalidTailoringResultError):
+        parse_tailoring_payload('{"tailored_resume":"too short","matched_keywords":"Python, FastAPI"}')
 
 
 @pytest.mark.asyncio

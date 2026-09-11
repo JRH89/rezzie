@@ -13,6 +13,7 @@ _MAX_PROVIDER_ATTEMPTS = 3
 _MAX_RESULT_ATTEMPTS = 2
 _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504, 529})
 _RETRY_BASE_DELAY_SECONDS = 0.75
+_OPTIONAL_METADATA_FIELDS = frozenset({"matched_keywords", "review_items", "truth_statement", "changes"})
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +54,13 @@ def parse_tailoring_payload(payload: str) -> TailoringResult:
         try:
             return TailoringResult.model_validate(parsed)
         except ValidationError as error:
-            validation_fields.update(_validation_field(error) for error in error.errors())
+            fields = {_validation_field(item) for item in error.errors()}
+            if _discard_invalid_optional_metadata(parsed, fields):
+                try:
+                    return TailoringResult.model_validate(parsed)
+                except ValidationError as retry_error:
+                    fields = {_validation_field(item) for item in retry_error.errors()}
+            validation_fields.update(fields)
             continue
     if validation_fields:
         raise InvalidTailoringResultError("schema_validation", tuple(sorted(validation_fields))[:8])
@@ -70,6 +77,18 @@ def _remove_null_optional_metadata(payload: dict[str, object]) -> None:
     for field in ("matched_keywords", "review_items", "truth_statement", "changes"):
         if payload.get(field) is None:
             payload.pop(field, None)
+
+
+def _discard_invalid_optional_metadata(payload: object, fields: set[str]) -> bool:
+    """Discard only invalid non-document metadata, retaining strict resume validation."""
+    if not isinstance(payload, dict) or not fields:
+        return False
+    roots = {field.split(".", 1)[0] for field in fields}
+    if not roots <= _OPTIONAL_METADATA_FIELDS:
+        return False
+    for field in roots:
+        payload.pop(field, None)
+    return True
 
 
 def _validation_field(error: dict[str, object]) -> str:

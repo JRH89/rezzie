@@ -4,6 +4,7 @@ import pytest
 from docx import Document
 from docx.shared import Pt
 from fastapi.testclient import TestClient
+
 from rezzie.documents import ResumeExportService
 from rezzie.main import app
 
