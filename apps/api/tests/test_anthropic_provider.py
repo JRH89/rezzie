@@ -4,7 +4,6 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from anthropic import BadRequestError, InternalServerError
-
 from rezzie.providers.anthropic import (
     AnthropicProvider,
     InvalidTailoringResultError,
@@ -114,11 +113,21 @@ def test_parser_extracts_json_from_prose_and_discards_extra_fields() -> None:
 
 def test_parser_reports_schema_field_names_without_response_content() -> None:
     with pytest.raises(InvalidTailoringResultError) as error:
-        parse_tailoring_payload('{"tailored_resume":"too short","matched_keywords":[]}')
+        parse_tailoring_payload('{"tailored_resume":"too short"}')
 
     assert error.value.reason == "schema_validation"
-    assert error.value.fields == ("review_items", "tailored_resume", "truth_statement")
+    assert error.value.fields == ("tailored_resume",)
     assert str(error.value) == "The model returned an invalid tailoring result."
+
+
+def test_parser_defaults_omitted_ui_metadata() -> None:
+    result = parse_tailoring_payload(
+        '{"tailored_resume":"A grounded resume result that is long enough to pass response validation safely."}'
+    )
+
+    assert result.matched_keywords == []
+    assert result.review_items == []
+    assert result.truth_statement == "Review the tailored draft against your source resume before using it."
 
 
 @pytest.mark.asyncio

@@ -104,9 +104,11 @@ class TailorRequest(BaseModel):
 
 class TailoringResult(BaseModel):
     tailored_resume: str = Field(min_length=50)
-    matched_keywords: list[str] = Field(max_length=30)
-    review_items: list[str] = Field(max_length=20)
-    truth_statement: str
+    # These power supplemental UI, not the tailored document itself. Claude can
+    # occasionally omit them even when it produces a complete grounded resume.
+    matched_keywords: list[str] = Field(default_factory=list, max_length=30)
+    review_items: list[str] = Field(default_factory=list, max_length=20)
+    truth_statement: str = "Review the tailored draft against your source resume before using it."
     changes: list["TailoringChange"] = Field(default_factory=list, max_length=40)
 
 
