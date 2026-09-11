@@ -4,6 +4,7 @@
 | --- | --- | --- | --- |
 | Engineering | Keep providers interchangeable | complete | `providers/base.py`, `providers/anthropic.py`; Sonnet 5 default remains environment-configurable |
 | Engineering | Diagnose malformed model responses without retaining candidate data | complete | `providers/anthropic.py` records only safe response metadata and schema categories; `test_anthropic_provider.py` verifies model text is absent from logs. |
+| Engineering | Preserve section-heading structure in tailored output | complete | API normalizes known bullet-prefixed headings and the editor recognizes legacy drafts; API/document and web formatting regression tests cover `SELECTED PROJECTS`. |
 | Platform | Configure private support administration | pending | Set `ADMIN_EMAIL=jaredroberthooker@gmail.com` in the server API environment and rebuild the API container; its startup runs Alembic migration `0006_support_tickets` automatically. |
 | Engineering | Do not persist BYOK | complete | request-scoped credentials policy |
 | Product/Legal | Define data retention and AI consent | pending | Required before launch |

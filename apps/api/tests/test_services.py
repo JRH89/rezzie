@@ -8,6 +8,7 @@ from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest
 from rezzie.services import (
     JobDescriptionImporter,
     TailoringService,
+    normalize_bulleted_section_headings,
     preserve_source_summary,
 )
 
@@ -81,6 +82,12 @@ def test_does_not_overwrite_a_nonempty_generated_summary() -> None:
     generated = "SUMMARY\nTailored, grounded summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
 
     assert preserve_source_summary(source, generated) == generated
+
+
+def test_normalizes_a_bulleted_selected_projects_heading() -> None:
+    result = normalize_bulleted_section_headings("EXPERIENCE\n- Delivered a feature.\n- SELECTED PROJECTS\nTruss - Agentic Coding Harness")
+
+    assert result == "EXPERIENCE\n- Delivered a feature.\nSELECTED PROJECTS\nTruss - Agentic Coding Harness"
 
 
 @pytest.mark.asyncio

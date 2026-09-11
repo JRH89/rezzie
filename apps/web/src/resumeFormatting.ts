@@ -4,7 +4,7 @@ const sectionHeadings = new Set([
   "SUMMARY", "PROFESSIONAL SUMMARY", "CAREER SUMMARY", "PROFILE", "PROFESSIONAL PROFILE", "CAREER PROFILE", "OBJECTIVE",
   "SKILLS", "CORE SKILLS", "TECHNICAL SKILLS", "TECHNICAL PROFICIENCIES", "EXPERIENCE", "PROFESSIONAL EXPERIENCE",
   "RELEVANT EXPERIENCE", "SELECTED EXPERIENCE", "WORK EXPERIENCE", "WORK HISTORY", "EMPLOYMENT", "EMPLOYMENT HISTORY",
-  "CAREER HISTORY", "PROFESSIONAL BACKGROUND", "PROJECTS", "ACADEMIC PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING",
+  "CAREER HISTORY", "PROFESSIONAL BACKGROUND", "PROJECTS", "SELECTED PROJECTS", "ACADEMIC PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING",
 ]);
 
 function escapeHtml(value: string) {
@@ -30,7 +30,7 @@ function isProjectEntryLine(line: string) {
 }
 
 export function isResumeHeading(line: string) {
-  return sectionHeadings.has(line.replace(":", "").trim().replace(/\s+/g, " ").toUpperCase());
+  return sectionHeadings.has(bulletText(line).replace(":", "").trim().replace(/\s+/g, " ").toUpperCase());
 }
 
 function isAchievementSection(line: string) {
@@ -62,9 +62,10 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
     }
     if (isResumeHeading(line)) {
       flushBullets();
-      const rendered = render(line);
+      const heading = bulletText(line);
+      const rendered = render(heading);
       blocks.push(`<h3>${styleProfile?.heading_uppercase ? rendered.replace(/:$/, "").toUpperCase() : rendered.replace(/:$/, "")}</h3>`);
-      achievementSection = isAchievementSection(line);
+      achievementSection = isAchievementSection(heading);
       hasEntryLine = false;
       contentIndex += 1;
       continue;

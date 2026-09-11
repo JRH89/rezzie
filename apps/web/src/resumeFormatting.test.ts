@@ -27,6 +27,13 @@ describe("resume formatting", () => {
     expect(html).toContain("<ul><li>Built reliable systems.</li></ul><h3>PROJECTS</h3><p><strong>Rezzie - Resume tailoring tool</strong></p><ul><li>Built a truthful resume workflow.</li></ul>");
   });
 
+  it("renders a bulleted selected-projects label as a heading, not a list item", () => {
+    const html = resumeEditorHtml("Taylor Example\ntaylor@example.com\n\nEXPERIENCE\n- Built reliable systems.\n- SELECTED PROJECTS\nTruss - Agentic Coding Harness (TypeScript, Electron)");
+
+    expect(html).toContain("<ul><li>Built reliable systems.</li></ul><h3>SELECTED PROJECTS</h3>");
+    expect(html).not.toContain("<li>SELECTED PROJECTS</li>");
+  });
+
   it("separates consecutive project titles into their own entries", () => {
     const html = resumeEditorHtml("Taylor Example\ntaylor@example.com\n\nPROJECTS\nTruss - Agentic Coding Harness (TypeScript, JavaScript) | https://truss-agent.com\nBuilt a local-first coding harness.\nPinLeads - Lead Generation Platform (Node.js, Next.js) | https://pinleads.org\nBuilt a lead collection workflow.");
 

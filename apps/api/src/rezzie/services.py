@@ -11,10 +11,21 @@ from .security import assert_safe_public_url, require_generation_key
 from .trusted_sources import ExternalSource
 
 SUMMARY_HEADINGS = {"SUMMARY", "PROFESSIONAL SUMMARY", "CAREER SUMMARY", "PROFILE", "PROFESSIONAL PROFILE", "CAREER PROFILE", "OBJECTIVE"}
+_BULLET_PREFIXES = ("- ", "* ", "• ", "‣ ", "◦ ", "– ")
 
 
 def _heading_name(line: str) -> str:
     return " ".join(line.replace(":", "").split()).upper()
+
+
+def normalize_bulleted_section_headings(resume_text: str) -> str:
+    """Render recognized section labels as headings even when the model prefixes one as a bullet."""
+    normalized_lines = []
+    for line in resume_text.splitlines():
+        stripped = line.strip()
+        heading = next((stripped.removeprefix(prefix) for prefix in _BULLET_PREFIXES if stripped.startswith(prefix)), None)
+        normalized_lines.append(heading if heading and is_section_heading(heading) else line)
+    return "\n".join(normalized_lines)
 
 
 def _summary_bounds(lines: list[str]) -> tuple[int, int] | None:
@@ -113,14 +124,14 @@ class TailoringService:
             if evidence_text:
                 provider_args["evidence_text"] = evidence_text
             result = await self._provider.tailor(**provider_args)
-            result = result.model_copy(update={"tailored_resume": preserve_source_summary(request.resume_text, result.tailored_resume)})
+            result = result.model_copy(update={"tailored_resume": normalize_bulleted_section_headings(preserve_source_summary(request.resume_text, result.tailored_resume))})
             try:
                 assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
             except HTTPException as error:
                 if error.status_code != 422:
                     raise
                 result = await self._provider.repair(api_key=api_key, resume_text=request.resume_text, job_description=request.job_description, rejected_draft=result.tailored_resume)
-                result = result.model_copy(update={"tailored_resume": preserve_source_summary(request.resume_text, result.tailored_resume)})
+                result = result.model_copy(update={"tailored_resume": normalize_bulleted_section_headings(preserve_source_summary(request.resume_text, result.tailored_resume))})
                 try:
                     assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
                 except HTTPException as repair_error:
