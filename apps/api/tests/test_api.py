@@ -96,6 +96,21 @@ def test_cors_headers_are_preserved_for_tailoring_errors(monkeypatch: pytest.Mon
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
+def test_cors_headers_are_preserved_for_unhandled_tailoring_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def failing_tailor(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError("Synthetic unexpected provider failure.")
+
+    monkeypatch.setattr("rezzie.main.tailoring_service.tailor", failing_tailor)
+    error_client = TestClient(app, raise_server_exceptions=False)
+    response = error_client.post(
+        "/api/v1/tailor",
+        headers={**LOCAL_IDENTITY, "Origin": "http://localhost:5173"},
+        json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "byok", "api_key": "test-key" * 3},
+    )
+    assert response.status_code == 500
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
 def test_text_import_validates_minimum_length() -> None:
     response = client.post("/api/v1/job-descriptions/text", headers=LOCAL_IDENTITY, json={"text": "short"})
     assert response.status_code == 422

@@ -56,9 +56,6 @@ settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
-# Add CORS last: Starlette wraps middleware in reverse registration order, making
-# this the outer application middleware and preserving CORS headers on errors.
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["DELETE", "GET", "PATCH", "POST"], allow_headers=["Authorization", "Content-Type"])
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 career_records = CareerRecordRepository(billing_repository.sessions)
 trusted_sources = TrustedSourceRepository(billing_repository.sessions)
@@ -444,3 +441,14 @@ def reply_to_admin_support_ticket(ticket_id: str, request: SupportTicketReplyCre
 def update_admin_support_ticket(ticket_id: str, request: SupportTicketStatusUpdate, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None), x_rezzie_user_email: str | None = Header(default=None)) -> SupportTicketResponse:
     require_admin(authorization, x_rezzie_user_id, x_rezzie_user_email)
     return support_ticket_response(support_tickets.update_status(ticket_id, request.status), include_messages=True)
+
+
+# The wrapper sits outside Starlette's ServerErrorMiddleware, so browser clients
+# retain CORS headers even if an unexpected exception escapes a route.
+app = CORSMiddleware(
+    app=app,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["DELETE", "GET", "PATCH", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
+)
