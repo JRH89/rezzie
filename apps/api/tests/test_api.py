@@ -1,9 +1,9 @@
 import io
 
+import pytest
 from docx import Document
 from docx.shared import Pt
 from fastapi.testclient import TestClient
-
 from rezzie.documents import ResumeExportService
 from rezzie.main import app
 
@@ -80,6 +80,20 @@ def test_cors_preflight_is_not_rate_limited() -> None:
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert "POST" in response.headers["access-control-allow-methods"]
+
+
+def test_cors_headers_are_preserved_for_tailoring_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def failing_tailor(*_args: object, **_kwargs: object) -> object:
+        raise ValueError("Synthetic provider failure.")
+
+    monkeypatch.setattr("rezzie.main.tailoring_service.tailor", failing_tailor)
+    response = client.post(
+        "/api/v1/tailor",
+        headers={**LOCAL_IDENTITY, "Origin": "http://localhost:5173"},
+        json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "byok", "api_key": "test-key" * 3},
+    )
+    assert response.status_code == 502
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
 def test_text_import_validates_minimum_length() -> None:

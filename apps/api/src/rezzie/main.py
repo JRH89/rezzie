@@ -54,9 +54,11 @@ from .trusted_sources import (
 
 settings = Settings()
 app = FastAPI(title="Rezzie API", version="v1")
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["DELETE", "GET", "PATCH", "POST"], allow_headers=["Authorization", "Content-Type"])
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware, production=settings.environment == "production")
+# Add CORS last: Starlette wraps middleware in reverse registration order, making
+# this the outer application middleware and preserving CORS headers on errors.
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=False, allow_methods=["DELETE", "GET", "PATCH", "POST"], allow_headers=["Authorization", "Content-Type"])
 billing_repository = BillingRepository(settings.database_url, bootstrap_schema=settings.environment == "development")
 career_records = CareerRecordRepository(billing_repository.sessions)
 trusted_sources = TrustedSourceRepository(billing_repository.sessions)
