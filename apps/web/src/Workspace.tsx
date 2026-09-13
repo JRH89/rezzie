@@ -84,6 +84,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [savedDrafts, setSavedDrafts] = useState<SavedTailoringDraft[]>([]);
   const [selectedSavedResume, setSelectedSavedResume] = useState<string>();
+  const [selectedSavedDraft, setSelectedSavedDraft] = useState<string>();
   const [recordLabel, setRecordLabel] = useState("My Career Record");
   const [records, setRecords] = useState<CareerRecord[]>([]);
   const [careerRecord, setCareerRecord] = useState<CareerRecord>();
@@ -133,7 +134,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
     setLoading(true); setError(undefined);
     try {
       const imported = await api.importResumeFile(file);
-      setResume(imported.text); setUploadedResumeName(file.name); setUploadedResumePreview(file.type === "application/pdf" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined); setSourcePageCount(imported.page_count ?? undefined); setSourceStyleProfile(imported.style_profile ?? undefined); setSourceEntryLines(imported.entry_lines ?? []); setResumeTemplate(imported.style_profile ? "source" : "professional"); setCareerRecord(undefined); setSelectedSavedResume(undefined);
+      setResume(imported.text); setUploadedResumeName(file.name); setUploadedResumePreview(file.type === "application/pdf" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : undefined); setSourcePageCount(imported.page_count ?? undefined); setSourceStyleProfile(imported.style_profile ?? undefined); setSourceEntryLines(imported.entry_lines ?? []); setResumeTemplate(imported.style_profile ? "source" : "professional"); setCareerRecord(undefined); setSelectedSavedResume(undefined); setSelectedSavedDraft(undefined);
     }
     catch (reason) { setError(errorMessage(reason, "We could not read that resume.")); }
     finally { setLoading(false); }
@@ -191,9 +192,26 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
 
   function selectSavedResume(resumeId: string) {
     setSelectedSavedResume(resumeId || undefined);
+    setSelectedSavedDraft(undefined);
     const saved = savedResumes.find(item => item.id === resumeId);
     if (saved) { setResume(saved.source_text); setUploadedResumeName(`${saved.label} (saved)`); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setResumeTemplate("professional"); setCareerRecord(undefined); }
     else { setResume(""); setUploadedResumeName(undefined); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setResumeTemplate("professional"); }
+  }
+
+  function selectSavedDraft(draftId: string) {
+    const draft = savedDrafts.find(item => item.id === draftId);
+    setSelectedSavedDraft(draftId || undefined);
+    if (!draft) {
+      setSelectedSavedResume(undefined); setResume(""); setUploadedResumeName(undefined); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setSourceEntryLines([]); setResumeTemplate("professional");
+      return;
+    }
+    setSelectedSavedResume(draft.resume_id ?? undefined); setResume(draft.tailored_resume); setUploadedResumeName(`${draft.label} (saved tailored draft)`); setUploadedResumePreview(undefined); setSourcePageCount(undefined); setSourceStyleProfile(undefined); setSourceEntryLines([]); setResumeTemplate("professional"); setCareerRecord(undefined);
+  }
+
+  function selectSavedSource(value: string) {
+    if (value.startsWith("resume:")) { selectSavedResume(value.slice("resume:".length)); return; }
+    if (value.startsWith("draft:")) { selectSavedDraft(value.slice("draft:".length)); return; }
+    selectSavedResume("");
   }
 
   async function deleteSavedResume(resumeId: string) {
@@ -207,7 +225,7 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
   async function deleteSavedDraft(draftId: string) {
     if (!window.confirm("Delete this saved draft? This cannot be undone.")) return;
     setLoading(true); setError(undefined);
-    try { await api.deleteTailoringDraft(draftId); setSavedDrafts(current => current.filter(item => item.id !== draftId)); }
+    try { await api.deleteTailoringDraft(draftId); setSavedDrafts(current => current.filter(item => item.id !== draftId)); if (selectedSavedDraft === draftId) selectSavedDraft(""); }
     catch (reason) { setError(errorMessage(reason, "We could not delete that saved draft.")); }
     finally { setLoading(false); }
   }
@@ -304,9 +322,8 @@ export function Workspace({ accessToken, onBilling, onHome, onSignOut, onSupport
           {step === 1 && <>
             <div className="step-heading"><p className="eyebrow">STEP 1 OF 4</p><h1>Start with what’s true.</h1><p>Add the resume you trust. Rezzie will use it as the boundary for every suggestion.</p></div>
             {uploadedResumePreview && <SourceReview pageCount={sourcePageCount} pdfPreviewUrl={uploadedResumePreview} text={resume} />}
-            {savedResumes.length > 0 && <div className="source-switcher"><label htmlFor="saved-resume">Use a saved private resume</label><select id="saved-resume" value={selectedSavedResume ?? ""} onChange={event => selectSavedResume(event.target.value)}><option value="">Use a new resume instead</option>{savedResumes.map(saved => <option key={saved.id} value={saved.id}>{saved.label}</option>)}</select></div>}
-            {(savedResumes.length > 0 || savedDrafts.length > 0) && <details className="library-manager"><summary>Manage your private library</summary><p>Only you can see these saved resumes and drafts. Deleting an item removes it from Rezzie.</p>{savedResumes.length > 0 && <section><strong>Saved resumes</strong>{savedResumes.map(saved => <div key={saved.id}><span>{saved.label}</span><button disabled={loading} onClick={() => void deleteSavedResume(saved.id)} type="button">Delete</button></div>)}</section>}{savedDrafts.length > 0 && <section><strong>Saved drafts</strong>{savedDrafts.map(draft => <div key={draft.id}><span>{draft.label}</span><button disabled={loading} onClick={() => reopenDraft(draft)} type="button">Open</button><button disabled={loading} onClick={() => void deleteSavedDraft(draft.id)} type="button">Delete</button></div>)}</section>}</details>}
-            {records.length > 0 && <div className="source-switcher"><label htmlFor="saved-record">Or use a saved Career Record</label><select id="saved-record" value={careerRecord?.id ?? ""} onChange={event => { const record = records.find(item => item.id === event.target.value); setCareerRecord(record); if (record) setSelectedSavedResume(undefined); }}><option value="">Use a resume instead</option>{records.map(record => <option key={record.id} value={record.id}>{record.label}</option>)}</select></div>}
+            {(savedResumes.length > 0 || savedDrafts.length > 0) && <><div className="source-switcher"><label htmlFor="saved-source">Choose from your Rezzie library</label><select id="saved-source" value={selectedSavedDraft ? `draft:${selectedSavedDraft}` : selectedSavedResume ? `resume:${selectedSavedResume}` : ""} onChange={event => selectSavedSource(event.target.value)}><option value="">Use a new resume instead</option>{savedResumes.length > 0 && <optgroup label="Saved resumes">{savedResumes.map(saved => <option key={saved.id} value={`resume:${saved.id}`}>{saved.label}</option>)}</optgroup>}{savedDrafts.length > 0 && <optgroup label="Saved tailored drafts">{savedDrafts.map(draft => <option key={draft.id} value={`draft:${draft.id}`}>{draft.label}</option>)}</optgroup>}</select><small>Tailored drafts are reusable sources. Rezzie will still keep every new change grounded in the version you select.</small></div><details className="library-manager"><summary>Your private library · {savedResumes.length} resume{savedResumes.length === 1 ? "" : "s"} · {savedDrafts.length} tailored draft{savedDrafts.length === 1 ? "" : "s"}</summary><p>Only you can see these saved resumes and drafts. Deleting an item removes it from Rezzie.</p>{savedResumes.length > 0 && <section><strong>Saved resumes</strong>{savedResumes.map(saved => <div key={saved.id}><span>{saved.label}</span><button disabled={loading} onClick={() => selectSavedResume(saved.id)} type="button">Use to tailor</button><button disabled={loading} onClick={() => void deleteSavedResume(saved.id)} type="button">Delete</button></div>)}</section>}{savedDrafts.length > 0 && <section><strong>Saved tailored drafts</strong>{savedDrafts.map(draft => <div key={draft.id}><span>{draft.label}</span><button disabled={loading} onClick={() => selectSavedDraft(draft.id)} type="button">Use to tailor</button><button disabled={loading} onClick={() => reopenDraft(draft)} type="button">Open</button><button disabled={loading} onClick={() => void deleteSavedDraft(draft.id)} type="button">Delete</button></div>)}</section>}</details></>}
+            {records.length > 0 && <div className="source-switcher"><label htmlFor="saved-record">Or use a saved Career Record</label><select id="saved-record" value={careerRecord?.id ?? ""} onChange={event => { const record = records.find(item => item.id === event.target.value); setCareerRecord(record); if (record) { setSelectedSavedResume(undefined); setSelectedSavedDraft(undefined); } }}><option value="">Use a resume instead</option>{records.map(record => <option key={record.id} value={record.id}>{record.label}</option>)}</select></div>}
             {!careerRecord && <div className="upload-panel">{uploadedResumeName ? <><div className="uploaded-source-card"><span className="uploaded-source-icon" aria-hidden="true">✓</span><div><strong>{uploadedResumeName}</strong><small>Resume imported · {resume.length.toLocaleString()} characters ready for tailoring</small></div><label className="source-file-replace"><input aria-label="Replace resume file" onChange={importResume} accept={fileTypes} type="file" />Replace</label></div><details className="extracted-text-review"><summary>Review extracted text <span>Optional</span></summary><p>Only open this if you need to correct what Rezzie read from the file before tailoring.</p><label htmlFor="resume">Extracted resume text <span className="field-count">{resume.length.toLocaleString()} characters</span></label><textarea id="resume" value={resume} onChange={event => { setResume(event.target.value); setCareerRecord(undefined); }} /></details></> : <><label className="drop-zone"><input aria-label="Resume file" onChange={importResume} accept={fileTypes} type="file" /><span className="upload-icon">↑</span><strong>Upload your resume</strong><small>PDF, DOCX, Markdown, or text · maximum 5 MB</small></label><div className="divider"><span>or paste it below</span></div><label htmlFor="resume">Current resume <span className="field-count">{resume.length.toLocaleString()} characters</span></label><textarea id="resume" value={resume} onChange={event => { setResume(event.target.value); setCareerRecord(undefined); }} placeholder="Paste the complete resume you want to tailor…" /></>}</div>}
             {!careerRecord && resume.length >= minLength && !selectedSavedResume && <details className="career-option"><summary>Save this private resume for later <span>Optional</span></summary><p>It stays in your Rezzie library so you can select it on another device or in the future Chrome extension. You can delete it anytime.</p><div className="inline-form"><input aria-label="Saved resume name" value={resumeLabel} onChange={event => setResumeLabel(event.target.value)} /><button className="button button-outline" disabled={loading} onClick={() => void saveCurrentResume()} type="button">Save resume</button></div></details>}
             {!careerRecord && resume.length >= minLength && <details className="career-option"><summary>Save this as a reusable Career Record <span>Facts only</span></summary><p>Rezzie extracts individual claims for you to confirm. Future tailoring can use confirmed facts only.</p><div className="inline-form"><input aria-label="Career Record name" value={recordLabel} onChange={event => setRecordLabel(event.target.value)} /><button className="button button-outline" disabled={loading} onClick={() => void createCareerRecord()} type="button">Create record</button></div></details>}

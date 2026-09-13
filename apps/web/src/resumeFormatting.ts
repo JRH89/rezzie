@@ -11,7 +11,7 @@ function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-const urlPattern = /(?:https?:\/\/|www\.)[^\s<>"']+/giu;
+const urlPattern = /(?:https?:\/\/|www\.|mailto:)[^\s<>"']+/giu;
 
 function linkify(value: string) {
   let output = "";

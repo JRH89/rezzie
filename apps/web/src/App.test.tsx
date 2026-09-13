@@ -39,6 +39,25 @@ describe("guided tailoring workspace", () => {
     expect((tailor as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("makes saved tailored drafts easy to reuse as a tailoring source", async () => {
+    const savedDraft = {
+      id: "draft-1", resume_id: null, label: "Product engineer - Acme", tailored_resume: "A saved tailored resume with enough grounded detail to be selected for a new role.", resume_html: null, created_at: "2026-09-13T00:00:00Z",
+    };
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const path = String(input);
+      const body = path.includes("/tailoring-drafts") ? [savedDraft] : path.includes("/billing/me") ? { subscription_status: "none", subscription_remaining: 0, purchased_credits: 0 } : [];
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }));
+    }));
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    const sourcePicker = await screen.findByLabelText("Choose from your Rezzie library");
+    expect(within(sourcePicker).getByRole("option", { name: "Product engineer - Acme" })).toBeTruthy();
+    fireEvent.change(sourcePicker, { target: { value: "draft:draft-1" } });
+    expect(await screen.findByText("Product engineer - Acme (saved tailored draft)")).toBeTruthy();
+    expect((screen.getByRole("button", { name: /continue to the job/i }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("provides working landing navigation and a way back home", () => {
     render(<App />);
     expect(screen.getAllByRole("link", { name: "Features" })[0].getAttribute("href")).toBe("/features");

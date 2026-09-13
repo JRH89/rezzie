@@ -37,6 +37,9 @@ SECTION_HEADINGS = {
     "PROJECTS", "SELECTED PROJECTS", "SELECTED PRODUCTS", "ACADEMIC PROJECTS", "EDUCATION", "CERTIFICATIONS", "AWARDS", "VOLUNTEERING",
 }
 
+URL_PATTERN = re.compile(r"(?:https?://|www\.|mailto:)[^\s<>\"']+", re.IGNORECASE)
+URL_TRAILING_PUNCTUATION = ".,;:!?"
+
 
 def is_section_heading(line: str) -> bool:
     normalized = " ".join(line.replace(":", "").split()).upper()
@@ -145,6 +148,39 @@ def safe_link(value: str | None) -> str | None:
     return value if parsed.scheme in {"http", "https", "mailto"} else None
 
 
+def _linkify_run(run: TextRun) -> list[TextRun]:
+    """Turn displayed, safe URLs into links while retaining all run styling."""
+    if run.href:
+        return [run]
+    linked_runs: list[TextRun] = []
+    cursor = 0
+    for match in URL_PATTERN.finditer(run.text):
+        matched = match.group(0)
+        visible_url = matched.rstrip(URL_TRAILING_PUNCTUATION)
+        if not visible_url:
+            continue
+        if match.start() > cursor:
+            linked_runs.append(
+                TextRun(run.text[cursor:match.start()], run.bold, run.italic, run.underline)
+            )
+        href = f"https://{visible_url}" if visible_url.lower().startswith("www.") else visible_url
+        linked_runs.append(
+            TextRun(visible_url, run.bold, run.italic, run.underline, safe_link(href))
+        )
+        cursor = match.start() + len(visible_url)
+    if not linked_runs:
+        return [run]
+    if cursor < len(run.text):
+        linked_runs.append(TextRun(run.text[cursor:], run.bold, run.italic, run.underline))
+    return linked_runs
+
+
+def _linkify_blocks(blocks: list[ResumeBlock]) -> list[ResumeBlock]:
+    for block in blocks:
+        block.runs = [linked_run for run in block.runs for linked_run in _linkify_run(run)]
+    return blocks
+
+
 class ResumeHtmlParser(HTMLParser):
     """Parse the editor's allow-listed formatting into a portable document model."""
 
@@ -229,9 +265,10 @@ def document_blocks(resume_text: str, resume_html: str | None) -> list[ResumeBlo
         parser.feed(resume_html)
         blocks = parser.blocks()
         if blocks:
-            return blocks
+            return _linkify_blocks(blocks)
     lines = [line.strip() for line in resume_text.splitlines() if line.strip()]
-    return [ResumeBlock(kind="h1" if index == 0 else "p", runs=[TextRun(line[2:].strip() if line.startswith(("- ", "* ", "â€¢ ")) else line)], alignment="center" if index < 2 else "left") if not line.startswith(("- ", "* ", "â€¢ ")) else ResumeBlock(kind="li", runs=[TextRun(line[2:].strip())]) for index, line in enumerate(lines)]
+    blocks = [ResumeBlock(kind="h1" if index == 0 else "p", runs=[TextRun(line[2:].strip() if line.startswith(("- ", "* ", "â€¢ ")) else line)], alignment="center" if index < 2 else "left") if not line.startswith(("- ", "* ", "â€¢ ")) else ResumeBlock(kind="li", runs=[TextRun(line[2:].strip())]) for index, line in enumerate(lines)]
+    return _linkify_blocks(blocks)
 
 
 class DocumentService:
@@ -429,8 +466,6 @@ class RichResumeExportService(ResumeExportService):
     """Render editor HTML as one style system shared by DOCX and PDF exports."""
 
     def render_docx(self, resume_text: str, resume_html: str | None = None, target_page_count: int | None = None, template_id: str = "professional", style_profile=None) -> bytes:
-        if not resume_html:
-            return super().render_docx(resume_text, target_page_count)
         template = source_template(resume_template(template_id), style_profile) if template_id == "source" else resume_template(template_id)
         compact = target_page_count == 1 or template_id == "compact"
         document = Document()
@@ -467,8 +502,6 @@ class RichResumeExportService(ResumeExportService):
         return output.getvalue()
 
     def render_pdf(self, resume_text: str, resume_html: str | None = None, target_page_count: int | None = None, template_id: str = "professional", style_profile=None) -> bytes:
-        if not resume_html:
-            return super().render_pdf(resume_text, target_page_count)
         template = source_template(resume_template(template_id), style_profile) if template_id == "source" else resume_template(template_id)
         scales = (1.0, 0.95, 0.9, 0.85) if target_page_count == 1 else (1.0,)
         rendered = b""

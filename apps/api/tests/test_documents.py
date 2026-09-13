@@ -2,6 +2,7 @@ import io
 
 from docx import Document
 from docx.shared import Pt
+from pypdf import PdfReader
 
 from rezzie.documents import (
     ResumeExportService,
@@ -57,6 +58,25 @@ def test_rich_exports_preserve_clickable_links() -> None:
 
     assert any(str(relationship.target_ref) == "https://portfolio.example.com" for relationship in rendered.part.rels.values())
     assert RichResumeExportService().render_pdf("Taylor Example", source_html).startswith(b"%PDF")
+
+
+def test_rich_exports_linkify_plain_text_urls_when_editor_html_is_unavailable() -> None:
+    resume_text = "Taylor Example\nwww.portfolio.example.com | mailto:taylor@example.com\n\nEXPERIENCE\n- Built https://github.com/example/project."
+    service = RichResumeExportService()
+    rendered = Document(io.BytesIO(service.render_docx(resume_text)))
+    targets = {str(relationship.target_ref) for relationship in rendered.part.rels.values()}
+
+    assert "https://www.portfolio.example.com" in targets
+    assert "mailto:taylor@example.com" in targets
+    assert "https://github.com/example/project" in targets
+    pdf = PdfReader(io.BytesIO(service.render_pdf(resume_text)))
+    targets_in_pdf = {
+        str(annotation.get_object()["/A"]["/URI"])
+        for page in pdf.pages
+        for annotation in (page.get("/Annots") or [])
+        if annotation.get_object().get("/A", {}).get("/URI")
+    }
+    assert {"https://www.portfolio.example.com", "mailto:taylor@example.com", "https://github.com/example/project"} <= targets_in_pdf
 
 
 def test_docx_style_profile_extracts_portable_hierarchy() -> None:

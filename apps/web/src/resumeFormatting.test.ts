@@ -44,10 +44,11 @@ describe("resume formatting", () => {
   });
 
   it("turns retained URLs into safe clickable editor links", () => {
-    const html = resumeEditorHtml("Taylor Example\nhttps://portfolio.example.com | www.example.com\n\nEXPERIENCE\n- Built https://github.com/example/project.");
+    const html = resumeEditorHtml("Taylor Example\nhttps://portfolio.example.com | www.example.com | mailto:taylor@example.com\n\nEXPERIENCE\n- Built https://github.com/example/project.");
 
     expect(html).toContain('<a href="https://portfolio.example.com" rel="noreferrer" target="_blank">https://portfolio.example.com</a>');
     expect(html).toContain('<a href="https://www.example.com" rel="noreferrer" target="_blank">www.example.com</a>');
+    expect(html).toContain('<a href="mailto:taylor@example.com" rel="noreferrer" target="_blank">mailto:taylor@example.com</a>');
     expect(html).toContain('<a href="https://github.com/example/project" rel="noreferrer" target="_blank">https://github.com/example/project</a>.');
   });
 });
