@@ -8,7 +8,23 @@ const sectionHeadings = new Set([
 ]);
 
 function escapeHtml(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const urlPattern = /(?:https?:\/\/|www\.)[^\s<>"']+/giu;
+
+function linkify(value: string) {
+  let output = "";
+  let cursor = 0;
+  for (const match of value.matchAll(urlPattern)) {
+    const matched = match[0];
+    const trailing = matched.match(/[.,;:!?]+$/u)?.[0] ?? "";
+    const visibleUrl = matched.slice(0, matched.length - trailing.length);
+    const href = visibleUrl.startsWith("www.") ? `https://${visibleUrl}` : visibleUrl;
+    output += `${escapeHtml(value.slice(cursor, match.index))}<a href="${escapeHtml(href)}" rel="noreferrer" target="_blank">${escapeHtml(visibleUrl)}</a>${escapeHtml(trailing)}`;
+    cursor = (match.index ?? 0) + matched.length;
+  }
+  return `${output}${escapeHtml(value.slice(cursor))}`;
 }
 
 const bulletPrefix = /^(?:[-*]|\u2022|\u2023|\u25e6|\u2013)\s+/u;
@@ -50,8 +66,8 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
     bullets = [];
   };
   const render = (line: string) => {
-    const escaped = escapeHtml(line);
-    return sourceBacked.has(line) ? `<mark class="source-backed-highlight">${escaped}</mark>` : escaped;
+    const linked = linkify(line);
+    return sourceBacked.has(line) ? `<mark class="source-backed-highlight">${linked}</mark>` : linked;
   };
 
   for (const rawLine of text.split("\n")) {
@@ -71,7 +87,7 @@ export function resumeEditorHtml(text: string, changes: TailoringChange[] = [], 
       continue;
     }
     if (isBullet(line)) {
-      bullets.push(`<li>${escapeHtml(bulletText(line))}</li>`);
+      bullets.push(`<li>${linkify(bulletText(line))}</li>`);
       contentIndex += 1;
       continue;
     }

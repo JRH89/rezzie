@@ -51,6 +51,14 @@ def test_rich_editor_formatting_survives_docx_and_pdf_exports() -> None:
     assert service.render_pdf("Taylor Example", source_html, template_id="modern").startswith(b"%PDF")
 
 
+def test_rich_exports_preserve_clickable_links() -> None:
+    source_html = '<h1>Taylor Example</h1><p><a href="https://portfolio.example.com">portfolio.example.com</a></p>'
+    rendered = Document(io.BytesIO(RichResumeExportService().render_docx("Taylor Example", source_html)))
+
+    assert any(str(relationship.target_ref) == "https://portfolio.example.com" for relationship in rendered.part.rels.values())
+    assert RichResumeExportService().render_pdf("Taylor Example", source_html).startswith(b"%PDF")
+
+
 def test_docx_style_profile_extracts_portable_hierarchy() -> None:
     source = Document()
     source.styles["Normal"].font.name = "Georgia"

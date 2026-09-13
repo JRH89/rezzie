@@ -37,6 +37,17 @@ describe("resume formatting", () => {
   it("separates consecutive project titles into their own entries", () => {
     const html = resumeEditorHtml("Taylor Example\ntaylor@example.com\n\nPROJECTS\nTruss - Agentic Coding Harness (TypeScript, JavaScript) | https://truss-agent.com\nBuilt a local-first coding harness.\nPinLeads - Lead Generation Platform (Node.js, Next.js) | https://pinleads.org\nBuilt a lead collection workflow.");
 
-    expect(html).toContain("<strong>Truss - Agentic Coding Harness (TypeScript, JavaScript) | https://truss-agent.com</strong></p><ul><li>Built a local-first coding harness.</li></ul><p><strong>PinLeads - Lead Generation Platform (Node.js, Next.js) | https://pinleads.org</strong></p><ul><li>Built a lead collection workflow.</li></ul>");
+    expect(html).toContain("<strong>Truss - Agentic Coding Harness (TypeScript, JavaScript) | <a href=\"https://truss-agent.com\"");
+    expect(html).toContain("<strong>PinLeads - Lead Generation Platform (Node.js, Next.js) | <a href=\"https://pinleads.org\"");
+    expect(html).toContain("<ul><li>Built a local-first coding harness.</li></ul>");
+    expect(html).toContain("<ul><li>Built a lead collection workflow.</li></ul>");
+  });
+
+  it("turns retained URLs into safe clickable editor links", () => {
+    const html = resumeEditorHtml("Taylor Example\nhttps://portfolio.example.com | www.example.com\n\nEXPERIENCE\n- Built https://github.com/example/project.");
+
+    expect(html).toContain('<a href="https://portfolio.example.com" rel="noreferrer" target="_blank">https://portfolio.example.com</a>');
+    expect(html).toContain('<a href="https://www.example.com" rel="noreferrer" target="_blank">www.example.com</a>');
+    expect(html).toContain('<a href="https://github.com/example/project" rel="noreferrer" target="_blank">https://github.com/example/project</a>.');
   });
 });
