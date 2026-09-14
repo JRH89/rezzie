@@ -27,6 +27,15 @@ function metaForPath(pathname: string): PageMeta | undefined {
 
 function setContent(element: Element, content: string) { element.setAttribute("content", content); }
 
+function extensionAuthResponse(response: Response) {
+  const headers = new Headers(response.headers);
+  // This is the only page deliberately embedded by Rezzie's allow-listed
+  // Chrome extension. The bridge itself verifies the caller's exact origin
+  // before it can request or receive a Firebase token.
+  headers.delete("x-frame-options");
+  return new Response(response.body, { headers, status: response.status, statusText: response.statusText });
+}
+
 function rewriteDocument(response: Response, meta: PageMeta, url: URL) {
   const canonicalUrl = `${siteUrl}${url.pathname}`;
   const imageUrl = `${siteUrl}${meta.image}`;
@@ -56,6 +65,7 @@ export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const response = await env.ASSETS.fetch(request);
     const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/extension-auth") return extensionAuthResponse(response);
     const meta = request.method === "GET" && response.headers.get("content-type")?.includes("text/html") ? metaForPath(url.pathname) : undefined;
     return meta ? rewriteDocument(response, meta, url) : response;
   },

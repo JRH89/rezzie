@@ -9,7 +9,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         sidepanel: resolve(import.meta.dirname, "sidepanel.html"),
-        offscreen: resolve(import.meta.dirname, "offscreen.html"),
         background: resolve(import.meta.dirname, "src/background.ts"),
       },
       output: { entryFileNames: "[name].js", chunkFileNames: "chunks/[name]-[hash].js", assetFileNames: "assets/[name]-[hash][extname]" },

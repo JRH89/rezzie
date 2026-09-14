@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rezzie",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "Tailor a truthful, job-specific resume from the job page you are viewing using your saved Rezzie resumes and credits.",
   "homepage_url": "https://rezzie.org",
   "action": {
@@ -21,7 +21,10 @@
   },
   "background": { "service_worker": "background.js", "type": "module" },
   "side_panel": { "default_path": "sidepanel.html" },
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "offscreen", "downloads"],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "downloads"],
+  "externally_connectable": {
+    "matches": ["https://rezzie.org/*", "http://localhost:5173/*", "http://127.0.0.1:5173/*"]
+  },
   "host_permissions": [
     "https://rezzie.org/*",
     "https://api.rezzie.org/*",

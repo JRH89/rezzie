@@ -1,11 +1,33 @@
 import type { ExtensionMessage, JobSnapshot } from "./messages";
 import { extractJobFromPage } from "./page-extractor";
 
-const OFFSCREEN_PATH = "offscreen.html";
+const webBaseUrl = (import.meta.env.VITE_WEB_BASE_URL ?? "https://rezzie.org").replace(/\/$/, "");
+const webOrigin = new URL(webBaseUrl).origin;
+const extensionAuthUrl = `${webBaseUrl}/extension-auth?extension_id=${chrome.runtime.id}`;
+const googleAuthRequestKey = "google-auth-request";
+const googleAuthRequestTtlMs = 10 * 60 * 1_000;
 
-async function ensureOffscreenDocument() {
-  const contexts = await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"], documentUrls: [chrome.runtime.getURL(OFFSCREEN_PATH)] });
-  if (!contexts.length) await chrome.offscreen.createDocument({ url: OFFSCREEN_PATH, reasons: ["IFRAME_SCRIPTING"], justification: "Relay the user-initiated Google sign-in flow from Rezzie's trusted auth page." });
+type PendingGoogleAuth = { requestId: string; createdAt: number };
+
+async function startGoogleAuthentication() {
+  const requestId = crypto.randomUUID();
+  await chrome.storage.session.set({ [googleAuthRequestKey]: { requestId, createdAt: Date.now() } satisfies PendingGoogleAuth });
+  await chrome.tabs.create({ url: `${extensionAuthUrl}&request_id=${encodeURIComponent(requestId)}` });
+}
+
+async function completeGoogleAuthentication(message: ExtensionMessage, sender: chrome.runtime.MessageSender) {
+  const senderUrl = sender.url ? new URL(sender.url) : undefined;
+  if (message.type !== "google-auth-result" || !message.token || !message.request_id || senderUrl?.origin !== webOrigin || senderUrl.pathname !== "/extension-auth") {
+    throw new Error("Unrecognized extension sign-in response.");
+  }
+  const stored = await chrome.storage.session.get(googleAuthRequestKey);
+  const pending = stored[googleAuthRequestKey] as PendingGoogleAuth | undefined;
+  if (!pending || pending.requestId !== message.request_id || Date.now() - pending.createdAt > googleAuthRequestTtlMs) {
+    throw new Error("This Rezzie sign-in request expired. Start it again from the extension.");
+  }
+  await chrome.storage.session.remove(googleAuthRequestKey);
+  await chrome.runtime.sendMessage(message);
+  if (sender.tab?.id) await chrome.tabs.remove(sender.tab.id);
 }
 
 async function extractCurrentJob(): Promise<JobSnapshot> {
@@ -30,8 +52,15 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     return true;
   }
   if (message.type === "google-auth") {
-    void ensureOffscreenDocument().then(() => chrome.runtime.sendMessage({ type: "google-auth-offscreen" } satisfies ExtensionMessage)).then(response => sendResponse(response)).catch(error => sendResponse({ type: "google-auth-result", error: error instanceof Error ? error.message : "Google sign-in could not start." } satisfies ExtensionMessage));
+    void startGoogleAuthentication().then(() => sendResponse({ type: "google-auth-pending" } satisfies ExtensionMessage)).catch(error => sendResponse({ type: "google-auth-result", error: error instanceof Error ? error.message : "Google sign-in could not start." } satisfies ExtensionMessage));
     return true;
   }
   return undefined;
+});
+
+chrome.runtime.onMessageExternal.addListener((message: ExtensionMessage, sender, sendResponse) => {
+  void completeGoogleAuthentication(message, sender)
+    .then(() => sendResponse({ ok: true }))
+    .catch(error => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Google sign-in could not finish." }));
+  return true;
 });

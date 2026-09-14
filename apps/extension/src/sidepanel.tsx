@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth/web-extension";
 
-import type { JobSnapshot } from "./messages";
+import type { ExtensionMessage, JobSnapshot } from "./messages";
 import { clearSessionToken, readSessionToken, storeSessionToken } from "./session-token";
 import "./sidepanel.css";
 
@@ -40,6 +40,7 @@ function App() {
   const [job, setJob] = useState<JobSnapshot>();
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [credentialMode, setCredentialMode] = useState<CredentialMode>("subscription");
   const [apiKey, setApiKey] = useState("");
@@ -69,6 +70,16 @@ function App() {
         setToken(await readSessionToken());
       })();
     });
+  }, []);
+
+  useEffect(() => {
+    function receiveGoogleResult(message: ExtensionMessage) {
+      if (message.type !== "google-auth-result") return;
+      if (!message.token) { setError(message.error ?? "Google sign-in failed."); return; }
+      void storeSessionToken(message.token).then(() => { setToken(message.token); setNotice(undefined); }).catch(() => setError("Google sign-in succeeded, but Rezzie could not save the session."));
+    }
+    chrome.runtime.onMessage.addListener(receiveGoogleResult);
+    return () => chrome.runtime.onMessage.removeListener(receiveGoogleResult);
   }, []);
 
   useEffect(() => {
@@ -115,11 +126,11 @@ function App() {
   async function google() {
     setBusy(true);
     setError(undefined);
+    setNotice(undefined);
     try {
-      const response = await chrome.runtime.sendMessage({ type: "google-auth" }) as { token?: string; error?: string };
-      if (!response.token) throw new Error(response.error ?? "Google sign-in failed.");
-      await storeSessionToken(response.token);
-      setToken(response.token);
+      const response = await chrome.runtime.sendMessage({ type: "google-auth" }) as { type?: string; error?: string };
+      if (response.error) throw new Error(response.error);
+      setNotice("A Rezzie sign-in tab opened. Choose your Google account there, then return here.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Google sign-in failed.");
     } finally {
@@ -207,7 +218,7 @@ function App() {
         <h1>{isSignUp ? "Start with what is true." : "Bring your application work with you."}</h1>
         <p>{isSignUp ? "Create a private account to save resumes and use Rezzie credits." : "Sign in to use your saved resumes and shared credits."}</p>
       </div>
-      <button className="button secondary" disabled={busy} onClick={() => void google()} type="button">Continue with Google</button>
+      <button className="button secondary" disabled={busy} onClick={() => void google()} type="button">Continue with Google</button>{notice && <p className="hint" role="status">{notice}</p>}
       <label>Email<input autoComplete="email" onChange={event => setEmail(event.target.value)} type="email" value={email} /></label>
       <label>Password<input autoComplete={isSignUp ? "new-password" : "current-password"} minLength={8} onChange={event => setPassword(event.target.value)} type="password" value={password} /></label>
       <button className="button" disabled={busy || !email.trim() || password.length < 8} onClick={() => void submitEmailAuthentication()} type="button">{busy ? "Working..." : isSignUp ? "Create account" : "Sign in"}</button>

@@ -27,13 +27,13 @@ The extension asks Chrome for page access only on supported job boards and appli
 
 ## Enable production Google sign-in
 
-Email/password sign-in uses the Firebase extension SDK. Google sign-in is deliberately relayed through `https://rezzie.org/extension-auth`, which only returns a Firebase token to explicitly allow-listed extension origins.
+Email/password sign-in uses the Firebase extension SDK. Google sign-in opens `https://rezzie.org/extension-auth` in a normal tab. The user explicitly chooses **Continue with Google** there, then the hosted page sends the Firebase token only to the installed extension that initiated the flow. The extension creates a one-time, ten-minute request ID in `chrome.storage.session`; it accepts a returned token only when that ID, the hosted `https://rezzie.org/extension-auth` origin, and the originating tab all match. The published extension allow-lists `https://rezzie.org/*` through `externally_connectable`.
 
 After creating the production extension package and obtaining its stable ID:
 
 1. In Firebase Authentication, add `chrome-extension://EXTENSION_ID` to **Authorized domains**.
-2. In the Cloudflare Worker production build variables for `rezzie.org`, set `VITE_CHROME_EXTENSION_IDS=EXTENSION_ID`. For more than one approved build, use a comma-separated list.
-3. Redeploy the web Worker so the `/extension-auth` bridge receives the allow-list at build time.
+2. Verify the Rezzie page can call the extension through the manifest's `externally_connectable` match for `https://rezzie.org/*`.
+3. Redeploy the web Worker so the `/extension-auth` bridge is current.
 4. Reload the unpacked/production extension, sign in with Google, select a saved resume, and tailor a harmless test job. Confirm the API request uses the account's existing credit balance.
 
 Never place Stripe, Anthropic, Firebase Admin, or API-secret values in the extension. Firebase's web configuration values are public identifiers; the extension's authentication token is retained only in `chrome.storage.session` and is cleared on sign-out or expiry.
