@@ -8,6 +8,7 @@ from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest
 from rezzie.services import (
     JobDescriptionImporter,
     TailoringService,
+    finalize_tailored_resume,
     normalize_bulleted_section_headings,
     preserve_source_summary,
 )
@@ -75,6 +76,16 @@ def test_preserves_a_source_summary_when_the_generated_section_is_empty() -> Non
     result = preserve_source_summary(source, generated)
 
     assert "Grounded product leader with platform delivery experience." in result
+
+
+def test_preserves_a_bulleted_source_summary_when_the_generated_summary_is_empty() -> None:
+    source = "Taylor Example\n\n- SUMMARY\nGrounded product leader with platform delivery experience.\n\nSKILLS\nStrategy"
+    generated = "Taylor Example\n\nSUMMARY\n\nSKILLS\nStrategy"
+
+    result = finalize_tailored_resume(source, generated)
+
+    assert "Grounded product leader with platform delivery experience." in result
+    assert "- SUMMARY" not in result
 
 
 def test_does_not_overwrite_a_nonempty_generated_summary() -> None:

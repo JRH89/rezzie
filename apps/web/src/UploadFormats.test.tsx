@@ -5,6 +5,8 @@ import { App } from "./App";
 describe("job description uploads", () => {
   beforeEach(() => {
     window.location.hash = "#top";
+    window.localStorage.clear();
+    window.sessionStorage.clear();
     vi.stubGlobal("scrollTo", vi.fn());
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(
       new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } }),
@@ -14,6 +16,7 @@ describe("job description uploads", () => {
   it("offers the same PDF and DOCX formats accepted by the API", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    expect(screen.getByText(/best formatting match: upload a DOCX/i)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
     fireEvent.click(screen.getByRole("button", { name: /continue to the job/i }));
     fireEvent.click(screen.getByRole("button", { name: "Upload file" }));

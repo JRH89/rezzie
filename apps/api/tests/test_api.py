@@ -163,6 +163,39 @@ def test_resume_export_returns_an_editable_docx() -> None:
     assert response.content[:2] == b"PK"
 
 
+def test_source_docx_export_patches_the_uploaded_document() -> None:
+    source = Document()
+    source.add_paragraph("Taylor Example")
+    source.add_paragraph("taylor@example.com")
+    source.add_paragraph("SUMMARY")
+    source.add_paragraph("Original summary.")
+    source_bytes = io.BytesIO()
+    source.save(source_bytes)
+
+    response = client.post(
+        "/api/v1/resumes/export/source-docx",
+        headers=LOCAL_IDENTITY,
+        data={"resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer.", "resume_html": ""},
+        files={"original_docx": ("resume.docx", source_bytes.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "Grounded systems engineer." in [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
+
+
+def test_source_docx_export_rejects_non_docx_sources() -> None:
+    response = client.post(
+        "/api/v1/resumes/export/source-docx",
+        headers=LOCAL_IDENTITY,
+        data={"resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer."},
+        files={"original_docx": ("resume.pdf", b"not a docx", "application/pdf")},
+    )
+
+    assert response.status_code == 422
+    assert "original DOCX" in response.json()["detail"]
+
+
 def test_resume_export_returns_a_pdf() -> None:
     response = client.post(
         "/api/v1/resumes/export/pdf",

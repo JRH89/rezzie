@@ -37,6 +37,7 @@ class ImportResponse(BaseModel):
     page_count: int | None = Field(default=None, ge=1, le=100)
     style_profile: ResumeStyleProfile | None = None
     entry_lines: list[str] = Field(default_factory=list, max_length=500)
+    editor_html: str | None = Field(default=None, max_length=200_000)
 
 
 class SavedResumeCreate(BaseModel):

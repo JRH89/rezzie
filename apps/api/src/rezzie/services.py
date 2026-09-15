@@ -1,3 +1,5 @@
+import re
+
 import httpx
 from fastapi import HTTPException
 
@@ -16,7 +18,13 @@ _BULLET_PREFIXES = ("- ", "* ", "• ", "‣ ", "◦ ", "– ")
 
 
 def _heading_name(line: str) -> str:
-    return " ".join(line.replace(":", "").split()).upper()
+    stripped = line.strip()
+    stripped = re.sub(r"^(?:[-*\u2022\u2023\u25e6\u2013]\s*)+", "", stripped)
+    return " ".join(stripped.replace(":", "").split()).upper()
+
+
+def _is_section_heading(line: str) -> bool:
+    return is_section_heading(_heading_name(line))
 
 
 def normalize_bulleted_section_headings(resume_text: str) -> str:
@@ -34,7 +42,7 @@ def _summary_bounds(lines: list[str]) -> tuple[int, int] | None:
         if _heading_name(line) not in SUMMARY_HEADINGS:
             continue
         end = index + 1
-        while end < len(lines) and not is_section_heading(lines[end]):
+        while end < len(lines) and not _is_section_heading(lines[end]):
             end += 1
         return index, end
     return None
@@ -62,6 +70,13 @@ def preserve_source_summary(source_resume: str, tailored_resume: str) -> str:
     insertion_index = next((index for index, line in enumerate(tailored_lines) if is_section_heading(line)), len(tailored_lines))
     replacement = [*tailored_lines[:insertion_index], "SUMMARY", source_summary, "", *tailored_lines[insertion_index:]]
     return "\n".join(replacement).strip()
+
+
+def finalize_tailored_resume(source_resume: str, tailored_resume: str) -> str:
+    """Normalize section labels before enforcing a non-empty source summary."""
+    normalized_source = normalize_bulleted_section_headings(source_resume)
+    normalized_draft = normalize_bulleted_section_headings(tailored_resume)
+    return preserve_source_summary(normalized_source, normalized_draft)
 
 
 class JobDescriptionImporter:
@@ -125,14 +140,14 @@ class TailoringService:
             if evidence_text:
                 provider_args["evidence_text"] = evidence_text
             result = await self._provider.tailor(**provider_args)
-            result = result.model_copy(update={"tailored_resume": normalize_bulleted_section_headings(preserve_source_summary(request.resume_text, result.tailored_resume))})
+            result = result.model_copy(update={"tailored_resume": finalize_tailored_resume(request.resume_text, result.tailored_resume)})
             try:
                 assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
             except HTTPException as error:
                 if error.status_code != 422:
                     raise
                 result = await self._provider.repair(api_key=api_key, resume_text=request.resume_text, job_description=request.job_description, rejected_draft=result.tailored_resume)
-                result = result.model_copy(update={"tailored_resume": normalize_bulleted_section_headings(preserve_source_summary(request.resume_text, result.tailored_resume))})
+                result = result.model_copy(update={"tailored_resume": finalize_tailored_resume(request.resume_text, result.tailored_resume)})
                 try:
                     assert_grounded(f"{request.resume_text}\n{evidence_text}", result.tailored_resume)
                 except HTTPException as repair_error:

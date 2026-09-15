@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -195,14 +195,14 @@ async def import_url(request: UrlImportRequest, authorization: str | None = Head
 async def import_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [])
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [], editor_html=document.editor_html)
 
 
 @app.post("/api/v1/resumes/file", response_model=ImportResponse)
 async def import_resume_file(file: UploadFile = File(...), authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> ImportResponse:  # noqa: B008
     require_user(authorization, x_rezzie_user_id)
     document = await document_service.extract(file)
-    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [])
+    return ImportResponse(text=document.text, source_type="file", page_count=document.page_count, style_profile=document.style_profile, entry_lines=document.entry_lines or [], editor_html=document.editor_html)
 
 
 @app.post("/api/v1/resumes", response_model=SavedResumeResponse, status_code=201)
@@ -290,6 +290,37 @@ def export_resume(request: ResumeExportRequest, authorization: str | None = Head
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={
             "Content-Disposition": 'attachment; filename="rezzie-tailored-resume.docx"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@app.post("/api/v1/resumes/export/source-docx")
+async def export_source_docx(
+    resume_text: str = Form(...),
+    resume_html: str | None = Form(default=None),
+    original_docx: UploadFile = File(...),  # noqa: B008
+    authorization: str | None = Header(default=None),
+    x_rezzie_user_id: str | None = Header(default=None),
+) -> Response:
+    """Patch a transient DOCX source; the original file is never retained by Rezzie."""
+    require_user(authorization, x_rezzie_user_id)
+    if original_docx.content_type != "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        raise HTTPException(status_code=422, detail="Upload the original DOCX file to preserve its layout.")
+    source_docx = await original_docx.read(settings.max_import_bytes + 1)
+    if len(source_docx) > settings.max_import_bytes:
+        raise HTTPException(status_code=413, detail="File exceeds the configured upload limit.")
+    document_service.validate_docx_source(source_docx)
+    content = resume_export_service.render_source_docx(
+        source_docx,
+        editor_html_to_text(resume_html, resume_text),
+        resume_html,
+    )
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": 'attachment; filename="rezzie-tailored-source.docx"',
             "Cache-Control": "no-store",
         },
     )

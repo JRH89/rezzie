@@ -1,7 +1,7 @@
 import io
 
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Inches, Pt
 from pypdf import PdfReader
 
 from rezzie.documents import (
@@ -77,6 +77,36 @@ def test_rich_exports_linkify_plain_text_urls_when_editor_html_is_unavailable() 
         if annotation.get_object().get("/A", {}).get("/URI")
     }
     assert {"https://www.portfolio.example.com", "mailto:taylor@example.com", "https://github.com/example/project"} <= targets_in_pdf
+
+
+def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs() -> None:
+    source = Document()
+    source.sections[0].left_margin = Inches(1.1)
+    source.styles["Normal"].font.name = "Georgia"
+    name = source.add_paragraph("Taylor Example")
+    name.runs[0].font.size = Pt(20)
+    source.add_paragraph("taylor@example.com")
+    source.add_paragraph("SUMMARY")
+    summary = source.add_paragraph("Original summary.")
+    summary.runs[0].font.size = Pt(10)
+    source.add_paragraph("EXPERIENCE")
+    source.add_paragraph("Acme Corp | Engineer")
+    source.add_paragraph("Delivered reliable systems.", style="List Bullet")
+    source_bytes = io.BytesIO()
+    source.save(source_bytes)
+
+    output = RichResumeExportService().render_source_docx(
+        source_bytes.getvalue(),
+        "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer.\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems and improved deployment speed.",
+    )
+    rendered = Document(io.BytesIO(output))
+
+    assert rendered.sections[0].left_margin == Inches(1.1)
+    assert rendered.styles["Normal"].font.name == "Georgia"
+    assert "Grounded systems engineer." in [paragraph.text for paragraph in rendered.paragraphs]
+    assert any("improved deployment speed" in paragraph.text for paragraph in rendered.paragraphs)
+    rendered_summary = next(paragraph for paragraph in rendered.paragraphs if paragraph.text == "Grounded systems engineer.")
+    assert rendered_summary.runs[0].font.size == Pt(10)
 
 
 def test_docx_style_profile_extracts_portable_hierarchy() -> None:

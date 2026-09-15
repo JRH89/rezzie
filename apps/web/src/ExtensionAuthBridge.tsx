@@ -64,5 +64,5 @@ export function ExtensionAuthBridge() {
     }
   }
 
-  return <main className="auth-screen"><div className="auth-card"><p className="eyebrow">REZZIE EXTENSION</p><h1>Connect your account.</h1><p>{message}</p>{authRequest && <button className="button" onClick={() => void signIn()} type="button">Continue with Google</button>}{error && <p role="alert">{error}</p>}</div></main>;
+  return <main className="auth-screen"><div className="auth-card"><p className="eyebrow">REZZIE EXTENSION</p><h1>Connect your account.</h1><p>{message}</p>{authRequest && <button className="google-button extension-google-button" onClick={() => void signIn()} type="button"><span aria-hidden="true">G</span> Continue with Google <b aria-hidden="true">→</b></button>}{error && <p role="alert">{error}</p>}</div></main>;
 }

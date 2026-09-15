@@ -1,5 +1,5 @@
 export type ResumeStyleProfile = { font_family: "Aptos" | "Arial" | "Calibri" | "Georgia" | "Times New Roman"; body_size: number; line_height: number; name_size: number; heading_size: number; heading_uppercase: boolean; emphasize_role_lines: boolean; italic_metadata: boolean };
-export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null; style_profile?: ResumeStyleProfile | null; entry_lines?: string[] };
+export type ImportResponse = { text: string; source_type: string; source_url?: string; page_count?: number | null; style_profile?: ResumeStyleProfile | null; entry_lines?: string[]; editor_html?: string | null };
 export type TailoringChange = { text: string; kind: "source_backed" | "tailored"; source_url?: string | null };
 export type TailoringResult = { tailored_resume: string; matched_keywords: string[]; review_items: string[]; truth_statement: string; changes: TailoringChange[] };
 export type CreditBalance = { subscription_status: string; subscription_remaining: number; purchased_credits: number; unlimited: boolean };
@@ -38,6 +38,19 @@ export function createApi(accessToken?: string) {
     if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? `We could not create the ${format.toUpperCase()} file.`); }
     return response.blob();
   }
+  async function exportSourceDocx(resumeText: string, resumeHtml: string, originalDocx: File): Promise<Blob> {
+    const headers = new Headers();
+    if (import.meta.env.DEV) headers.set("X-Rezzie-User-Id", import.meta.env.VITE_DEVELOPMENT_USER_ID ?? "local-user");
+    if (import.meta.env.DEV && import.meta.env.VITE_DEVELOPMENT_USER_EMAIL) headers.set("X-Rezzie-User-Email", import.meta.env.VITE_DEVELOPMENT_USER_EMAIL);
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    const form = new FormData();
+    form.append("resume_text", resumeText);
+    form.append("resume_html", resumeHtml);
+    form.append("original_docx", originalDocx);
+    const response = await fetch(apiUrl("/api/v1/resumes/export/source-docx"), { method: "POST", headers, body: form });
+    if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? "We could not preserve the source DOCX layout."); }
+    return response.blob();
+  }
   return {
     importText: (text: string) => request<ImportResponse>("/api/v1/job-descriptions/text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }),
     importUrl: (url: string) => request<ImportResponse>("/api/v1/job-descriptions/url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) }),
@@ -54,6 +67,7 @@ export function createApi(accessToken?: string) {
     listTailoringDrafts: () => request<SavedTailoringDraft[]>("/api/v1/tailoring-drafts", { method: "GET" }),
     deleteTailoringDraft: (draftId: string) => request<void>(`/api/v1/tailoring-drafts/${draftId}`, { method: "DELETE" }),
     exportResume,
+    exportSourceDocx,
     createCareerRecord: (body: { label: string; source_text: string }) => request<CareerRecord>("/api/v1/career-records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     listCareerRecords: () => request<CareerRecord[]>("/api/v1/career-records", { method: "GET" }),
     addCareerFact: (recordId: string, body: { fact_type: "claim" | "skill"; text: string; evidence_note?: string }) => request<CareerFact>(`/api/v1/career-records/${recordId}/facts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),

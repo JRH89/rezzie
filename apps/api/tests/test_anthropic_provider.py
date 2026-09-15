@@ -223,12 +223,12 @@ async def test_provider_logs_only_safe_invalid_result_metadata(monkeypatch: pyte
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    with pytest.raises(InvalidTailoringResultError):
-        await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
 
     assert "stop_reason=max_tokens" in caplog.text
     assert "diagnostic=malformed_json" in caplog.text
     assert "secret resume content" not in caplog.text
+    assert result.tailored_resume == "A" * 50
 
 
 @pytest.mark.asyncio

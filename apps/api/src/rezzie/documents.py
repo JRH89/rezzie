@@ -3,6 +3,7 @@ import io
 import re
 import socket
 from collections import Counter
+from copy import deepcopy
 from dataclasses import dataclass, field
 from html import escape
 from html.parser import HTMLParser
@@ -14,6 +15,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
+from docx.text.paragraph import Paragraph as DocxParagraph
 from fastapi import HTTPException, UploadFile
 from pypdf import PdfReader
 from reportlab.lib.pagesizes import letter
@@ -117,12 +119,57 @@ def docx_entry_lines(document: Document) -> list[str]:
     return entries[:500]
 
 
+def docx_editor_html(document: Document) -> str:
+    """Create safe editable HTML from DOCX paragraphs and styled runs."""
+    blocks: list[str] = []
+    open_list = False
+    for paragraph in document.paragraphs:
+        if not paragraph.text.strip():
+            continue
+        is_bullet = "List Bullet" in (paragraph.style.name or "") or paragraph._p.pPr is not None and paragraph._p.pPr.numPr is not None
+        if open_list and not is_bullet:
+            blocks.append("</ul>")
+            open_list = False
+        rendered_runs: list[str] = []
+        for run in paragraph.runs:
+            value = escape(run.text).replace("\n", "<br/>")
+            for match in reversed(list(URL_PATTERN.finditer(run.text))):
+                visible = match.group(0).rstrip(URL_TRAILING_PUNCTUATION)
+                href = f"https://{visible}" if visible.lower().startswith("www.") else visible
+                if visible and safe_link(href):
+                    start, end = match.span()
+                    value = f'{escape(run.text[:start])}<a href="{escape(href, quote=True)}" rel="noreferrer" target="_blank">{escape(visible)}</a>{escape(run.text[end:])}'
+                    break
+            if run.bold:
+                value = f"<strong>{value}</strong>"
+            if run.italic:
+                value = f"<em>{value}</em>"
+            if run.underline:
+                value = f"<u>{value}</u>"
+            rendered_runs.append(value)
+        content = "".join(rendered_runs) or escape(paragraph.text)
+        alignment = {WD_ALIGN_PARAGRAPH.CENTER: "center", WD_ALIGN_PARAGRAPH.RIGHT: "right"}.get(paragraph.alignment, "left")
+        style = f' style="text-align: {alignment}"' if alignment != "left" else ""
+        if is_bullet:
+            if not open_list:
+                blocks.append("<ul>")
+                open_list = True
+            blocks.append(f"<li{style}>{content}</li>")
+        else:
+            tag = "h3" if is_section_heading(paragraph.text) else "p"
+            blocks.append(f"<{tag}{style}>{content}</{tag}>")
+    if open_list:
+        blocks.append("</ul>")
+    return "".join(blocks)
+
+
 @dataclass(frozen=True)
 class ExtractedDocument:
     text: str
     page_count: int | None = None
     style_profile: dict[str, str | float | bool] | None = None
     entry_lines: list[str] | None = None
+    editor_html: str | None = None
 
 
 @dataclass(frozen=True)
@@ -286,6 +333,7 @@ class DocumentService:
         try:
             style_profile = None
             entry_lines = None
+            editor_html = None
             if document_type == "text":
                 text, page_count = data.decode("utf-8", errors="replace"), None
             elif document_type == "pdf":
@@ -293,12 +341,20 @@ class DocumentService:
                 text, page_count = pdf_text(reader), len(reader.pages)
             else:
                 document = Document(io.BytesIO(data))
-                text, page_count, style_profile, entry_lines = paragraph_text(document), None, docx_style_profile(document), docx_entry_lines(document)
+                text, page_count, style_profile, entry_lines, editor_html = paragraph_text(document), None, docx_style_profile(document), docx_entry_lines(document), docx_editor_html(document)
         except Exception as error:
             raise HTTPException(status_code=422, detail="That document could not be read.") from error
         text = text.strip()
         if len(text) < 50: raise HTTPException(status_code=422, detail="The document is too short or has no readable text.")
-        return ExtractedDocument(text=text[:100_000], page_count=page_count, style_profile=style_profile, entry_lines=entry_lines)
+        return ExtractedDocument(text=text[:100_000], page_count=page_count, style_profile=style_profile, entry_lines=entry_lines, editor_html=editor_html)
+
+    def validate_docx_source(self, data: bytes) -> None:
+        """Scan and open a transient DOCX before source-preserving export."""
+        self._scan(data)
+        try:
+            Document(io.BytesIO(data))
+        except Exception as error:
+            raise HTTPException(status_code=422, detail="The original DOCX could not be opened.") from error
 
     def _scan(self, data: bytes) -> None:
         if not self._settings.clamav_host:
@@ -500,6 +556,102 @@ class RichResumeExportService(ResumeExportService):
                 run.underline = source_run.underline
         output = io.BytesIO(); document.save(output)
         return output.getvalue()
+
+    def render_source_docx(self, source_docx: bytes, resume_text: str, resume_html: str | None = None) -> bytes:
+        """Patch body paragraphs in an uploaded DOCX while retaining its document setup and styles."""
+        try:
+            document = Document(io.BytesIO(source_docx))
+        except Exception as error:
+            raise HTTPException(status_code=422, detail="The original DOCX could not be opened.") from error
+
+        blocks = document_blocks(resume_text, resume_html)
+        paragraphs = [paragraph for paragraph in document.paragraphs if paragraph.text.strip()]
+        if not paragraphs:
+            raise HTTPException(status_code=422, detail="The original DOCX has no editable body paragraphs.")
+        templates = self._source_paragraph_templates(paragraphs)
+        last_paragraph = paragraphs[-1]
+
+        for index, block in enumerate(blocks):
+            kind = self._source_block_kind(block)
+            if index < len(paragraphs):
+                paragraph = paragraphs[index]
+                template = paragraph
+            else:
+                template = templates.get(kind) or last_paragraph
+                paragraph = self._clone_paragraph_after(template, last_paragraph)
+            self._replace_source_paragraph(paragraph, block, template)
+            last_paragraph = paragraph
+
+        for paragraph in paragraphs[len(blocks):]:
+            element = paragraph._element
+            element.getparent().remove(element)
+
+        output = io.BytesIO()
+        document.save(output)
+        return output.getvalue()
+
+    @staticmethod
+    def _source_block_kind(block: ResumeBlock) -> str:
+        text = "".join(run.text for run in block.runs)
+        if block.kind in {"h1", "h2"}:
+            return "title"
+        if block.kind == "h3" or is_section_heading(text):
+            return "heading"
+        return "bullet" if block.kind == "li" else "body"
+
+    @classmethod
+    def _source_paragraph_templates(cls, paragraphs: list[DocxParagraph]) -> dict[str, DocxParagraph]:
+        templates: dict[str, DocxParagraph] = {}
+        for index, paragraph in enumerate(paragraphs):
+            if index == 0:
+                kind = "title"
+            elif is_section_heading(paragraph.text):
+                kind = "heading"
+            elif paragraph._p.pPr is not None and paragraph._p.pPr.numPr is not None:
+                kind = "bullet"
+            else:
+                kind = "body"
+            templates.setdefault(kind, paragraph)
+        templates.setdefault("body", paragraphs[0])
+        return templates
+
+    @staticmethod
+    def _clone_paragraph_after(template: DocxParagraph, anchor: DocxParagraph) -> DocxParagraph:
+        cloned = deepcopy(template._p)
+        anchor._p.addnext(cloned)
+        return DocxParagraph(cloned, anchor._parent)
+
+    @staticmethod
+    def _clear_paragraph_content(paragraph: DocxParagraph) -> None:
+        for child in list(paragraph._p):
+            if child.tag != qn("w:pPr"):
+                paragraph._p.remove(child)
+
+    @staticmethod
+    def _copy_run_style(target, source) -> None:
+        source_properties = source._r.rPr
+        if source_properties is None:
+            return
+        target_properties = target._r.rPr
+        if target_properties is not None:
+            target._r.remove(target_properties)
+        target._r.insert(0, deepcopy(source_properties))
+
+    def _replace_source_paragraph(self, paragraph: DocxParagraph, block: ResumeBlock, template: DocxParagraph) -> None:
+        source_run = next((run for run in template.runs if run.text), None)
+        self._clear_paragraph_content(paragraph)
+        if block.alignment in {"center", "right"}:
+            paragraph.alignment = _alignment(block.alignment)
+        for source in block.runs:
+            if source.href:
+                _add_link(paragraph, source)
+                continue
+            run = paragraph.add_run(source.text)
+            if source_run is not None:
+                self._copy_run_style(run, source_run)
+            run.bold = bool(source.bold) or run.bold
+            run.italic = bool(source.italic) or run.italic
+            run.underline = bool(source.underline) or run.underline
 
     def render_pdf(self, resume_text: str, resume_html: str | None = None, target_page_count: int | None = None, template_id: str = "professional", style_profile=None) -> bytes:
         template = source_template(resume_template(template_id), style_profile) if template_id == "source" else resume_template(template_id)

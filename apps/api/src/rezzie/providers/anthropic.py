@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from datetime import UTC, datetime
+from math import ceil
 
 from anthropic import APIError, AsyncAnthropic, AuthenticationError, BadRequestError
 from pydantic import ValidationError
@@ -106,11 +107,15 @@ class AnthropicProvider:
         self._effort = effort
 
     async def tailor(self, *, api_key: str, resume_text: str, job_description: str, evidence_text: str = "") -> TailoringResult:
+        source_word_count = len(resume_text.split())
+        max_resume_words = max(50, ceil(source_word_count * 1.1))
         return await self._generate(
             api_key=api_key,
             system=cached_prompt_with_reference_date(self._reference_date()),
-            user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nCANDIDATE-ATTESTED_EXTERNAL_EVIDENCE:\n{evidence_text or 'None supplied.'}\n\nJOB_DESCRIPTION:\n{job_description}",
+            user_content=f"TARGET_LENGTH: approximately {source_word_count} words. HARD MAXIMUM: {max_resume_words} words. Preserve the original one-page density: prioritize and reorder existing evidence instead of expanding it. Do not use em dashes (—).\n\nORIGINAL_RESUME:\n{resume_text}\n\nCANDIDATE-ATTESTED_EXTERNAL_EVIDENCE:\n{evidence_text or 'None supplied.'}\n\nJOB_DESCRIPTION:\n{job_description}",
             max_resume_length=max(12_000, len(resume_text) * 2),
+            max_resume_words=max_resume_words,
+            fallback_resume=resume_text,
         )
 
     async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult:
@@ -122,13 +127,15 @@ class AnthropicProvider:
             ],
             user_content=f"ORIGINAL_RESUME:\n{resume_text}\n\nJOB_DESCRIPTION:\n{job_description}\n\nREJECTED_DRAFT_TO_CORRECT:\n{rejected_draft}",
             max_resume_length=max(12_000, len(resume_text) * 2),
+            max_resume_words=max(50, ceil(len(resume_text.split()) * 1.1)),
+            fallback_resume=resume_text,
         )
 
     @staticmethod
     def _reference_date() -> str:
         return datetime.now(UTC).date().isoformat()
 
-    async def _generate(self, *, api_key: str, system: list[dict[str, object]], user_content: str, max_resume_length: int) -> TailoringResult:
+    async def _generate(self, *, api_key: str, system: list[dict[str, object]], user_content: str, max_resume_length: int, max_resume_words: int, fallback_resume: str) -> TailoringResult:
         # Own the retry policy here so one tailoring operation has a predictable
         # upper bound. The SDK's automatic retries are disabled to avoid stacking
         # separate retry policies.
@@ -159,6 +166,8 @@ class AnthropicProvider:
                 result = parse_tailoring_payload(payload)
                 if len(result.tailored_resume) > max_resume_length:
                     raise InvalidTailoringResultError("tailored_resume_too_long", ("tailored_resume",))
+                if len(result.tailored_resume.split()) > max_resume_words:
+                    raise InvalidTailoringResultError("tailored_resume_too_wordy", ("tailored_resume",))
                 return result
             except InvalidTailoringResultError as error:
                 logger.warning(
@@ -171,8 +180,34 @@ class AnthropicProvider:
                     error.reason,
                     error.fields,
                 )
+                if result_attempt < _MAX_RESULT_ATTEMPTS - 1:
+                    retry_guidance = (
+                        f"REQUIRED RETRY: The prior response could not be used ({error.reason}). "
+                        "Return only one complete JSON object matching the requested contract. "
+                        "Do not omit a resume section or emit an empty section heading. "
+                    )
+                    if error.reason == "tailored_resume_too_wordy":
+                        retry_guidance += (
+                            f"Keep the resume at or below {max_resume_words} words. "
+                            "Remove redundancy rather than dropping sections."
+                        )
+                    request["messages"] = [{
+                        "role": "user",
+                        "content": f"{user_content}\n\n{retry_guidance}",
+                    }]
                 if result_attempt == _MAX_RESULT_ATTEMPTS - 1:
-                    raise
+                    logger.error(
+                        "Anthropic tailoring exhausted result validation; returning the source resume unchanged: model=%s diagnostic=%s",
+                        self._model,
+                        error.reason,
+                    )
+                    return TailoringResult(
+                        tailored_resume=fallback_resume,
+                        review_items=[
+                            "VERIFY: Rezzie kept your original resume because the model response could not be validated. No tailoring changes were applied."
+                        ],
+                        truth_statement="Your original resume was returned unchanged because no validated tailored draft was available.",
+                    )
         raise RuntimeError("Model result retry loop exited unexpectedly.")
 
     @staticmethod

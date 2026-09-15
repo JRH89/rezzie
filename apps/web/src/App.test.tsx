@@ -18,6 +18,8 @@ function mockBootstrapRequests() {
 describe("guided tailoring workspace", () => {
   beforeEach(() => {
     window.location.hash = "#top";
+    window.localStorage.clear();
+    window.sessionStorage.clear();
     vi.stubGlobal("scrollTo", vi.fn());
     mockBootstrapRequests();
   });
@@ -37,6 +39,39 @@ describe("guided tailoring workspace", () => {
     expect((tailor as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
     expect((tailor as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("remembers workflow choices locally without storing an API key", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /continue to the job/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Import link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Paste text" }));
+    fireEvent.change(screen.getByLabelText(/job description text/i), { target: { value: "b".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /review setup/i }));
+    fireEvent.click(screen.getByRole("radio", { name: /use a rezzie credit/i }));
+
+    await waitFor(() => {
+      const preferences = JSON.parse(window.localStorage.getItem("rezzie.workspace-preferences.v1") ?? "{}");
+      expect(preferences.credentialMode).toBe("subscription");
+      expect(preferences.importMode).toBe("paste");
+      expect(JSON.stringify(preferences)).not.toContain("apiKey");
+    });
+  });
+
+  it("restores the in-progress source after a page refresh in the same tab", async () => {
+    const sourceText = "An in-progress resume stays available after a refresh in this browser tab.";
+    const first = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: sourceText } });
+    await waitFor(() => expect(window.sessionStorage.getItem("rezzie.workspace-session.v1")).toContain(sourceText));
+
+    first.unmount();
+    window.location.hash = "#workspace";
+    render(<App />);
+
+    expect((await screen.findByLabelText(/current resume/i) as HTMLTextAreaElement).value).toBe(sourceText);
   });
 
   it("makes saved tailored drafts easy to reuse as a tailoring source", async () => {
@@ -124,7 +159,7 @@ describe("guided tailoring workspace", () => {
     expect(screen.getByLabelText("Tailored resume")).toBeTruthy();
   });
 
-  it("keeps the long draft and change review in separate result tabs", async () => {
+  it("compares the original and tailored resumes from their actual text", async () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
     fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
@@ -134,9 +169,15 @@ describe("guided tailoring workspace", () => {
     fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
     fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
     expect(await screen.findByLabelText("Tailored resume")).toBeTruthy();
-    fireEvent.click(screen.getByRole("tab", { name: /changes 1/i }));
-    expect(screen.getByRole("button", { name: "Undo change" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Original" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Side by side" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: /changes/i })).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Original" }));
     expect(screen.queryByLabelText("Tailored resume")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: /tailored draft/i }));
+    expect(screen.getByLabelText("Tailored resume").textContent).toContain(
+      "A grounded tailored resume",
+    );
   });
 
   it("shows visible progress while a tailoring request is in flight", async () => {
