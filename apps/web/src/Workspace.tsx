@@ -1,6 +1,7 @@
 import {
   ChangeEvent,
   ClipboardEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useRef,
@@ -217,6 +218,7 @@ function RichResumeEditor({
   templateId,
   onChange,
   entryLines = [],
+  controls,
 }: {
   text: string;
   sourceText?: string;
@@ -225,6 +227,7 @@ function RichResumeEditor({
   templateId: ResumeTemplateId;
   onChange: (html: string, plainText: string) => void;
   entryLines?: string[];
+  controls?: ReactNode;
 }) {
   const editor = useRef<HTMLDivElement>(null);
   const selectionRange = useRef<Range | null>(null);
@@ -322,37 +325,40 @@ function RichResumeEditor({
   }
   return (
     <div className="rich-editor-shell">
-      {sourceText && (
+      {(sourceText || controls) && (
         <div className="resume-compare-controls">
-          <div aria-label="Resume comparison view" role="tablist">
-            <button
-              aria-selected={view === "draft"}
-              className={view === "draft" ? "active" : ""}
-              onClick={() => setView("draft")}
-              role="tab"
-              type="button"
-            >
-              Tailored draft (edit)
-            </button>
-            <button
-              aria-selected={view === "original"}
-              className={view === "original" ? "active" : ""}
-              onClick={() => setView("original")}
-              role="tab"
-              type="button"
-            >
-              Original
-            </button>
-            <button
-              aria-selected={view === "compare"}
-              className={view === "compare" ? "active" : ""}
-              onClick={() => setView("compare")}
-              role="tab"
-              type="button"
-            >
-              Side by side
-            </button>
-          </div>
+          {sourceText && (
+            <div aria-label="Resume comparison view" role="tablist">
+              <button
+                aria-selected={view === "draft"}
+                className={view === "draft" ? "active" : ""}
+                onClick={() => setView("draft")}
+                role="tab"
+                type="button"
+              >
+                Tailored draft (edit)
+              </button>
+              <button
+                aria-selected={view === "original"}
+                className={view === "original" ? "active" : ""}
+                onClick={() => setView("original")}
+                role="tab"
+                type="button"
+              >
+                Original
+              </button>
+              <button
+                aria-selected={view === "compare"}
+                className={view === "compare" ? "active" : ""}
+                onClick={() => setView("compare")}
+                role="tab"
+                type="button"
+              >
+                Side by side
+              </button>
+            </div>
+          )}
+          {controls && <div className="resume-document-actions">{controls}</div>}
         </div>
       )}
       {view === "original" && sourceText ? (
@@ -1358,9 +1364,8 @@ export function Workspace({
           </button>
         </MobileMenu>
       </header>
-      {step !== 4 && (
-        <nav className="stepper" aria-label="Tailoring progress">
-          {stepLabels.map((label, index) => {
+      <nav className="stepper" aria-label="Tailoring progress">
+        {stepLabels.map((label, index) => {
           const number = (index + 1) as Step;
           const available =
             number <= step ||
@@ -1381,9 +1386,8 @@ export function Workspace({
               <small>{label}</small>
             </button>
           );
-          })}
-        </nav>
-      )}
+        })}
+      </nav>
 
       <main
         className={`workspace-main${step === 4 ? " workspace-main-result" : ""}`}
@@ -2187,7 +2191,7 @@ export function Workspace({
                     ? "Your DOCX source will be edited in place for download."
                     : "Make any final edits, then download."}
                 </p>
-                <div>
+                <div hidden>
                   <button
                     className="button button-outline"
                     onClick={() => void copyResult()}
@@ -2276,7 +2280,7 @@ export function Workspace({
                       {draftSaved ? "Saved" : "Save draft"}
                     </button>
                   </div>
-                  <div className="resume-template-control">
+                  <div className="resume-template-control" hidden>
                     <label htmlFor="resume-template">Document template</label>
                     <select
                       id="resume-template"
@@ -2311,6 +2315,41 @@ export function Workspace({
                         : undefined
                     }
                     templateId={resumeTemplate}
+                    controls={
+                      <>
+                        <label
+                          className="resume-template-select"
+                          htmlFor="resume-template-control"
+                        >
+                          <span>Template</span>
+                          <select
+                            id="resume-template-control"
+                            value={resumeTemplate}
+                            onChange={(event) =>
+                              setResumeTemplate(
+                                event.target.value as ResumeTemplateId,
+                              )
+                            }
+                          >
+                            {sourceStyleProfile && (
+                              <option value="source">Match uploaded DOCX</option>
+                            )}
+                            <option value="professional">Professional</option>
+                            <option value="modern">Modern</option>
+                            <option value="classic">Classic</option>
+                            <option value="compact">Compact</option>
+                          </select>
+                        </label>
+                        <div className="resume-download-actions">
+                          <button onClick={() => void copyResult()} type="button">
+                            {copied ? "Copied" : "Copy"}
+                          </button>
+                          <button onClick={downloadText} type="button">TXT ↓</button>
+                          <button disabled={loading} onClick={() => void downloadResult("pdf")} type="button">PDF ↓</button>
+                          <button className="primary" disabled={loading} onClick={() => void downloadResult("docx")} type="button">DOCX ↓</button>
+                        </div>
+                      </>
+                    }
                     onChange={(html, plainText) =>
                       setEditorState({ html, text: plainText })
                     }
