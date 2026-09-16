@@ -184,6 +184,31 @@ def test_source_docx_export_patches_the_uploaded_document() -> None:
     assert "Grounded systems engineer." in [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
 
 
+def test_source_docx_export_never_uses_stale_original_editor_html() -> None:
+    source = Document()
+    source.add_paragraph("Taylor Example")
+    source.add_paragraph("ORIGINAL SUMMARY")
+    source.add_paragraph("Original resume wording.")
+    source_bytes = io.BytesIO()
+    source.save(source_bytes)
+
+    response = client.post(
+        "/api/v1/resumes/export/source-docx",
+        headers=LOCAL_IDENTITY,
+        data={
+            "resume_text": "Taylor Example\n\nTAILORED SUMMARY\nTailored resume wording.",
+            "resume_html": "<h1>Taylor Example</h1><h3>ORIGINAL SUMMARY</h3><p>Original resume wording.</p>",
+        },
+        files={"original_docx": ("resume.docx", source_bytes.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert response.status_code == 200
+    paragraphs = [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
+    assert "TAILORED SUMMARY" in paragraphs
+    assert "Tailored resume wording." in paragraphs
+    assert "Original resume wording." not in paragraphs
+
+
 def test_source_docx_export_rejects_non_docx_sources() -> None:
     response = client.post(
         "/api/v1/resumes/export/source-docx",

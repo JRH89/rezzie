@@ -306,6 +306,28 @@ def editor_html_to_text(resume_html: str | None, fallback: str) -> str:
     return parser.text() or fallback
 
 
+def editor_html_matches_resume_text(resume_html: str | None, resume_text: str) -> bool:
+    """Use rich editor markup only when it still represents the requested draft.
+
+    The browser keeps plain text and HTML separately so a document can retain
+    inline formatting.  A stale HTML snapshot must never replace the current
+    tailored text during an export.
+    """
+    if not resume_html:
+        return False
+
+    def normalized_lines(value: str) -> list[str]:
+        return [
+            re.sub(r"^(?:[-*\u2022]\s+)", "", " ".join(line.split()))
+            for line in value.splitlines()
+            if line.strip()
+        ]
+
+    return normalized_lines(editor_html_to_text(resume_html, "")) == normalized_lines(
+        resume_text
+    )
+
+
 def document_blocks(resume_text: str, resume_html: str | None) -> list[ResumeBlock]:
     if resume_html:
         parser = ResumeHtmlParser()

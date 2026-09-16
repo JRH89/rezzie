@@ -8,7 +8,12 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .auth import is_configured_admin, verified_identity, verified_user_id
 from .billing import BillingRepository, CheckoutRequest, StripeBillingService
 from .config import Settings
-from .documents import DocumentService, RichResumeExportService, editor_html_to_text
+from .documents import (
+    DocumentService,
+    RichResumeExportService,
+    editor_html_matches_resume_text,
+    editor_html_to_text,
+)
 from .middleware import SecurityHeadersMiddleware
 from .providers.anthropic import AnthropicProvider
 from .rate_limits import RateLimiter
@@ -284,7 +289,8 @@ def delete_tailoring_draft(draft_id: str, authorization: str | None = Header(def
 def export_resume(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     """Create an editable DOCX without persisting the candidate's document."""
     require_user(authorization, x_rezzie_user_id)
-    content = resume_export_service.render_docx(editor_html_to_text(request.resume_html, request.resume_text), request.resume_html, request.target_page_count, request.template_id, request.style_profile)
+    resume_html = request.resume_html if editor_html_matches_resume_text(request.resume_html, request.resume_text) else None
+    content = resume_export_service.render_docx(editor_html_to_text(resume_html, request.resume_text), resume_html, request.target_page_count, request.template_id, request.style_profile)
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -311,11 +317,8 @@ async def export_source_docx(
     if len(source_docx) > settings.max_import_bytes:
         raise HTTPException(status_code=413, detail="File exceeds the configured upload limit.")
     document_service.validate_docx_source(source_docx)
-    content = resume_export_service.render_source_docx(
-        source_docx,
-        editor_html_to_text(resume_html, resume_text),
-        resume_html,
-    )
+    export_html = resume_html if editor_html_matches_resume_text(resume_html, resume_text) else None
+    content = resume_export_service.render_source_docx(source_docx, editor_html_to_text(export_html, resume_text), export_html)
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -330,7 +333,8 @@ async def export_source_docx(
 def export_resume_pdf(request: ResumeExportRequest, authorization: str | None = Header(default=None), x_rezzie_user_id: str | None = Header(default=None)) -> Response:
     """Create a printable PDF without persisting the candidate's document."""
     require_user(authorization, x_rezzie_user_id)
-    content = resume_export_service.render_pdf(editor_html_to_text(request.resume_html, request.resume_text), request.resume_html, request.target_page_count, request.template_id, request.style_profile)
+    resume_html = request.resume_html if editor_html_matches_resume_text(request.resume_html, request.resume_text) else None
+    content = resume_export_service.render_pdf(editor_html_to_text(resume_html, request.resume_text), resume_html, request.target_page_count, request.template_id, request.style_profile)
     return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="rezzie-tailored-resume.pdf"', "Cache-Control": "no-store"})
 
 
