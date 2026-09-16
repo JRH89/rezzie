@@ -82,7 +82,7 @@ def test_webhook_handles_stripe_resource_and_retries_previously_unhandled_event(
 
 def test_credit_checkout_uses_selected_pack_quantity(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
     repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
-    service = StripeBillingService(Settings(stripe_secret_key="sk_test", stripe_credit_packs='{"price_pack":20}'), repository)
+    service = StripeBillingService(Settings(app_url="https://rezzie.example", stripe_secret_key="sk_test", stripe_credit_packs='{"price_pack":20}'), repository)
     captured: dict[str, object] = {}
     monkeypatch.setattr("rezzie.billing.stripe.Customer.create", lambda **_: {"id": "cus_1"})
     monkeypatch.setattr("rezzie.billing.stripe.checkout.Session.create", lambda **kwargs: captured.update(kwargs) or SimpleNamespace(url="https://checkout.example"))
@@ -91,6 +91,8 @@ def test_credit_checkout_uses_selected_pack_quantity(tmp_path: object, monkeypat
     assert captured["line_items"] == [{"price": "price_pack", "quantity": 3}]
     assert captured["metadata"] == {"rezzie_kind": "credits", "credits": "60"}
     assert captured["allow_promotion_codes"] is True
+    assert captured["success_url"] == "https://rezzie.example/#workspace?checkout=success&session_id={CHECKOUT_SESSION_ID}"
+    assert captured["cancel_url"] == "https://rezzie.example/#workspace?checkout=cancelled"
 
 
 @pytest.mark.parametrize("quantity", [0, 11])

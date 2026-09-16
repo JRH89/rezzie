@@ -170,7 +170,7 @@ class StripeBillingService:
             customer = account.stripe_customer_id or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
             self._repository.save_customer(user_id, customer)
             credits = packs.get(request.price_id, 0) * request.quantity
-            session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, allow_promotion_codes=True, success_url=f"{self._settings.app_url}/?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/?checkout=cancelled")
+            session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, allow_promotion_codes=True, success_url=f"{self._settings.app_url}/#workspace?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/#workspace?checkout=cancelled")
         except stripe.error.StripeError as error:
             raise HTTPException(status_code=502, detail="Stripe Checkout could not start. Verify the server's live Stripe key and matching Price IDs.") from error
         return session.url
