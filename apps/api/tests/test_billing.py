@@ -69,6 +69,7 @@ def test_credit_checkout_uses_selected_pack_quantity(tmp_path: object, monkeypat
     assert service.checkout("user-1", CheckoutRequest(kind="credits", price_id="price_pack", quantity=3)) == "https://checkout.example"
     assert captured["line_items"] == [{"price": "price_pack", "quantity": 3}]
     assert captured["metadata"] == {"rezzie_kind": "credits", "credits": "60"}
+    assert captured["allow_promotion_codes"] is True
 
 
 @pytest.mark.parametrize("quantity", [0, 11])

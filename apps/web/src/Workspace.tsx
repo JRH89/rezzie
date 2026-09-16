@@ -2003,18 +2003,24 @@ export function Workspace({
             </details>
           )}
 
-          {step !== 4 && sourceReady && jobReady && (
+          {step !== 4 && (
             <details
               className="workflow-step"
               id="setup-step-3"
               open={step === 3}
               onToggle={(event) => {
-                if (event.currentTarget.open) setStep(3);
+                if (!event.currentTarget.open) return;
+                if (sourceReady && jobReady) setStep(3);
+                else event.currentTarget.open = false;
               }}
             >
               <summary>
                 <span><b>03</b> Tailor</span>
-                <small>Choose access and review your sources</small>
+                <small>
+                  {sourceReady && jobReady
+                    ? "Choose access and review your sources"
+                    : "Complete the first two steps to unlock"}
+                </small>
               </summary>
               <div className="step-heading">
                 <p className="eyebrow">STEP 3 OF 4</p>
