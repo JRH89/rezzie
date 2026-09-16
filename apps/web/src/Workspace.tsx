@@ -52,6 +52,7 @@ type WorkspaceSession = {
   jobUrl?: string;
   result?: TailoringResult;
   editorText?: string;
+  editorHtml?: string;
   draftLabel?: string;
   resultTab?: ResultTab;
 };
@@ -212,6 +213,7 @@ function EditorToolbar({
 
 function RichResumeEditor({
   text,
+  html,
   sourceText = "",
   sourceHtml,
   styleProfile,
@@ -221,6 +223,7 @@ function RichResumeEditor({
   controls,
 }: {
   text: string;
+  html?: string;
   sourceText?: string;
   sourceHtml?: string;
   styleProfile?: ResumeStyleProfile;
@@ -237,15 +240,9 @@ function RichResumeEditor({
   );
   const [draftText, setDraftText] = useState(text);
   useEffect(() => {
-    draftHtml.current = resumeEditorHtml(
-        text,
-        [],
-        styleProfile,
-        entryLines,
-        [],
-      );
+    draftHtml.current = html || resumeEditorHtml(text, [], styleProfile, entryLines, []);
     setDraftText(text);
-  }, [entryLines, styleProfile, templateId, text]);
+  }, [entryLines, html, styleProfile, templateId, text]);
   useEffect(() => {
     if (editor.current && view === "draft") {
       editor.current.innerHTML = draftHtml.current;
@@ -627,7 +624,7 @@ export function Workspace({
   const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TailoringResult | undefined>(initialSession.result);
-  const [editorState, setEditorState] = useState({ html: "", text: initialSession.editorText ?? initialSession.result?.tailored_resume ?? "" });
+  const [editorState, setEditorState] = useState({ html: initialSession.editorHtml ?? "", text: initialSession.editorText ?? initialSession.result?.tailored_resume ?? "" });
   const priorStep = useRef<Step>(step);
   const [resumeTemplate, setResumeTemplate] = useState<ResumeTemplateId>(
     initialPreferences.resumeTemplate ?? "professional",
@@ -708,11 +705,13 @@ export function Workspace({
           }
         : undefined,
       editorText: editorState.text,
+      editorHtml: editorState.html,
       draftLabel,
       resultTab,
     });
   }, [
     draftLabel,
+    editorState.html,
     editorState.text,
     job,
     jobUrl,
@@ -2312,6 +2311,7 @@ export function Workspace({
                   </div>
                   <RichResumeEditor
                     text={result.tailored_resume}
+                    html={editorState.html}
                     sourceText={careerRecord ? "" : resume}
                     sourceHtml={sourceHtml}
                     entryLines={sourceEntryLines}

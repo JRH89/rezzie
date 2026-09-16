@@ -74,6 +74,24 @@ describe("guided tailoring workspace", () => {
     expect((await screen.findByLabelText(/current resume/i) as HTMLTextAreaElement).value).toBe(sourceText);
   });
 
+  it("restores the tailored editor with its saved paragraph structure", async () => {
+    window.sessionStorage.setItem("rezzie.workspace-session.v1", JSON.stringify({
+      step: 4,
+      resume: "Original resume text that is long enough to retain in the workspace.",
+      result: { tailored_resume: "Taylor Example\n\nSUMMARY\nTailored experience with grounded detail.", matched_keywords: [], review_items: [], truth_statement: "Every claim is grounded.", changes: [] },
+      editorText: "Taylor Example\n\nSUMMARY\nTailored experience with grounded detail.",
+      editorHtml: "<h1>Taylor Example</h1><h3>SUMMARY</h3><p>Tailored experience with grounded detail.</p>",
+    }));
+    window.location.hash = "#workspace";
+
+    render(<App />);
+
+    const editor = await screen.findByLabelText("Tailored resume");
+    expect(editor.querySelector("h1")?.textContent).toBe("Taylor Example");
+    expect(editor.querySelector("h3")?.textContent).toBe("SUMMARY");
+    expect(editor.querySelector("p")?.textContent).toBe("Tailored experience with grounded detail.");
+  });
+
   it("makes saved tailored drafts easy to reuse as a tailoring source", async () => {
     const savedDraft = {
       id: "draft-1", resume_id: null, label: "Product engineer - Acme", tailored_resume: "A saved tailored resume with enough grounded detail to be selected for a new role.", resume_html: null, created_at: "2026-09-13T00:00:00Z",
