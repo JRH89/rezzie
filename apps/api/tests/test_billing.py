@@ -8,6 +8,14 @@ from rezzie.billing import BillingRepository, CheckoutRequest, StripeBillingServ
 from rezzie.config import Settings
 
 
+class StripeResource:
+    def __init__(self, data: dict[str, object]) -> None:
+        self._data = data
+
+    def to_dict(self) -> dict[str, object]:
+        return self._data
+
+
 def test_purchased_credit_grant_is_idempotent(tmp_path: object) -> None:
     repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
     repository.grant_purchase_once("user-1", "checkout-1", 5)
@@ -57,6 +65,19 @@ def test_paid_invoice_resets_monthly_credit_allowance(tmp_path: object, monkeypa
     monkeypatch.setattr("rezzie.billing.stripe.Webhook.construct_event", lambda *_: event)
     service.webhook(b"{}", "signature")
     assert repository.balance("user-1") == ("active", 20, 0)
+
+
+def test_webhook_handles_stripe_resource_and_retries_previously_unhandled_event(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:
+    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
+    service = StripeBillingService(Settings(stripe_webhook_secret="whsec_test"), repository)
+    event = {"id": "evt_retry", "type": "checkout.session.completed", "data": {"object": StripeResource({"id": "cs_retry", "mode": "payment", "payment_status": "paid", "client_reference_id": "user-1", "metadata": {"credits": "5"}})}}
+    repository.begin_event("evt_retry")
+    monkeypatch.setattr("rezzie.billing.stripe.Webhook.construct_event", lambda *_: event)
+
+    service.webhook(b"{}", "signature")
+
+    assert repository.balance("user-1") == ("none", 0, 5)
+    assert repository.begin_event("evt_retry") is False
 
 
 def test_credit_checkout_uses_selected_pack_quantity(tmp_path: object, monkeypatch: pytest.MonkeyPatch) -> None:

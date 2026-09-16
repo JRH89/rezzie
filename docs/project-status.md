@@ -4,10 +4,10 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Haiku 4.5 default with a 4,096-token ceiling, cached stable instructions, JSON-schema output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
-| Latest local verification | done | 2026-09-12: API Ruff and 80 API tests passed; web ESLint, 23 web tests, and the web production build passed. |
+| Latest local verification | done | 2026-09-15: API Ruff and 86 API tests passed with test-safe host/origin settings; web ESLint, 23 web tests, and the web production build previously passed 2026-09-12. |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
-| API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 56 passed 2026-09-06 |
-| Stripe checkout/webhook/credit ledger | done | `docs/stripe-setup.md`; requires account env values and production identity adapter |
+| API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 86 passed 2026-09-15 |
+| Stripe checkout/webhook/credit ledger | done | Verified Stripe resource objects are decoded before processing; webhook completion state permits retrying events that previously failed. `docs/stripe-setup.md`; requires account env values and production identity adapter. |
 | Public signup and pricing UX | done | Landing-page pricing, OIDC-aware account CTA, and workspace credit/subscription checkout controls |
 | Signed-in billing flow | done | Account route exposes credit balance, credit-pack checkout, monthly upgrade, and Stripe portal entry point |
 | Firebase identity integration | done | Firebase Authentication supports Google and email/password; API verifies Firebase ID tokens after project configuration |

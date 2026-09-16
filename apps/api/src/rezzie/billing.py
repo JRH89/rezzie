@@ -6,7 +6,7 @@ from typing import Literal
 
 import stripe
 from fastapi import HTTPException
-from sqlalchemy import DateTime, Integer, String, create_engine, select, text
+from sqlalchemy import Boolean, DateTime, Integer, String, create_engine, select, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import Settings
@@ -30,6 +30,7 @@ class ProcessedStripeEvent(Base):
     __tablename__ = "processed_stripe_events"
     event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     received_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    handled: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class CreditGrant(Base):
@@ -77,10 +78,20 @@ class BillingRepository:
             account.stripe_customer_id = customer_id
             session.merge(account)
 
-    def mark_event_once(self, event_id: str) -> bool:
+    def begin_event(self, event_id: str) -> bool:
         with self._sessions.begin() as session:
-            if session.get(ProcessedStripeEvent, event_id): return False
-            session.add(ProcessedStripeEvent(event_id=event_id)); return True
+            event = session.get(ProcessedStripeEvent, event_id)
+            if event and event.handled:
+                return False
+            if event is None:
+                session.add(ProcessedStripeEvent(event_id=event_id))
+            return True
+
+    def complete_event(self, event_id: str) -> None:
+        with self._sessions.begin() as session:
+            event = session.get(ProcessedStripeEvent, event_id)
+            if event is not None:
+                event.handled = True
 
     def grant_purchase_once(self, user_id: str, reference: str, credits: int) -> None:
         with self._sessions.begin() as session:
@@ -173,12 +184,25 @@ class StripeBillingService:
         except stripe.error.StripeError as error:
             raise HTTPException(status_code=502, detail="Stripe billing portal could not open. Verify the server's live Stripe configuration.") from error
 
+    @staticmethod
+    def _event_object_data(value: object) -> dict[str, object]:
+        if isinstance(value, dict):
+            return value
+        to_dict = getattr(value, "to_dict", None)
+        if callable(to_dict):
+            data = to_dict()
+            if isinstance(data, dict):
+                return data
+        raise ValueError("Stripe event object could not be decoded.")
+
     def webhook(self, payload: bytes, signature: str | None) -> None:
         if not self._settings.stripe_webhook_secret or not signature: raise HTTPException(status_code=400, detail="Invalid webhook signature.")
         try: event = stripe.Webhook.construct_event(payload, signature, self._settings.stripe_webhook_secret)
         except (ValueError, stripe.error.SignatureVerificationError) as error: raise HTTPException(status_code=400, detail="Invalid webhook signature.") from error
-        if not self._repository.mark_event_once(event["id"]): return
-        obj, event_type = event["data"]["object"], event["type"]
+        event_id, event_type = event["id"], event["type"]
+        if not self._repository.begin_event(event_id):
+            return
+        obj = self._event_object_data(event["data"]["object"])
         if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"} and obj.get("mode") == "payment" and obj.get("payment_status") == "paid":
             credits = int(obj.get("metadata", {}).get("credits", "0")); user_id = obj.get("client_reference_id")
             if user_id and credits > 0: self._repository.grant_purchase_once(user_id, obj["id"], credits)
@@ -188,3 +212,4 @@ class StripeBillingService:
             self._repository.set_subscription(obj["customer"], "past_due")
         elif event_type in {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}:
             self._repository.set_subscription(obj["customer"], obj["status"])
+        self._repository.complete_event(event_id)
