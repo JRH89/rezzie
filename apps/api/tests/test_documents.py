@@ -8,6 +8,7 @@ from rezzie.documents import (
     ResumeExportService,
     RichResumeExportService,
     docx_style_profile,
+    editor_html_matches_resume_text,
     is_section_heading,
     paragraph_text,
 )
@@ -79,6 +80,15 @@ def test_rich_exports_linkify_plain_text_urls_when_editor_html_is_unavailable() 
     assert {"https://www.portfolio.example.com", "mailto:taylor@example.com", "https://github.com/example/project"} <= targets_in_pdf
 
 
+def test_editor_html_match_accepts_browser_list_text_without_markers() -> None:
+    editor_html = "<h1>Taylor Example</h1><h3>SKILLS</h3><ul><li><strong>TypeScript</strong> and React</li><li>System design</li></ul>"
+
+    assert editor_html_matches_resume_text(
+        editor_html,
+        "Taylor Example\nSKILLS\nTypeScript and React\nSystem design",
+    )
+
+
 def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs() -> None:
     source = Document()
     source.sections[0].left_margin = Inches(1.1)
@@ -107,6 +117,24 @@ def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs(
     assert any("improved deployment speed" in paragraph.text for paragraph in rendered.paragraphs)
     rendered_summary = next(paragraph for paragraph in rendered.paragraphs if paragraph.text == "Grounded systems engineer.")
     assert rendered_summary.runs[0].font.size == Pt(10)
+
+
+def test_source_docx_export_preserves_source_link_targets_for_retained_labels() -> None:
+    source = RichResumeExportService().render_docx(
+        "Taylor Example",
+        '<h1>Taylor Example</h1><p>Portfolio: <a href="https://portfolio.example.com/work">Selected work and grounded engineering case studies</a></p>',
+    )
+
+    output = RichResumeExportService().render_source_docx(
+        source,
+        "Taylor Example\nPortfolio: Selected work and grounded engineering case studies",
+    )
+    rendered = Document(io.BytesIO(output))
+
+    assert any(
+        str(relationship.target_ref) == "https://portfolio.example.com/work"
+        for relationship in rendered.part.rels.values()
+    )
 
 
 def test_docx_style_profile_extracts_portable_hierarchy() -> None:

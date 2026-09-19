@@ -5,7 +5,7 @@ from docx import Document
 from docx.shared import Pt
 from fastapi.testclient import TestClient
 
-from rezzie.documents import ResumeExportService
+from rezzie.documents import ResumeExportService, RichResumeExportService
 from rezzie.main import app
 
 client = TestClient(app)
@@ -144,6 +144,23 @@ def test_docx_resume_import_returns_a_safe_style_profile() -> None:
     }
 
 
+def test_docx_resume_import_preserves_relationship_backed_hyperlinks() -> None:
+    source = RichResumeExportService().render_docx(
+        "Taylor Example",
+        '<h1>Taylor Example</h1><p>Portfolio: <a href="https://portfolio.example.com/work">Selected work and grounded engineering case studies</a></p>',
+    )
+
+    response = client.post(
+        "/api/v1/resumes/file",
+        headers=LOCAL_IDENTITY,
+        files={"file": ("resume.docx", source, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert response.status_code == 200
+    assert 'href="https://portfolio.example.com/work"' in (response.json()["editor_html"] or "")
+    assert "Selected work and grounded engineering case studies" in (response.json()["editor_html"] or "")
+
+
 def test_resume_pdf_import_reports_its_original_page_count() -> None:
     content = ResumeExportService().render_pdf("Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.")
     response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.pdf", content, "application/pdf")})
@@ -161,6 +178,27 @@ def test_resume_export_returns_an_editable_docx() -> None:
     assert response.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     assert response.headers["cache-control"] == "no-store"
     assert response.content[:2] == b"PK"
+
+
+def test_resume_export_keeps_rich_formatting_when_browser_text_omits_list_markers() -> None:
+    response = client.post(
+        "/api/v1/resumes/export",
+        headers=LOCAL_IDENTITY,
+        json={
+            "resume_text": "Taylor Example\nSKILLS\nTypeScript and React for production systems and accessible user interfaces",
+            "resume_html": "<h1>Taylor Example</h1><h3>SKILLS</h3><ul><li><strong>TypeScript</strong> and React for production systems and accessible user interfaces</li></ul>",
+        },
+    )
+
+    assert response.status_code == 200
+    exported = Document(io.BytesIO(response.content))
+    assert any(paragraph.style.name == "List Bullet" for paragraph in exported.paragraphs)
+    assert any(
+        run.bold
+        for paragraph in exported.paragraphs
+        for run in paragraph.runs
+        if "TypeScript" in run.text
+    )
 
 
 def test_source_docx_export_patches_the_uploaded_document() -> None:

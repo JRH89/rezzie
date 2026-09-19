@@ -16,6 +16,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from docx.text.paragraph import Paragraph as DocxParagraph
+from docx.text.run import Run as DocxRun
 from fastapi import HTTPException, UploadFile
 from pypdf import PdfReader
 from reportlab.lib.pagesizes import letter
@@ -119,6 +120,31 @@ def docx_entry_lines(document: Document) -> list[str]:
     return entries[:500]
 
 
+def docx_inline_runs(paragraph: DocxParagraph) -> list[tuple[DocxRun, str | None]]:
+    """Return ordinary and relationship-backed DOCX runs in document order.
+
+    python-docx omits ``w:hyperlink`` children from ``paragraph.runs``.  That
+    loses links whose visible label is not itself a URL unless we read the
+    relationship-backed runs directly.
+    """
+    runs: list[tuple[DocxRun, str | None]] = []
+    for child in paragraph._p:
+        if child.tag == qn("w:r"):
+            runs.append((DocxRun(child, paragraph), None))
+            continue
+        if child.tag != qn("w:hyperlink"):
+            continue
+        relationship_id = child.get(qn("r:id"))
+        try:
+            relationship = paragraph.part.rels[relationship_id] if relationship_id else None
+            href = safe_link(str(relationship.target_ref)) if relationship else None
+        except KeyError:
+            href = None
+        for run_element in child.findall(qn("w:r")):
+            runs.append((DocxRun(run_element, paragraph), href))
+    return runs
+
+
 def docx_editor_html(document: Document) -> str:
     """Create safe editable HTML from DOCX paragraphs and styled runs."""
     blocks: list[str] = []
@@ -131,15 +157,18 @@ def docx_editor_html(document: Document) -> str:
             blocks.append("</ul>")
             open_list = False
         rendered_runs: list[str] = []
-        for run in paragraph.runs:
+        for run, relationship_href in docx_inline_runs(paragraph):
             value = escape(run.text).replace("\n", "<br/>")
-            for match in reversed(list(URL_PATTERN.finditer(run.text))):
-                visible = match.group(0).rstrip(URL_TRAILING_PUNCTUATION)
-                href = f"https://{visible}" if visible.lower().startswith("www.") else visible
-                if visible and safe_link(href):
-                    start, end = match.span()
-                    value = f'{escape(run.text[:start])}<a href="{escape(href, quote=True)}" rel="noreferrer" target="_blank">{escape(visible)}</a>{escape(run.text[end:])}'
-                    break
+            if relationship_href:
+                value = f'<a href="{escape(relationship_href, quote=True)}" rel="noreferrer" target="_blank">{value}</a>'
+            else:
+                for match in reversed(list(URL_PATTERN.finditer(run.text))):
+                    visible = match.group(0).rstrip(URL_TRAILING_PUNCTUATION)
+                    href = f"https://{visible}" if visible.lower().startswith("www.") else visible
+                    if visible and safe_link(href):
+                        start, end = match.span()
+                        value = f'{escape(run.text[:start])}<a href="{escape(href, quote=True)}" rel="noreferrer" target="_blank">{escape(visible)}</a>{escape(run.text[end:])}'
+                        break
             if run.bold:
                 value = f"<strong>{value}</strong>"
             if run.italic:
@@ -225,6 +254,54 @@ def _linkify_run(run: TextRun) -> list[TextRun]:
 def _linkify_blocks(blocks: list[ResumeBlock]) -> list[ResumeBlock]:
     for block in blocks:
         block.runs = [linked_run for run in block.runs for linked_run in _linkify_run(run)]
+    return blocks
+
+
+def _source_docx_hyperlinks(document: Document) -> list[tuple[str, str]]:
+    """Collect externally linked labels from an uploaded DOCX in document order."""
+    links: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for paragraph in document.paragraphs:
+        for child in paragraph._p:
+            if child.tag != qn("w:hyperlink"):
+                continue
+            relationship_id = child.get(qn("r:id"))
+            try:
+                relationship = paragraph.part.rels[relationship_id] if relationship_id else None
+                href = safe_link(str(relationship.target_ref)) if relationship else None
+            except KeyError:
+                href = None
+            label = "".join(DocxRun(run, paragraph).text for run in child.findall(qn("w:r"))).strip()
+            pair = (label, href or "")
+            if label and href and pair not in seen:
+                links.append((label, href))
+                seen.add(pair)
+    return links
+
+
+def _preserve_source_link_labels(blocks: list[ResumeBlock], links: list[tuple[str, str]]) -> list[ResumeBlock]:
+    """Restore source hyperlinks when their visible label remains in the draft."""
+    for block in blocks:
+        runs = block.runs
+        for label, href in sorted(links, key=lambda item: len(item[0]), reverse=True):
+            updated: list[TextRun] = []
+            pattern = re.compile(re.escape(label), re.IGNORECASE)
+            for run in runs:
+                if run.href:
+                    updated.append(run)
+                    continue
+                cursor = 0
+                for match in pattern.finditer(run.text):
+                    if match.start() > cursor:
+                        updated.append(TextRun(run.text[cursor:match.start()], run.bold, run.italic, run.underline))
+                    updated.append(TextRun(run.text[match.start():match.end()], run.bold, run.italic, run.underline, href))
+                    cursor = match.end()
+                if cursor < len(run.text):
+                    updated.append(TextRun(run.text[cursor:], run.bold, run.italic, run.underline))
+                elif cursor == 0:
+                    updated.append(run)
+            runs = updated
+        block.runs = runs
     return blocks
 
 
@@ -318,7 +395,11 @@ def editor_html_matches_resume_text(resume_html: str | None, resume_text: str) -
 
     def normalized_lines(value: str) -> list[str]:
         return [
-            re.sub(r"^(?:[-*\u2022]\s+)", "", " ".join(line.split()))
+            re.sub(
+                r"^(?:(?:[-*\u2022\u2023\u2043\u2013])\s+|\d+[.)]\s+)",
+                "",
+                " ".join(line.split()),
+            )
             for line in value.splitlines()
             if line.strip()
         ]
@@ -586,7 +667,10 @@ class RichResumeExportService(ResumeExportService):
         except Exception as error:
             raise HTTPException(status_code=422, detail="The original DOCX could not be opened.") from error
 
-        blocks = document_blocks(resume_text, resume_html)
+        blocks = _preserve_source_link_labels(
+            document_blocks(resume_text, resume_html),
+            _source_docx_hyperlinks(document),
+        )
         paragraphs = [paragraph for paragraph in document.paragraphs if paragraph.text.strip()]
         if not paragraphs:
             raise HTTPException(status_code=422, detail="The original DOCX has no editable body paragraphs.")
