@@ -89,6 +89,15 @@ def test_editor_html_match_accepts_browser_list_text_without_markers() -> None:
     )
 
 
+def test_editor_html_match_accepts_a_browser_flattened_block_snapshot() -> None:
+    editor_html = "<h1>Taylor Example</h1><h3>SUMMARY</h3><p>Builds reliable systems.</p><ul><li>TypeScript and React</li></ul>"
+
+    assert editor_html_matches_resume_text(
+        editor_html,
+        "Taylor ExampleSUMMARYBuilds reliable systems.TypeScript and React",
+    )
+
+
 def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs() -> None:
     source = Document()
     source.sections[0].left_margin = Inches(1.1)

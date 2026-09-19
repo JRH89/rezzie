@@ -404,9 +404,19 @@ def editor_html_matches_resume_text(resume_html: str | None, resume_text: str) -
             if line.strip()
         ]
 
-    return normalized_lines(editor_html_to_text(resume_html, "")) == normalized_lines(
-        resume_text
-    )
+    html_lines = normalized_lines(editor_html_to_text(resume_html, ""))
+    text_lines = normalized_lines(resume_text)
+    if html_lines == text_lines:
+        return True
+
+    # contentEditable's innerText is not stable across browsers: a valid set
+    # of block elements can occasionally arrive as one concatenated line.  It
+    # is still safe to retain the rich HTML only when that flattened text is
+    # exactly the same content once structural whitespace is removed.  This
+    # prevents a stale source snapshot from replacing edited resume text.
+    collapsed_html = re.sub(r"\s+", "", "".join(html_lines))
+    collapsed_text = re.sub(r"\s+", "", "".join(text_lines))
+    return len(html_lines) > 1 and len(text_lines) == 1 and collapsed_html == collapsed_text
 
 
 def document_blocks(resume_text: str, resume_html: str | None) -> list[ResumeBlock]:

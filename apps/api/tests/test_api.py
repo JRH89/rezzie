@@ -201,6 +201,27 @@ def test_resume_export_keeps_rich_formatting_when_browser_text_omits_list_marker
     )
 
 
+def test_resume_export_keeps_rich_blocks_when_browser_text_is_flattened() -> None:
+    response = client.post(
+        "/api/v1/resumes/export",
+        headers=LOCAL_IDENTITY,
+        json={
+            "resume_text": "Taylor ExampleSUMMARYBuilds reliable systems.TypeScript and React for production systems",
+            "resume_html": "<h1>Taylor Example</h1><h3>SUMMARY</h3><p>Builds reliable systems.</p><ul><li><strong>TypeScript</strong> and React for production systems</li></ul>",
+        },
+    )
+
+    assert response.status_code == 200
+    exported = Document(io.BytesIO(response.content))
+    assert [paragraph.text for paragraph in exported.paragraphs] == [
+        "Taylor Example",
+        "SUMMARY",
+        "Builds reliable systems.",
+        "TypeScript and React for production systems",
+    ]
+    assert exported.paragraphs[3].style.name == "List Bullet"
+
+
 def test_source_docx_export_patches_the_uploaded_document() -> None:
     source = Document()
     source.add_paragraph("Taylor Example")
