@@ -22,7 +22,7 @@
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Model-result diagnostics | done | Provider logs only model name, attempt, stop reason, content block types, text length, and contract field categories when Claude returns invalid JSON; no resume, job description, key, or model text is logged. |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
-| Trusted Sources and rate limits | done | Subscriber-only public GitHub/portfolio evidence, source-backed 2-credit tailoring, per-line undo/provenance review, SSRF-safe import, and persistent SQLite rate limits; see `docs/trusted-sources.md` |
+| Cover letters and Trusted Sources | done | Truth-preserving standalone or paired cover-letter generation, one-credit letter billing, all-user owned GitHub/portfolio source connection, subscriber-included source use, and a one-credit non-subscriber source supplement; see `docs/trusted-sources.md` |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side. The workspace library lists drafts separately and lets users reopen or reuse one as the next tailoring source. |
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |

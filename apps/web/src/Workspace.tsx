@@ -12,6 +12,7 @@ import { MobileMenu } from "./MobileMenu";
 import {
   CareerFact,
   CareerRecord,
+  CoverLetterResult,
   createApi,
   CreditBalance,
   ResumeStyleProfile,
@@ -32,7 +33,7 @@ type ResumeTemplateId =
   | "modern"
   | "classic"
   | "compact";
-type ResultTab = "draft" | "changes" | "checks";
+type ResultTab = "draft" | "cover-letter" | "changes" | "checks";
 type WorkspacePreferences = {
   credentialMode?: CredentialMode;
   importMode?: ImportMode;
@@ -40,6 +41,7 @@ type WorkspacePreferences = {
   selectedSavedResume?: string;
   selectedSavedDraft?: string;
   selectedTrustedSources?: string[];
+  includeCoverLetter?: boolean;
 };
 type WorkspaceSession = {
   step?: Step;
@@ -55,6 +57,7 @@ type WorkspaceSession = {
   editorHtml?: string;
   draftLabel?: string;
   resultTab?: ResultTab;
+  includeCoverLetter?: boolean;
 };
 
 const minLength = 50;
@@ -624,6 +627,12 @@ export function Workspace({
   const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TailoringResult | undefined>(initialSession.result);
+  const [includeCoverLetter, setIncludeCoverLetter] = useState(
+    initialSession.includeCoverLetter ?? initialPreferences.includeCoverLetter ?? false,
+  );
+  const [coverLetter, setCoverLetter] = useState<CoverLetterResult | undefined>(
+    initialSession.result?.cover_letter ?? undefined,
+  );
   const [editorState, setEditorState] = useState({ html: initialSession.editorHtml ?? "", text: initialSession.editorText ?? initialSession.result?.tailored_resume ?? "" });
   const priorStep = useRef<Step>(step);
   const [resumeTemplate, setResumeTemplate] = useState<ResumeTemplateId>(
@@ -678,6 +687,7 @@ export function Workspace({
       selectedSavedResume,
       selectedSavedDraft,
       selectedTrustedSources,
+      includeCoverLetter,
     });
   }, [
     credentialMode,
@@ -686,6 +696,7 @@ export function Workspace({
     selectedSavedResume,
     selectedSavedDraft,
     selectedTrustedSources,
+    includeCoverLetter,
   ]);
 
   useEffect(() => {
@@ -708,6 +719,7 @@ export function Workspace({
       editorHtml: editorState.html,
       draftLabel,
       resultTab,
+      includeCoverLetter,
     });
   }, [
     draftLabel,
@@ -717,6 +729,7 @@ export function Workspace({
     jobUrl,
     result,
     resultTab,
+    includeCoverLetter,
     resume,
     sourceEntryLines,
     sourcePageCount,
@@ -1135,12 +1148,14 @@ export function Workspace({
       credential_mode: credentialMode,
       api_key: credentialMode === "byok" ? apiKey : undefined,
       external_source_ids: selectedTrustedSources,
+      include_cover_letter: includeCoverLetter,
     };
     try {
       const tailored = careerRecord
         ? await api.tailorCareerRecord({ ...body, record_id: careerRecord.id })
         : await api.tailor({ ...body, resume_text: resume });
       setResult(tailored);
+      setCoverLetter(tailored.cover_letter ?? undefined);
       setEditorState({
         html: resumeEditorHtml(
           tailored.tailored_resume,
@@ -1164,6 +1179,52 @@ export function Workspace({
       setLoading(false);
       setIsTailoring(false);
     }
+  }
+
+  async function generateCoverLetter() {
+    if (!result) return;
+    setLoading(true);
+    setError(undefined);
+    try {
+      const letter = careerRecord
+        ? await api.coverLetterCareerRecord({
+            record_id: careerRecord.id,
+            job_description: job,
+            credential_mode: credentialMode,
+            api_key: credentialMode === "byok" ? apiKey : undefined,
+            external_source_ids: selectedTrustedSources,
+          })
+        : await api.coverLetter({
+            resume_text: resume,
+            job_description: job,
+            credential_mode: credentialMode,
+            api_key: credentialMode === "byok" ? apiKey : undefined,
+            external_source_ids: selectedTrustedSources,
+          });
+      setCoverLetter(letter);
+      setResult((current) =>
+        current ? { ...current, cover_letter: letter } : current,
+      );
+      setResultTab("cover-letter");
+      if (credentialMode === "subscription") setBalance(await api.balance());
+    } catch (reason) {
+      setError(errorMessage(reason, "We could not create the cover letter. Your credit was not kept if the model failed."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyCoverLetter() {
+    if (!coverLetter) return;
+    await navigator.clipboard.writeText(coverLetter.cover_letter);
+  }
+
+  function downloadCoverLetter() {
+    if (!coverLetter) return;
+    saveResume(
+      new Blob([coverLetter.cover_letter], { type: "text/plain;charset=utf-8" }),
+      "rezzie-cover-letter.txt",
+    );
   }
 
   async function copyResult() {
@@ -1744,16 +1805,15 @@ export function Workspace({
                   {!careerRecord && (
                     <details className="trusted-sources-panel">
                       <summary>
-                        Use Trusted Sources <span>Subscribers</span>
+                        Use Trusted Sources <span>Grounded evidence</span>
                       </summary>
                       <p>
                         Add a public GitHub profile, repository, or portfolio
-                        you own. Rezzie will visibly label any source-backed
-                        resume changes for you to keep or undo.
+                        you own. Subscribers can use it with no source fee;
+                        other users add one credit only when they use it in a
+                        resume or cover-letter generation.
                       </p>
-                      {balance?.subscription_status === "active" ||
-                      balance?.subscription_status === "trialing" ? (
-                        <>
+                      <>
                           <div className="inline-form">
                             <input
                               aria-label="Trusted Source label"
@@ -1830,22 +1890,7 @@ export function Workspace({
                               ))}
                             </div>
                           )}
-                        </>
-                      ) : (
-                        <div className="trusted-source-upgrade">
-                          <strong>Available with Rezzie Monthly</strong>
-                          <span>
-                            Use public work you own as grounded evidence, then
-                            review every new resume line.
-                          </span>
-                          <button
-                            onClick={() => onBilling("subscription")}
-                            type="button"
-                          >
-                            Upgrade to monthly
-                          </button>
-                        </div>
-                      )}
+                      </>
                     </details>
                   )}
                 </div>
@@ -2158,6 +2203,19 @@ export function Workspace({
                   claims.
                 </p>
               </div>
+              <label className="choice-card cover-letter-option">
+                <input
+                  checked={includeCoverLetter}
+                  onChange={(event) => setIncludeCoverLetter(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  <strong>Also write a cover letter</strong>
+                  <small>
+                    Adds one credit. Public GitHub or portfolio evidence is included for subscribers, or adds one source-enrichment credit for other users.
+                  </small>
+                </span>
+              </label>
               <div className="step-actions">
                 <button
                   className="back-link"
@@ -2172,7 +2230,7 @@ export function Workspace({
                   onClick={() => void tailor()}
                   type="button"
                 >
-                  {loading ? "Tailoring your resume…" : "Tailor my resume"}
+                  {loading ? "Creating your application materials…" : includeCoverLetter ? "Tailor resume + cover letter" : "Tailor my resume"}
                   <span>✦</span>
                 </button>
               </div>
@@ -2243,6 +2301,16 @@ export function Workspace({
                   type="button"
                 >
                   Draft
+                </button>
+                <button
+                  aria-controls="result-cover-letter"
+                  aria-selected={resultTab === "cover-letter"}
+                  className={resultTab === "cover-letter" ? "active" : ""}
+                  onClick={() => setResultTab("cover-letter")}
+                  role="tab"
+                  type="button"
+                >
+                  Cover letter
                 </button>
                 <button
                   aria-controls="result-checks"
@@ -2360,6 +2428,47 @@ export function Workspace({
                       setEditorState({ html, text: plainText })
                     }
                   />
+                </section>
+              )}
+              {resultTab === "cover-letter" && (
+                <section className="cover-letter-panel" id="result-cover-letter" role="tabpanel">
+                  {coverLetter ? (
+                    <>
+                      <div className="cover-letter-heading">
+                        <div>
+                          <p className="eyebrow">GROUNDED COVER LETTER</p>
+                          <h2>Ready to personalize and send.</h2>
+                        </div>
+                        <div className="resume-download-actions">
+                          <button onClick={() => void copyCoverLetter()} type="button">Copy</button>
+                          <button onClick={downloadCoverLetter} type="button">TXT ↓</button>
+                        </div>
+                      </div>
+                      <textarea
+                        aria-label="Cover letter"
+                        value={coverLetter.cover_letter}
+                        onChange={(event) => {
+                          const updated = { ...coverLetter, cover_letter: event.target.value };
+                          setCoverLetter(updated);
+                          setResult((current) => current ? { ...current, cover_letter: updated } : current);
+                        }}
+                      />
+                      {coverLetter.review_items.length > 0 && (
+                        <ul className="cover-letter-checks">
+                          {coverLetter.review_items.map((item) => <li key={item}>{item}</li>)}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <div className="cover-letter-empty">
+                      <p className="eyebrow">COVER LETTER</p>
+                      <h2>Create a grounded letter for this job.</h2>
+                      <p>It uses this resume, job description, and any selected sources. One credit is charged only after a successful letter.</p>
+                      <button className="button button-primary" disabled={loading || !credentialsReady} onClick={() => void generateCoverLetter()} type="button">
+                        {loading ? "Writing cover letter…" : "Write cover letter · 1 credit"}
+                      </button>
+                    </div>
+                  )}
                 </section>
               )}
               {resultTab === "changes" && (

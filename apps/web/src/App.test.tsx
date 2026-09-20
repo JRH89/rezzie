@@ -198,6 +198,21 @@ describe("guided tailoring workspace", () => {
     );
   });
 
+  it("offers a standalone cover letter from the finished resume review", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
+    fireEvent.change(screen.getByLabelText(/current resume/i), { target: { value: "a".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /continue to the job/i }));
+    fireEvent.change(screen.getByLabelText(/job description text/i), { target: { value: "b".repeat(50) } });
+    fireEvent.click(screen.getByRole("button", { name: /review setup/i }));
+    fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "c".repeat(10) } });
+    fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Cover letter" }));
+    expect(screen.getByRole("button", { name: /write cover letter/i })).toBeTruthy();
+    expect(screen.getByText(/one credit is charged/i)).toBeTruthy();
+  });
+
   it("shows visible progress while a tailoring request is in flight", async () => {
     let resolveTailoring: ((response: Response) => void) | undefined;
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {

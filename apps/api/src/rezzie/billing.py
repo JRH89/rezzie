@@ -1,4 +1,5 @@
 """Stripe-backed billing and a local, idempotent entitlement ledger."""
+
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -29,7 +30,9 @@ class BillingAccount(Base):
 class ProcessedStripeEvent(Base):
     __tablename__ = "processed_stripe_events"
     event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
-    received_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC)
+    )
     handled: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
@@ -42,9 +45,12 @@ class CreditGrant(Base):
 
 class BillingRepository:
     def __init__(self, database_url: str, *, bootstrap_schema: bool = False) -> None:
-        connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+        connect_args = (
+            {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+        )
         self._engine = create_engine(database_url, connect_args=connect_args)
-        if bootstrap_schema: Base.metadata.create_all(self._engine)
+        if bootstrap_schema:
+            Base.metadata.create_all(self._engine)
         self._sessions = sessionmaker(self._engine, expire_on_commit=False)
 
     def is_ready(self) -> bool:
@@ -58,7 +64,14 @@ class BillingRepository:
 
     @staticmethod
     def _new_account(user_id: str) -> BillingAccount:
-        return BillingAccount(user_id=user_id, stripe_customer_id=None, subscription_status="none", subscription_credits=0, subscription_used=0, purchased_credits=0)
+        return BillingAccount(
+            user_id=user_id,
+            stripe_customer_id=None,
+            subscription_status="none",
+            subscription_credits=0,
+            subscription_used=0,
+            purchased_credits=0,
+        )
 
     def account(self, user_id: str) -> BillingAccount:
         with self._sessions.begin() as session:
@@ -70,7 +83,11 @@ class BillingRepository:
 
     def account_by_customer(self, customer_id: str) -> BillingAccount | None:
         with self._sessions() as session:
-            return session.scalar(select(BillingAccount).where(BillingAccount.stripe_customer_id == customer_id))
+            return session.scalar(
+                select(BillingAccount).where(
+                    BillingAccount.stripe_customer_id == customer_id
+                )
+            )
 
     def save_customer(self, user_id: str, customer_id: str) -> None:
         with self._sessions.begin() as session:
@@ -95,28 +112,51 @@ class BillingRepository:
 
     def grant_purchase_once(self, user_id: str, reference: str, credits: int) -> None:
         with self._sessions.begin() as session:
-            if session.get(CreditGrant, reference): return
+            if session.get(CreditGrant, reference):
+                return
             account = session.get(BillingAccount, user_id) or self._new_account(user_id)
             account.purchased_credits += credits
-            session.add(CreditGrant(reference=reference, user_id=user_id, credits=credits)); session.merge(account)
+            session.add(
+                CreditGrant(reference=reference, user_id=user_id, credits=credits)
+            )
+            session.merge(account)
 
-    def set_subscription(self, customer_id: str, status: str, credits: int | None = None) -> None:
+    def set_subscription(
+        self, customer_id: str, status: str, credits: int | None = None
+    ) -> None:
         with self._sessions.begin() as session:
-            account = session.scalar(select(BillingAccount).where(BillingAccount.stripe_customer_id == customer_id))
-            if account is None: return
+            account = session.scalar(
+                select(BillingAccount).where(
+                    BillingAccount.stripe_customer_id == customer_id
+                )
+            )
+            if account is None:
+                return
             account.subscription_status = status
-            if credits is not None: account.subscription_credits, account.subscription_used = credits, 0
+            if credits is not None:
+                account.subscription_credits, account.subscription_used = credits, 0
 
     def consume_credit(self, user_id: str) -> Literal["subscription", "purchased"]:
         with self._sessions.begin() as session:
             account = session.get(BillingAccount, user_id)
-            if account and account.subscription_status in {"active", "trialing"} and account.subscription_used < account.subscription_credits:
-                account.subscription_used += 1; return "subscription"
+            if (
+                account
+                and account.subscription_status in {"active", "trialing"}
+                and account.subscription_used < account.subscription_credits
+            ):
+                account.subscription_used += 1
+                return "subscription"
             if account and account.purchased_credits > 0:
-                account.purchased_credits -= 1; return "purchased"
-        raise HTTPException(status_code=402, detail="No tailoring credits available. Purchase credits or subscribe.")
+                account.purchased_credits -= 1
+                return "purchased"
+        raise HTTPException(
+            status_code=402,
+            detail="No tailoring credits available. Purchase credits or subscribe.",
+        )
 
-    def consume_credits(self, user_id: str, credits: int) -> list[Literal["subscription", "purchased"]]:
+    def consume_credits(
+        self, user_id: str, credits: int
+    ) -> list[Literal["subscription", "purchased"]]:
         if credits < 1:
             raise ValueError("credits must be positive")
         consumed: list[Literal["subscription", "purchased"]] = []
@@ -136,9 +176,12 @@ class BillingRepository:
     def refund_credit(self, user_id: str, source: str) -> None:
         with self._sessions.begin() as session:
             account = session.get(BillingAccount, user_id)
-            if not account: return
-            if source == "subscription": account.subscription_used = max(0, account.subscription_used - 1)
-            else: account.purchased_credits += 1
+            if not account:
+                return
+            if source == "subscription":
+                account.subscription_used = max(0, account.subscription_used - 1)
+            else:
+                account.purchased_credits += 1
 
     def balance(self, user_id: str) -> tuple[str, int, int]:
         account = self.account(user_id)
@@ -156,33 +199,74 @@ class CheckoutRequest:
 class StripeBillingService:
     def __init__(self, settings: Settings, repository: BillingRepository) -> None:
         self._settings, self._repository = settings, repository
-        if settings.stripe_secret_key: stripe.api_key = settings.stripe_secret_key
+        if settings.stripe_secret_key:
+            stripe.api_key = settings.stripe_secret_key
 
     def checkout(self, user_id: str, request: CheckoutRequest) -> str:
-        if not self._settings.stripe_secret_key: raise HTTPException(status_code=503, detail="Stripe billing is not configured.")
+        if not self._settings.stripe_secret_key:
+            raise HTTPException(
+                status_code=503, detail="Stripe billing is not configured."
+            )
         packs = json.loads(self._settings.stripe_credit_packs)
-        if request.kind == "credits" and request.price_id not in packs: raise HTTPException(status_code=422, detail="Unknown credit pack.")
-        if request.kind == "subscription" and request.price_id != self._settings.stripe_subscription_price_id: raise HTTPException(status_code=422, detail="Unknown subscription plan.")
-        if request.kind == "credits" and not 1 <= request.quantity <= 10: raise HTTPException(status_code=422, detail="Credit pack quantity must be between 1 and 10.")
-        if request.kind == "subscription" and request.quantity != 1: raise HTTPException(status_code=422, detail="Subscription quantity must be 1.")
+        if request.kind == "credits" and request.price_id not in packs:
+            raise HTTPException(status_code=422, detail="Unknown credit pack.")
+        if (
+            request.kind == "subscription"
+            and request.price_id != self._settings.stripe_subscription_price_id
+        ):
+            raise HTTPException(status_code=422, detail="Unknown subscription plan.")
+        if request.kind == "credits" and not 1 <= request.quantity <= 10:
+            raise HTTPException(
+                status_code=422, detail="Credit pack quantity must be between 1 and 10."
+            )
+        if request.kind == "subscription" and request.quantity != 1:
+            raise HTTPException(
+                status_code=422, detail="Subscription quantity must be 1."
+            )
         account = self._repository.account(user_id)
         try:
-            customer = account.stripe_customer_id or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
+            customer = (
+                account.stripe_customer_id
+                or stripe.Customer.create(metadata={"rezzie_user_id": user_id})["id"]
+            )
             self._repository.save_customer(user_id, customer)
             credits = packs.get(request.price_id, 0) * request.quantity
-            session = stripe.checkout.Session.create(customer=customer, mode="payment" if request.kind == "credits" else "subscription", line_items=[{"price": request.price_id, "quantity": request.quantity}], client_reference_id=user_id, metadata={"rezzie_kind": request.kind, "credits": str(credits)}, allow_promotion_codes=True, success_url=f"{self._settings.app_url}/#workspace?checkout=success&session_id={{CHECKOUT_SESSION_ID}}", cancel_url=f"{self._settings.app_url}/#workspace?checkout=cancelled")
+            session = stripe.checkout.Session.create(
+                customer=customer,
+                mode="payment" if request.kind == "credits" else "subscription",
+                line_items=[{"price": request.price_id, "quantity": request.quantity}],
+                client_reference_id=user_id,
+                metadata={"rezzie_kind": request.kind, "credits": str(credits)},
+                allow_promotion_codes=True,
+                success_url=f"{self._settings.app_url}/#workspace?checkout=success&session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{self._settings.app_url}/#workspace?checkout=cancelled",
+            )
         except stripe.error.StripeError as error:
-            raise HTTPException(status_code=502, detail="Stripe Checkout could not start. Verify the server's live Stripe key and matching Price IDs.") from error
+            raise HTTPException(
+                status_code=502,
+                detail="Stripe Checkout could not start. Verify the server's live Stripe key and matching Price IDs.",
+            ) from error
         return session.url
 
     def portal(self, user_id: str) -> str:
-        if not self._settings.stripe_secret_key: raise HTTPException(status_code=503, detail="Stripe billing is not configured.")
+        if not self._settings.stripe_secret_key:
+            raise HTTPException(
+                status_code=503, detail="Stripe billing is not configured."
+            )
         customer = self._repository.account(user_id).stripe_customer_id
-        if not customer: raise HTTPException(status_code=404, detail="No billing account exists yet.")
+        if not customer:
+            raise HTTPException(
+                status_code=404, detail="No billing account exists yet."
+            )
         try:
-            return stripe.billing_portal.Session.create(customer=customer, return_url=self._settings.app_url)["url"]
+            return stripe.billing_portal.Session.create(
+                customer=customer, return_url=self._settings.app_url
+            )["url"]
         except stripe.error.StripeError as error:
-            raise HTTPException(status_code=502, detail="Stripe billing portal could not open. Verify the server's live Stripe configuration.") from error
+            raise HTTPException(
+                status_code=502,
+                detail="Stripe billing portal could not open. Verify the server's live Stripe configuration.",
+            ) from error
 
     @staticmethod
     def _event_object_data(value: object) -> dict[str, object]:
@@ -196,20 +280,45 @@ class StripeBillingService:
         raise ValueError("Stripe event object could not be decoded.")
 
     def webhook(self, payload: bytes, signature: str | None) -> None:
-        if not self._settings.stripe_webhook_secret or not signature: raise HTTPException(status_code=400, detail="Invalid webhook signature.")
-        try: event = stripe.Webhook.construct_event(payload, signature, self._settings.stripe_webhook_secret)
-        except (ValueError, stripe.error.SignatureVerificationError) as error: raise HTTPException(status_code=400, detail="Invalid webhook signature.") from error
+        if not self._settings.stripe_webhook_secret or not signature:
+            raise HTTPException(status_code=400, detail="Invalid webhook signature.")
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, signature, self._settings.stripe_webhook_secret
+            )
+        except (ValueError, stripe.error.SignatureVerificationError) as error:
+            raise HTTPException(
+                status_code=400, detail="Invalid webhook signature."
+            ) from error
         event_id, event_type = event["id"], event["type"]
         if not self._repository.begin_event(event_id):
             return
         obj = self._event_object_data(event["data"]["object"])
-        if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"} and obj.get("mode") == "payment" and obj.get("payment_status") == "paid":
-            credits = int(obj.get("metadata", {}).get("credits", "0")); user_id = obj.get("client_reference_id")
-            if user_id and credits > 0: self._repository.grant_purchase_once(user_id, obj["id"], credits)
+        if (
+            event_type
+            in {
+                "checkout.session.completed",
+                "checkout.session.async_payment_succeeded",
+            }
+            and obj.get("mode") == "payment"
+            and obj.get("payment_status") == "paid"
+        ):
+            credits = int(obj.get("metadata", {}).get("credits", "0"))
+            user_id = obj.get("client_reference_id")
+            if user_id and credits > 0:
+                self._repository.grant_purchase_once(user_id, obj["id"], credits)
         elif event_type == "invoice.paid" and obj.get("subscription"):
-            self._repository.set_subscription(obj["customer"], "active", self._settings.stripe_subscription_monthly_credits)
+            self._repository.set_subscription(
+                obj["customer"],
+                "active",
+                self._settings.stripe_subscription_monthly_credits,
+            )
         elif event_type == "invoice.payment_failed" and obj.get("subscription"):
             self._repository.set_subscription(obj["customer"], "past_due")
-        elif event_type in {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}:
+        elif event_type in {
+            "customer.subscription.created",
+            "customer.subscription.updated",
+            "customer.subscription.deleted",
+        }:
             self._repository.set_subscription(obj["customer"], obj["status"])
         self._repository.complete_event(event_id)

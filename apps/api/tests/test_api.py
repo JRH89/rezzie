@@ -10,7 +10,10 @@ from rezzie.main import app
 
 client = TestClient(app)
 LOCAL_IDENTITY = {"X-Rezzie-User-Id": "test-user"}
-ADMIN_IDENTITY = {"X-Rezzie-User-Id": "admin-user", "X-Rezzie-User-Email": "jaredroberthooker@gmail.com"}
+ADMIN_IDENTITY = {
+    "X-Rezzie-User-Id": "admin-user",
+    "X-Rezzie-User-Email": "jaredroberthooker@gmail.com",
+}
 
 
 def test_health() -> None:
@@ -20,28 +23,69 @@ def test_health() -> None:
 def test_verified_administrator_has_unlimited_active_entitlement() -> None:
     response = client.get("/api/v1/billing/me", headers=ADMIN_IDENTITY)
     assert response.status_code == 200
-    assert response.json() == {"subscription_status": "active", "subscription_remaining": 0, "purchased_credits": 0, "unlimited": True}
-    checkout = client.post("/api/v1/billing/checkout", headers=ADMIN_IDENTITY, json={"kind": "credits", "price_id": "price_any"})
+    assert response.json() == {
+        "subscription_status": "active",
+        "subscription_remaining": 0,
+        "purchased_credits": 0,
+        "unlimited": True,
+    }
+    checkout = client.post(
+        "/api/v1/billing/checkout",
+        headers=ADMIN_IDENTITY,
+        json={"kind": "credits", "price_id": "price_any"},
+    )
     assert checkout.status_code == 403
 
 
 def test_support_ticket_customer_and_admin_flow() -> None:
-    created = client.post("/api/v1/support/tickets", headers=LOCAL_IDENTITY, json={"subject": "Checkout did not return", "category": "checkout", "message": "The payment completed but no credits appeared."})
+    created = client.post(
+        "/api/v1/support/tickets",
+        headers=LOCAL_IDENTITY,
+        json={
+            "subject": "Checkout did not return",
+            "category": "checkout",
+            "message": "The payment completed but no credits appeared.",
+        },
+    )
     assert created.status_code == 201
     ticket_id = created.json()["id"]
-    assert client.get("/api/v1/support/tickets", headers=LOCAL_IDENTITY).json()[0]["id"] == ticket_id
-    assert client.get(f"/api/v1/support/tickets/{ticket_id}", headers={"X-Rezzie-User-Id": "someone-else"}).status_code == 404
-    assert client.get("/api/v1/admin/support/tickets", headers=LOCAL_IDENTITY).status_code == 403
+    assert (
+        client.get("/api/v1/support/tickets", headers=LOCAL_IDENTITY).json()[0]["id"]
+        == ticket_id
+    )
+    assert (
+        client.get(
+            f"/api/v1/support/tickets/{ticket_id}",
+            headers={"X-Rezzie-User-Id": "someone-else"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get("/api/v1/admin/support/tickets", headers=LOCAL_IDENTITY).status_code
+        == 403
+    )
     admin_list = client.get("/api/v1/admin/support/tickets", headers=ADMIN_IDENTITY)
     assert admin_list.status_code == 200
     assert any(ticket["id"] == ticket_id for ticket in admin_list.json())
-    replied = client.post(f"/api/v1/admin/support/tickets/{ticket_id}/messages", headers=ADMIN_IDENTITY, json={"message": "We are checking the Stripe event now."})
+    replied = client.post(
+        f"/api/v1/admin/support/tickets/{ticket_id}/messages",
+        headers=ADMIN_IDENTITY,
+        json={"message": "We are checking the Stripe event now."},
+    )
     assert replied.status_code == 200
     assert replied.json()["messages"][-1]["author_role"] == "staff"
-    resolved = client.patch(f"/api/v1/admin/support/tickets/{ticket_id}", headers=ADMIN_IDENTITY, json={"status": "resolved"})
+    resolved = client.patch(
+        f"/api/v1/admin/support/tickets/{ticket_id}",
+        headers=ADMIN_IDENTITY,
+        json={"status": "resolved"},
+    )
     assert resolved.status_code == 200
     assert resolved.json()["status"] == "resolved"
-    reopened = client.post(f"/api/v1/support/tickets/{ticket_id}/messages", headers=LOCAL_IDENTITY, json={"message": "Thank you, it is now fixed."})
+    reopened = client.post(
+        f"/api/v1/support/tickets/{ticket_id}/messages",
+        headers=LOCAL_IDENTITY,
+        json={"message": "Thank you, it is now fixed."},
+    )
     assert reopened.status_code == 200
     assert reopened.json()["status"] == "open"
 
@@ -54,7 +98,10 @@ def test_health_emits_security_headers() -> None:
 def test_cors_preflight_allows_career_fact_updates() -> None:
     response = client.options(
         "/api/v1/career-records/record-1/facts/fact-1",
-        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "PATCH"},
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "PATCH",
+        },
     )
     assert response.status_code == 200
     assert "PATCH" in response.headers["access-control-allow-methods"]
@@ -63,7 +110,10 @@ def test_cors_preflight_allows_career_fact_updates() -> None:
 def test_cors_preflight_allows_private_library_deletion() -> None:
     response = client.options(
         "/api/v1/resumes/resume-1",
-        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "DELETE"},
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "DELETE",
+        },
     )
     assert response.status_code == 200
     assert "DELETE" in response.headers["access-control-allow-methods"]
@@ -83,7 +133,9 @@ def test_cors_preflight_is_not_rate_limited() -> None:
     assert "POST" in response.headers["access-control-allow-methods"]
 
 
-def test_cors_headers_are_preserved_for_tailoring_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cors_headers_are_preserved_for_tailoring_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     async def failing_tailor(*_args: object, **_kwargs: object) -> object:
         raise ValueError("Synthetic provider failure.")
 
@@ -91,13 +143,20 @@ def test_cors_headers_are_preserved_for_tailoring_errors(monkeypatch: pytest.Mon
     response = client.post(
         "/api/v1/tailor",
         headers={**LOCAL_IDENTITY, "Origin": "http://localhost:5173"},
-        json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "byok", "api_key": "test-key" * 3},
+        json={
+            "resume_text": "a" * 50,
+            "job_description": "b" * 50,
+            "credential_mode": "byok",
+            "api_key": "test-key" * 3,
+        },
     )
     assert response.status_code == 503
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
-def test_cors_headers_are_preserved_for_unhandled_tailoring_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cors_headers_are_preserved_for_unhandled_tailoring_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     async def failing_tailor(*_args: object, **_kwargs: object) -> object:
         raise RuntimeError("Synthetic unexpected provider failure.")
 
@@ -106,19 +165,36 @@ def test_cors_headers_are_preserved_for_unhandled_tailoring_errors(monkeypatch: 
     response = error_client.post(
         "/api/v1/tailor",
         headers={**LOCAL_IDENTITY, "Origin": "http://localhost:5173"},
-        json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "byok", "api_key": "test-key" * 3},
+        json={
+            "resume_text": "a" * 50,
+            "job_description": "b" * 50,
+            "credential_mode": "byok",
+            "api_key": "test-key" * 3,
+        },
     )
     assert response.status_code == 500
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
 def test_text_import_validates_minimum_length() -> None:
-    response = client.post("/api/v1/job-descriptions/text", headers=LOCAL_IDENTITY, json={"text": "short"})
+    response = client.post(
+        "/api/v1/job-descriptions/text", headers=LOCAL_IDENTITY, json={"text": "short"}
+    )
     assert response.status_code == 422
 
 
 def test_resume_file_imports_plain_text() -> None:
-    response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.txt", b"Experienced engineer with measurable delivery experience." * 2, "text/plain")})
+    response = client.post(
+        "/api/v1/resumes/file",
+        headers=LOCAL_IDENTITY,
+        files={
+            "file": (
+                "resume.txt",
+                b"Experienced engineer with measurable delivery experience." * 2,
+                "text/plain",
+            )
+        },
+    )
     assert response.status_code == 200
     assert response.json()["source_type"] == "file"
 
@@ -130,17 +206,34 @@ def test_docx_resume_import_returns_a_safe_style_profile() -> None:
     source.add_paragraph("Taylor Example")
     source.add_paragraph("taylor@example.com")
     source.add_paragraph("EXPERIENCE")
-    role = source.add_paragraph(); role.add_run("Acme Corp | Engineer").bold = True
+    role = source.add_paragraph()
+    role.add_run("Acme Corp | Engineer").bold = True
     source.add_paragraph("Delivered reliable systems and improved team workflows.")
-    content = io.BytesIO(); source.save(content)
+    content = io.BytesIO()
+    source.save(content)
 
-    response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.docx", content.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
+    response = client.post(
+        "/api/v1/resumes/file",
+        headers=LOCAL_IDENTITY,
+        files={
+            "file": (
+                "resume.docx",
+                content.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
 
     assert response.status_code == 200
     assert response.json()["style_profile"] == {
-        "font_family": "Georgia", "body_size": 10.5, "line_height": 13.1,
-        "name_size": 18.0, "heading_size": 10.5, "heading_uppercase": True,
-        "emphasize_role_lines": True, "italic_metadata": False,
+        "font_family": "Georgia",
+        "body_size": 10.5,
+        "line_height": 13.1,
+        "name_size": 18.0,
+        "heading_size": 10.5,
+        "heading_uppercase": True,
+        "emphasize_role_lines": True,
+        "italic_metadata": False,
     }
 
 
@@ -153,17 +246,33 @@ def test_docx_resume_import_preserves_relationship_backed_hyperlinks() -> None:
     response = client.post(
         "/api/v1/resumes/file",
         headers=LOCAL_IDENTITY,
-        files={"file": ("resume.docx", source, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        files={
+            "file": (
+                "resume.docx",
+                source,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
     )
 
     assert response.status_code == 200
-    assert 'href="https://portfolio.example.com/work"' in (response.json()["editor_html"] or "")
-    assert "Selected work and grounded engineering case studies" in (response.json()["editor_html"] or "")
+    assert 'href="https://portfolio.example.com/work"' in (
+        response.json()["editor_html"] or ""
+    )
+    assert "Selected work and grounded engineering case studies" in (
+        response.json()["editor_html"] or ""
+    )
 
 
 def test_resume_pdf_import_reports_its_original_page_count() -> None:
-    content = ResumeExportService().render_pdf("Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.")
-    response = client.post("/api/v1/resumes/file", headers=LOCAL_IDENTITY, files={"file": ("resume.pdf", content, "application/pdf")})
+    content = ResumeExportService().render_pdf(
+        "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."
+    )
+    response = client.post(
+        "/api/v1/resumes/file",
+        headers=LOCAL_IDENTITY,
+        files={"file": ("resume.pdf", content, "application/pdf")},
+    )
     assert response.status_code == 200
     assert response.json()["page_count"] == 1
 
@@ -172,15 +281,21 @@ def test_resume_export_returns_an_editable_docx() -> None:
     response = client.post(
         "/api/v1/resumes/export",
         headers=LOCAL_IDENTITY,
-        json={"resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."},
+        json={
+            "resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."
+        },
     )
     assert response.status_code == 200
-    assert response.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    assert response.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
     assert response.headers["cache-control"] == "no-store"
     assert response.content[:2] == b"PK"
 
 
-def test_resume_export_keeps_rich_formatting_when_browser_text_omits_list_markers() -> None:
+def test_resume_export_keeps_rich_formatting_when_browser_text_omits_list_markers() -> (
+    None
+):
     response = client.post(
         "/api/v1/resumes/export",
         headers=LOCAL_IDENTITY,
@@ -192,7 +307,9 @@ def test_resume_export_keeps_rich_formatting_when_browser_text_omits_list_marker
 
     assert response.status_code == 200
     exported = Document(io.BytesIO(response.content))
-    assert any(paragraph.style.name == "List Bullet" for paragraph in exported.paragraphs)
+    assert any(
+        paragraph.style.name == "List Bullet" for paragraph in exported.paragraphs
+    )
     assert any(
         run.bold
         for paragraph in exported.paragraphs
@@ -234,13 +351,25 @@ def test_source_docx_export_patches_the_uploaded_document() -> None:
     response = client.post(
         "/api/v1/resumes/export/source-docx",
         headers=LOCAL_IDENTITY,
-        data={"resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer.", "resume_html": ""},
-        files={"original_docx": ("resume.docx", source_bytes.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        data={
+            "resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer.",
+            "resume_html": "",
+        },
+        files={
+            "original_docx": (
+                "resume.docx",
+                source_bytes.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
     )
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
-    assert "Grounded systems engineer." in [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
+    assert "Grounded systems engineer." in [
+        paragraph.text
+        for paragraph in Document(io.BytesIO(response.content)).paragraphs
+    ]
 
 
 def test_source_docx_export_never_uses_stale_original_editor_html() -> None:
@@ -258,11 +387,20 @@ def test_source_docx_export_never_uses_stale_original_editor_html() -> None:
             "resume_text": "Taylor Example\n\nTAILORED SUMMARY\nTailored resume wording.",
             "resume_html": "<h1>Taylor Example</h1><h3>ORIGINAL SUMMARY</h3><p>Original resume wording.</p>",
         },
-        files={"original_docx": ("resume.docx", source_bytes.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        files={
+            "original_docx": (
+                "resume.docx",
+                source_bytes.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
     )
 
     assert response.status_code == 200
-    paragraphs = [paragraph.text for paragraph in Document(io.BytesIO(response.content)).paragraphs]
+    paragraphs = [
+        paragraph.text
+        for paragraph in Document(io.BytesIO(response.content)).paragraphs
+    ]
     assert "TAILORED SUMMARY" in paragraphs
     assert "Tailored resume wording." in paragraphs
     assert "Original resume wording." not in paragraphs
@@ -272,7 +410,9 @@ def test_source_docx_export_rejects_non_docx_sources() -> None:
     response = client.post(
         "/api/v1/resumes/export/source-docx",
         headers=LOCAL_IDENTITY,
-        data={"resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer."},
+        data={
+            "resume_text": "Taylor Example\ntaylor@example.com\n\nSUMMARY\nGrounded systems engineer."
+        },
         files={"original_docx": ("resume.pdf", b"not a docx", "application/pdf")},
     )
 
@@ -284,7 +424,9 @@ def test_resume_export_returns_a_pdf() -> None:
     response = client.post(
         "/api/v1/resumes/export/pdf",
         headers=LOCAL_IDENTITY,
-        json={"resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."},
+        json={
+            "resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems."
+        },
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
@@ -296,7 +438,10 @@ def test_resume_export_accepts_a_one_page_target() -> None:
     response = client.post(
         "/api/v1/resumes/export/pdf",
         headers=LOCAL_IDENTITY,
-        json={"resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.", "target_page_count": 1},
+        json={
+            "resume_text": "Taylor Example\ntaylor@example.com | Portland, OR\n\nEXPERIENCE\nAcme Corp | Engineer\n- Delivered reliable systems.",
+            "target_page_count": 1,
+        },
     )
     assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
@@ -306,8 +451,22 @@ def test_billing_balance_requires_identity() -> None:
     assert client.get("/api/v1/billing/me").status_code == 401
 
 
+def test_cover_letter_requires_identity() -> None:
+    response = client.post(
+        "/api/v1/cover-letters",
+        json={
+            "resume_text": "A" * 50,
+            "job_description": "B" * 50,
+            "credential_mode": "subscription",
+        },
+    )
+    assert response.status_code == 401
+
+
 def test_billing_balance_uses_local_development_identity() -> None:
-    response = client.get("/api/v1/billing/me", headers={"X-Rezzie-User-Id": "local-user"})
+    response = client.get(
+        "/api/v1/billing/me", headers={"X-Rezzie-User-Id": "local-user"}
+    )
     assert response.status_code == 200
     assert response.json()["purchased_credits"] == 0
 
@@ -316,21 +475,36 @@ def test_trusted_source_requires_ownership_attestation() -> None:
     response = client.post(
         "/api/v1/trusted-sources",
         headers=LOCAL_IDENTITY,
-        json={"label": "Portfolio", "url": "https://example.com", "ownership_attested": False},
+        json={
+            "label": "Portfolio",
+            "url": "https://example.com",
+            "ownership_attested": False,
+        },
     )
     assert response.status_code == 422
     assert "Confirm that you own" in response.json()["detail"]
 
 
-def test_trusted_source_requires_subscription_before_fetching() -> None:
+def test_trusted_source_can_be_connected_without_a_subscription() -> None:
     response = client.post(
         "/api/v1/trusted-sources",
         headers=LOCAL_IDENTITY,
-        json={"label": "Portfolio", "url": "https://example.com", "ownership_attested": True},
+        json={
+            "label": "Portfolio",
+            "url": "https://example.com",
+            "ownership_attested": True,
+        },
     )
-    assert response.status_code == 403
+    assert response.status_code == 201
 
 
 def test_subscription_route_requires_server_model_key() -> None:
-    response = client.post("/api/v1/tailor", json={"resume_text": "a" * 50, "job_description": "b" * 50, "credential_mode": "subscription"})
+    response = client.post(
+        "/api/v1/tailor",
+        json={
+            "resume_text": "a" * 50,
+            "job_description": "b" * 50,
+            "credential_mode": "subscription",
+        },
+    )
     assert response.status_code == 503

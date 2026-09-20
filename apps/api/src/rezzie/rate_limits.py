@@ -1,4 +1,5 @@
 """Small persistent rate limiter for Rezzie's single-instance SQLite deployment."""
+
 import hashlib
 from datetime import UTC, datetime
 
@@ -15,7 +16,9 @@ class RateLimitWindow(Base):
     scope: Mapped[str] = mapped_column(String(64), primary_key=True)
     window_start: Mapped[int] = mapped_column(Integer, primary_key=True)
     requests: Mapped[int] = mapped_column(Integer, default=0)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC)
+    )
 
 
 class RateLimiter:
@@ -27,11 +30,25 @@ class RateLimiter:
         window_start = now - (now % seconds)
         key = hashlib.sha256(f"{self._salt}:{subject}".encode()).hexdigest()
         with self._sessions.begin() as session:
-            record = session.scalar(select(RateLimitWindow).where(RateLimitWindow.key == key, RateLimitWindow.scope == scope, RateLimitWindow.window_start == window_start))
+            record = session.scalar(
+                select(RateLimitWindow).where(
+                    RateLimitWindow.key == key,
+                    RateLimitWindow.scope == scope,
+                    RateLimitWindow.window_start == window_start,
+                )
+            )
             if record is None:
-                session.add(RateLimitWindow(key=key, scope=scope, window_start=window_start, requests=1))
+                session.add(
+                    RateLimitWindow(
+                        key=key, scope=scope, window_start=window_start, requests=1
+                    )
+                )
                 return
             if record.requests >= limit:
                 retry_after = max(1, window_start + seconds - now)
-                raise HTTPException(status_code=429, detail="Too many requests. Please try again shortly.", headers={"Retry-After": str(retry_after)})
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests. Please try again shortly.",
+                    headers={"Retry-After": str(retry_after)},
+                )
             record.requests += 1

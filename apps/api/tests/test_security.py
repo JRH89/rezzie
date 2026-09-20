@@ -12,7 +12,9 @@ def test_byok_requires_a_key() -> None:
 
 
 def test_byok_returns_request_scoped_key() -> None:
-    assert require_generation_key(CredentialMode.BYOK, "user-key", "master") == "user-key"
+    assert (
+        require_generation_key(CredentialMode.BYOK, "user-key", "master") == "user-key"
+    )
 
 
 def test_subscription_requires_a_server_key() -> None:

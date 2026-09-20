@@ -16,7 +16,9 @@ class TextImportRequest(BaseModel):
 class ResumeStyleProfile(BaseModel):
     """Bounded source-document styling that can be safely re-applied after tailoring."""
 
-    font_family: str = Field(default="Aptos", pattern="^(Aptos|Arial|Calibri|Georgia|Times New Roman)$")
+    font_family: str = Field(
+        default="Aptos", pattern="^(Aptos|Arial|Calibri|Georgia|Times New Roman)$"
+    )
     body_size: float = Field(default=10.5, ge=8, le=14)
     line_height: float = Field(default=13, ge=10, le=20)
     name_size: float = Field(default=18, ge=12, le=28)
@@ -90,8 +92,7 @@ class SavedTailoringDraftResponse(BaseModel):
     created_at: datetime
 
 
-class TailorRequest(BaseModel):
-    resume_text: str = Field(min_length=50, max_length=100_000)
+class GroundedGenerationRequest(BaseModel):
     job_description: str = Field(min_length=50, max_length=100_000)
     credential_mode: CredentialMode
     api_key: str | None = Field(default=None, min_length=10, max_length=500)
@@ -103,14 +104,32 @@ class TailorRequest(BaseModel):
         return value.strip() if value else None
 
 
+class CoverLetterResult(BaseModel):
+    cover_letter: str = Field(min_length=80, max_length=7_000)
+    review_items: list[str] = Field(default_factory=list, max_length=12)
+    truth_statement: str = "This letter only uses evidence from the supplied resume and authorized sources."
+
+
+class TailorRequest(GroundedGenerationRequest):
+    resume_text: str = Field(min_length=50, max_length=100_000)
+    include_cover_letter: bool = False
+
+
+class CoverLetterRequest(GroundedGenerationRequest):
+    resume_text: str = Field(min_length=50, max_length=100_000)
+
+
 class TailoringResult(BaseModel):
     tailored_resume: str = Field(min_length=50)
     # These power supplemental UI, not the tailored document itself. Claude can
     # occasionally omit them even when it produces a complete grounded resume.
     matched_keywords: list[str] = Field(default_factory=list, max_length=30)
     review_items: list[str] = Field(default_factory=list, max_length=20)
-    truth_statement: str = "Review the tailored draft against your source resume before using it."
+    truth_statement: str = (
+        "Review the tailored draft against your source resume before using it."
+    )
     changes: list["TailoringChange"] = Field(default_factory=list, max_length=40)
+    cover_letter: CoverLetterResult | None = None
 
 
 class TailoringChange(BaseModel):
@@ -139,7 +158,9 @@ class ResumeExportRequest(BaseModel):
     resume_text: str = Field(min_length=50, max_length=100_000)
     resume_html: str | None = Field(default=None, max_length=200_000)
     target_page_count: int | None = Field(default=None, ge=1, le=5)
-    template_id: str = Field(default="professional", pattern="^(source|professional|modern|classic|compact)$")
+    template_id: str = Field(
+        default="professional", pattern="^(source|professional|modern|classic|compact)$"
+    )
     style_profile: ResumeStyleProfile | None = None
 
 
@@ -220,3 +241,16 @@ class TailorCareerRecordRequest(BaseModel):
     job_description: str = Field(min_length=50, max_length=100_000)
     credential_mode: CredentialMode
     api_key: str | None = Field(default=None, min_length=10, max_length=500)
+    external_source_ids: list[str] = Field(default_factory=list, max_length=3)
+    include_cover_letter: bool = False
+
+    @field_validator("api_key")
+    @classmethod
+    def strip_key(cls, value: str | None) -> str | None:
+        return value.strip() if value else None
+
+
+class CoverLetterCareerRecordRequest(GroundedGenerationRequest):
+    """Generate a letter from a user's confirmed Career Record facts."""
+
+    record_id: str

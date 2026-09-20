@@ -4,7 +4,13 @@ from fastapi import HTTPException
 
 from rezzie.billing import BillingRepository
 from rezzie.config import Settings
-from rezzie.schemas import CredentialMode, TailoringResult, TailorRequest
+from rezzie.schemas import (
+    CoverLetterRequest,
+    CoverLetterResult,
+    CredentialMode,
+    TailoringResult,
+    TailorRequest,
+)
 from rezzie.services import (
     JobDescriptionImporter,
     TailoringService,
@@ -12,26 +18,75 @@ from rezzie.services import (
     normalize_bulleted_section_headings,
     preserve_source_summary,
 )
+from rezzie.trusted_sources import ExternalSource
 
 
 class RepairingProvider:
     def __init__(self) -> None:
         self.repair_calls = 0
 
-    async def tailor(self, *, api_key: str, resume_text: str, job_description: str) -> TailoringResult:
-        return TailoringResult(tailored_resume="Acme Corp\nIncreased conversion by 40% with focused delivery work.", matched_keywords=[], review_items=[], truth_statement="Draft one.")
+    async def tailor(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> TailoringResult:
+        return TailoringResult(
+            tailored_resume="Acme Corp\nIncreased conversion by 40% with focused delivery work.",
+            matched_keywords=[],
+            review_items=[],
+            truth_statement="Draft one.",
+        )
 
-    async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult:
+    async def repair(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        rejected_draft: str,
+    ) -> TailoringResult:
         self.repair_calls += 1
-        return TailoringResult(tailored_resume="Acme Corp\nIncreased conversion by 25% with focused delivery work.", matched_keywords=[], review_items=[], truth_statement="Every claim is grounded in the supplied resume.")
+        return TailoringResult(
+            tailored_resume="Acme Corp\nIncreased conversion by 25% with focused delivery work.",
+            matched_keywords=[],
+            review_items=[],
+            truth_statement="Every claim is grounded in the supplied resume.",
+        )
+
+    async def cover_letter(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> CoverLetterResult:
+        return CoverLetterResult(
+            cover_letter="Dear Hiring Team,\n\nAt Acme Corp, I increased conversion by 25% through focused delivery work. I would bring the same evidence-led approach to this role and welcome the chance to discuss the work.\n\nSincerely,\nTaylor Example",
+            review_items=[],
+            truth_statement="Every statement is grounded in the supplied resume.",
+        )
 
 
 @pytest.mark.asyncio
-async def test_administrator_subscription_usage_does_not_consume_credits(tmp_path: object) -> None:
+async def test_administrator_subscription_usage_does_not_consume_credits(
+    tmp_path: object,
+) -> None:
     provider = RepairingProvider()
-    repository = BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True)
-    service = TailoringService(provider, Settings(anthropic_api_key="test-key"), repository)
-    request = TailorRequest(resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.", job_description="B" * 50, credential_mode=CredentialMode.SUBSCRIPTION)
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    service = TailoringService(
+        provider, Settings(anthropic_api_key="test-key"), repository
+    )
+    request = TailorRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.SUBSCRIPTION,
+    )
 
     result = await service.tailor(request, "admin-user", admin_override=True)
 
@@ -40,10 +95,72 @@ async def test_administrator_subscription_usage_does_not_consume_credits(tmp_pat
 
 
 @pytest.mark.asyncio
+async def test_cover_letter_costs_one_credit(tmp_path: object) -> None:
+    provider = RepairingProvider()
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    repository.grant_purchase_once("user-a", "cover-letter-pack", 2)
+    service = TailoringService(
+        provider, Settings(anthropic_api_key="test-key"), repository
+    )
+    request = CoverLetterRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through focused delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.SUBSCRIPTION,
+    )
+
+    result = await service.cover_letter(request, "user-a")
+
+    assert "25%" in result.cover_letter
+    assert repository.balance("user-a") == ("none", 0, 1)
+
+
+@pytest.mark.asyncio
+async def test_non_subscriber_source_enrichment_costs_one_extra_credit(
+    tmp_path: object,
+) -> None:
+    provider = RepairingProvider()
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    repository.grant_purchase_once("user-a", "source-tailoring-pack", 3)
+    service = TailoringService(
+        provider, Settings(anthropic_api_key="test-key"), repository
+    )
+    request = TailorRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.SUBSCRIPTION,
+    )
+    source = ExternalSource(
+        id="source-a",
+        user_id="user-a",
+        label="Portfolio",
+        url="https://portfolio.example.com",
+        source_type="portfolio",
+        extracted_text="Publicly documented engineering work and delivery details.",
+    )
+
+    await service.tailor(request, "user-a", [source])
+
+    assert repository.balance("user-a") == ("none", 0, 1)
+
+
+@pytest.mark.asyncio
 async def test_truth_guard_repairs_one_unsupported_draft(tmp_path: object) -> None:
     provider = RepairingProvider()
-    service = TailoringService(provider, Settings(), BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True))
-    request = TailorRequest(resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.", job_description="B" * 50, credential_mode=CredentialMode.BYOK, api_key="test-api-key")
+    service = TailoringService(
+        provider,
+        Settings(),
+        BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True),
+    )
+    request = TailorRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.BYOK,
+        api_key="test-api-key",
+    )
 
     result = await service.tailor(request)
 
@@ -52,16 +169,39 @@ async def test_truth_guard_repairs_one_unsupported_draft(tmp_path: object) -> No
 
 
 class PersistentlyUnsafeProvider(RepairingProvider):
-    async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult:
+    async def repair(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        rejected_draft: str,
+    ) -> TailoringResult:
         self.repair_calls += 1
-        return TailoringResult(tailored_resume="Acme Corp\nIncreased conversion by 40%\nLed product discovery.", matched_keywords=[], review_items=[], truth_statement="Draft two.")
+        return TailoringResult(
+            tailored_resume="Acme Corp\nIncreased conversion by 40%\nLed product discovery.",
+            matched_keywords=[],
+            review_items=[],
+            truth_statement="Draft two.",
+        )
 
 
 @pytest.mark.asyncio
-async def test_truth_guard_returns_sanitized_draft_after_a_failed_repair(tmp_path: object) -> None:
+async def test_truth_guard_returns_sanitized_draft_after_a_failed_repair(
+    tmp_path: object,
+) -> None:
     provider = PersistentlyUnsafeProvider()
-    service = TailoringService(provider, Settings(), BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True))
-    request = TailorRequest(resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.", job_description="B" * 50, credential_mode=CredentialMode.BYOK, api_key="test-api-key")
+    service = TailoringService(
+        provider,
+        Settings(),
+        BillingRepository(f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True),
+    )
+    request = TailorRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.BYOK,
+        api_key="test-api-key",
+    )
 
     result = await service.tailor(request)
 
@@ -78,7 +218,9 @@ def test_preserves_a_source_summary_when_the_generated_section_is_empty() -> Non
     assert "Grounded product leader with platform delivery experience." in result
 
 
-def test_preserves_a_bulleted_source_summary_when_the_generated_summary_is_empty() -> None:
+def test_preserves_a_bulleted_source_summary_when_the_generated_summary_is_empty() -> (
+    None
+):
     source = "Taylor Example\n\n- SUMMARY\nGrounded product leader with platform delivery experience.\n\nSKILLS\nStrategy"
     generated = "Taylor Example\n\nSUMMARY\n\nSKILLS\nStrategy"
 
@@ -89,16 +231,23 @@ def test_preserves_a_bulleted_source_summary_when_the_generated_summary_is_empty
 
 
 def test_does_not_overwrite_a_nonempty_generated_summary() -> None:
-    source = "SUMMARY\nOriginal source summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
+    source = (
+        "SUMMARY\nOriginal source summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
+    )
     generated = "SUMMARY\nTailored, grounded summary.\n\nEXPERIENCE\nAcme Corp | Product Manager"
 
     assert preserve_source_summary(source, generated) == generated
 
 
 def test_normalizes_a_bulleted_selected_projects_heading() -> None:
-    result = normalize_bulleted_section_headings("EXPERIENCE\n- Delivered a feature.\n- SELECTED PROJECTS\nTruss - Agentic Coding Harness")
+    result = normalize_bulleted_section_headings(
+        "EXPERIENCE\n- Delivered a feature.\n- SELECTED PROJECTS\nTruss - Agentic Coding Harness"
+    )
 
-    assert result == "EXPERIENCE\n- Delivered a feature.\nSELECTED PROJECTS\nTruss - Agentic Coding Harness"
+    assert (
+        result
+        == "EXPERIENCE\n- Delivered a feature.\nSELECTED PROJECTS\nTruss - Agentic Coding Harness"
+    )
 
 
 def test_change_review_skips_an_oversized_line() -> None:
@@ -106,34 +255,56 @@ def test_change_review_skips_an_oversized_line() -> None:
 
 
 @pytest.mark.asyncio
-async def test_job_importer_follows_and_validates_a_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_job_importer_follows_and_validates_a_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     checked_urls: list[str] = []
     monkeypatch.setattr("rezzie.services.assert_safe_public_url", checked_urls.append)
 
     def handler(request: httpx.Request) -> httpx.Response:
         if str(request.url) == "https://jobs.example.test/opening":
-            return httpx.Response(302, headers={"location": "/opening/backend"}, request=request)
-        return httpx.Response(200, headers={"content-type": "text/html"}, text="<html>Backend engineer responsibilities and requirements for this role.</html>", request=request)
+            return httpx.Response(
+                302, headers={"location": "/opening/backend"}, request=request
+            )
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html"},
+            text="<html>Backend engineer responsibilities and requirements for this role.</html>",
+            request=request,
+        )
 
-    importer = JobDescriptionImporter(Settings(), transport=httpx.MockTransport(handler))
+    importer = JobDescriptionImporter(
+        Settings(), transport=httpx.MockTransport(handler)
+    )
     result = await importer.from_url("https://jobs.example.test/opening")
 
-    assert checked_urls == ["https://jobs.example.test/opening", "https://jobs.example.test/opening/backend"]
+    assert checked_urls == [
+        "https://jobs.example.test/opening",
+        "https://jobs.example.test/opening/backend",
+    ]
     assert result.source_url == "https://jobs.example.test/opening/backend"
 
 
 @pytest.mark.asyncio
-async def test_job_importer_rejects_an_unsafe_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_job_importer_rejects_an_unsafe_redirect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def validate_url(url: str) -> None:
         if "localhost" in url:
-            raise HTTPException(status_code=422, detail="Private or local URL targets are not allowed.")
+            raise HTTPException(
+                status_code=422, detail="Private or local URL targets are not allowed."
+            )
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert str(request.url) == "https://jobs.example.test/opening"
-        return httpx.Response(302, headers={"location": "https://localhost/internal"}, request=request)
+        return httpx.Response(
+            302, headers={"location": "https://localhost/internal"}, request=request
+        )
 
     monkeypatch.setattr("rezzie.services.assert_safe_public_url", validate_url)
-    importer = JobDescriptionImporter(Settings(), transport=httpx.MockTransport(handler))
+    importer = JobDescriptionImporter(
+        Settings(), transport=httpx.MockTransport(handler)
+    )
 
     with pytest.raises(HTTPException, match="Private or local"):
         await importer.from_url("https://jobs.example.test/opening")

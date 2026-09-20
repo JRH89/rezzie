@@ -1,8 +1,30 @@
 from typing import Protocol
 
-from ..schemas import TailoringResult
+from ..schemas import CoverLetterResult, TailoringResult
 
 
 class LLMProvider(Protocol):
-    async def tailor(self, *, api_key: str, resume_text: str, job_description: str, evidence_text: str = "") -> TailoringResult: ...
-    async def repair(self, *, api_key: str, resume_text: str, job_description: str, rejected_draft: str) -> TailoringResult: ...
+    async def tailor(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> TailoringResult: ...
+    async def repair(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        rejected_draft: str,
+    ) -> TailoringResult: ...
+    async def cover_letter(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> CoverLetterResult: ...

@@ -677,6 +677,14 @@ textarea:focus, input:focus, select:focus, .rich-editor:focus { border-color: #6
 .resume-download-actions button { background: #fffaf4; border: 1px solid #bda28e; border-radius: .35rem; color: #4b3428; cursor: pointer; font: 750 .68rem/1 Arial, sans-serif; padding: .48rem .6rem; }
 .resume-download-actions button.primary { background: #4b3428; border-color: #4b3428; color: #fffaf4; }
 .resume-download-actions button:disabled { cursor: wait; opacity: .55; }
+.cover-letter-option { margin: .85rem 0; }
+.cover-letter-panel { background: #fffaf4; border: 1px solid #d9c8b9; padding: clamp(1rem, 3vw, 1.5rem); }
+.cover-letter-heading { align-items: center; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1rem; }
+.cover-letter-heading h2, .cover-letter-empty h2 { font: 500 clamp(1.65rem, 3vw, 2.35rem)/1.05 Georgia, serif; margin: .2rem 0 0; }
+.cover-letter-panel textarea { box-sizing: border-box; font: 400 1rem/1.65 Georgia, serif; min-height: 28rem; padding: 1.35rem; resize: vertical; width: 100%; }
+.cover-letter-empty { max-width: 42rem; padding: 1rem 0; }
+.cover-letter-empty > p:not(.eyebrow) { color: #685348; line-height: 1.6; }
+.cover-letter-checks { color: #685348; line-height: 1.5; margin: 1rem 0 0; padding-left: 1.2rem; }
 .resume-side-by-side { background: #f5ede4; display: grid; gap: 1px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .resume-side-by-side > section { background: #fffaf4; min-width: 0; padding: .85rem; }
 .resume-side-by-side .eyebrow { color: #806555; font-size: .66rem; margin: 0 0 .6rem; }

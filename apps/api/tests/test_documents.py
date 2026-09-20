@@ -22,7 +22,9 @@ def test_document_extraction_keeps_paragraph_and_table_boundaries() -> None:
     table.cell(0, 0).text = "Acme Corp"
     table.cell(0, 1).text = "Engineer"
 
-    assert paragraph_text(source) == "Taylor Example\n\nEXPERIENCE\n\nAcme Corp | Engineer"
+    assert (
+        paragraph_text(source) == "Taylor Example\n\nEXPERIENCE\n\nAcme Corp | Engineer"
+    )
 
 
 def test_exported_docx_has_resume_structure() -> None:
@@ -34,7 +36,10 @@ def test_exported_docx_has_resume_structure() -> None:
     assert rendered.paragraphs[0].text == "Taylor Example"
     assert rendered.paragraphs[0].runs[0].bold
     assert "EXPERIENCE" in [paragraph.text for paragraph in rendered.paragraphs]
-    assert any(paragraph.text == "Delivered reliable systems." for paragraph in rendered.paragraphs)
+    assert any(
+        paragraph.text == "Delivered reliable systems."
+        for paragraph in rendered.paragraphs
+    )
     assert is_section_heading("Experience:")
     assert is_section_heading("Professional Experience")
 
@@ -43,29 +48,46 @@ def test_rich_editor_formatting_survives_docx_and_pdf_exports() -> None:
     source_html = "<h1>Taylor Example</h1><p><strong>taylor@example.com</strong> · <em>Portland, OR</em></p><h3>EXPERIENCE</h3><ul><li><u>Delivered</u> reliable systems.</li></ul>"
     service = RichResumeExportService()
 
-    rendered = Document(io.BytesIO(service.render_docx("Taylor Example", source_html, template_id="classic")))
+    rendered = Document(
+        io.BytesIO(
+            service.render_docx("Taylor Example", source_html, template_id="classic")
+        )
+    )
     contact_runs = rendered.paragraphs[1].runs
 
     assert rendered.paragraphs[0].runs[0].font.name == "Times New Roman"
     assert contact_runs[0].bold
     assert any(run.italic for run in contact_runs)
     assert rendered.paragraphs[-1].runs[0].underline
-    assert service.render_pdf("Taylor Example", source_html, template_id="modern").startswith(b"%PDF")
+    assert service.render_pdf(
+        "Taylor Example", source_html, template_id="modern"
+    ).startswith(b"%PDF")
 
 
 def test_rich_exports_preserve_clickable_links() -> None:
     source_html = '<h1>Taylor Example</h1><p><a href="https://portfolio.example.com">portfolio.example.com</a></p>'
-    rendered = Document(io.BytesIO(RichResumeExportService().render_docx("Taylor Example", source_html)))
+    rendered = Document(
+        io.BytesIO(RichResumeExportService().render_docx("Taylor Example", source_html))
+    )
 
-    assert any(str(relationship.target_ref) == "https://portfolio.example.com" for relationship in rendered.part.rels.values())
-    assert RichResumeExportService().render_pdf("Taylor Example", source_html).startswith(b"%PDF")
+    assert any(
+        str(relationship.target_ref) == "https://portfolio.example.com"
+        for relationship in rendered.part.rels.values()
+    )
+    assert (
+        RichResumeExportService()
+        .render_pdf("Taylor Example", source_html)
+        .startswith(b"%PDF")
+    )
 
 
 def test_rich_exports_linkify_plain_text_urls_when_editor_html_is_unavailable() -> None:
     resume_text = "Taylor Example\nwww.portfolio.example.com | mailto:taylor@example.com\n\nEXPERIENCE\n- Built https://github.com/example/project."
     service = RichResumeExportService()
     rendered = Document(io.BytesIO(service.render_docx(resume_text)))
-    targets = {str(relationship.target_ref) for relationship in rendered.part.rels.values()}
+    targets = {
+        str(relationship.target_ref) for relationship in rendered.part.rels.values()
+    }
 
     assert "https://www.portfolio.example.com" in targets
     assert "mailto:taylor@example.com" in targets
@@ -77,7 +99,11 @@ def test_rich_exports_linkify_plain_text_urls_when_editor_html_is_unavailable() 
         for annotation in (page.get("/Annots") or [])
         if annotation.get_object().get("/A", {}).get("/URI")
     }
-    assert {"https://www.portfolio.example.com", "mailto:taylor@example.com", "https://github.com/example/project"} <= targets_in_pdf
+    assert {
+        "https://www.portfolio.example.com",
+        "mailto:taylor@example.com",
+        "https://github.com/example/project",
+    } <= targets_in_pdf
 
 
 def test_editor_html_match_accepts_browser_list_text_without_markers() -> None:
@@ -98,7 +124,9 @@ def test_editor_html_match_accepts_a_browser_flattened_block_snapshot() -> None:
     )
 
 
-def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs() -> None:
+def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs() -> (
+    None
+):
     source = Document()
     source.sections[0].left_margin = Inches(1.1)
     source.styles["Normal"].font.name = "Georgia"
@@ -122,9 +150,18 @@ def test_source_docx_export_preserves_document_setup_and_patches_its_paragraphs(
 
     assert rendered.sections[0].left_margin == Inches(1.1)
     assert rendered.styles["Normal"].font.name == "Georgia"
-    assert "Grounded systems engineer." in [paragraph.text for paragraph in rendered.paragraphs]
-    assert any("improved deployment speed" in paragraph.text for paragraph in rendered.paragraphs)
-    rendered_summary = next(paragraph for paragraph in rendered.paragraphs if paragraph.text == "Grounded systems engineer.")
+    assert "Grounded systems engineer." in [
+        paragraph.text for paragraph in rendered.paragraphs
+    ]
+    assert any(
+        "improved deployment speed" in paragraph.text
+        for paragraph in rendered.paragraphs
+    )
+    rendered_summary = next(
+        paragraph
+        for paragraph in rendered.paragraphs
+        if paragraph.text == "Grounded systems engineer."
+    )
     assert rendered_summary.runs[0].font.size == Pt(10)
 
 
@@ -150,11 +187,18 @@ def test_docx_style_profile_extracts_portable_hierarchy() -> None:
     source = Document()
     source.styles["Normal"].font.name = "Georgia"
     source.styles["Normal"].font.size = Pt(11)
-    name = source.add_paragraph(); name.add_run("Taylor Example").font.size = Pt(20)
+    name = source.add_paragraph()
+    name.add_run("Taylor Example").font.size = Pt(20)
     source.add_paragraph("taylor@example.com")
-    heading = source.add_paragraph(); heading_run = heading.add_run("EXPERIENCE"); heading_run.bold = True; heading_run.font.size = Pt(12)
-    role = source.add_paragraph(); role.add_run("Acme Corp | Engineer").bold = True
-    dates = source.add_paragraph(); dates_run = dates.add_run("2020 - 2024"); dates_run.italic = True
+    heading = source.add_paragraph()
+    heading_run = heading.add_run("EXPERIENCE")
+    heading_run.bold = True
+    heading_run.font.size = Pt(12)
+    role = source.add_paragraph()
+    role.add_run("Acme Corp | Engineer").bold = True
+    dates = source.add_paragraph()
+    dates_run = dates.add_run("2020 - 2024")
+    dates_run.italic = True
 
     profile = docx_style_profile(source)
 

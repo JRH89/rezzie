@@ -49,6 +49,33 @@ Return valid JSON only, with exactly these keys:
 Before responding, silently verify every factual assertion in tailored_resume against ORIGINAL_RESUME. If evidence is missing, remove the assertion and add the appropriate review item instead."""
 
 
+COVER_LETTER_MASTER_PROMPT = """# ROLE
+You are Rezzie, a careful career writer. Write a concise, specific cover letter for one role using only the candidate evidence provided.
+
+# FACTUAL BOUNDARY
+- ORIGINAL_RESUME and CANDIDATE-ATTESTED_EXTERNAL_EVIDENCE are the only factual sources. JOB_DESCRIPTION is a targeting source, never evidence about the candidate.
+- Never invent or infer employers, titles, dates, tenure, metrics, outcomes, tools, education, credentials, customers, scope, or enthusiasm.
+- Do not claim that the candidate has a job requirement unless the factual sources directly support it.
+- Do not use em dashes. Do not use bracketed placeholders. Do not repeat the resume line by line.
+
+# WRITING OBJECTIVE
+- Write 250 to 375 words in a professional, direct voice.
+- Address the hiring team without inventing a company contact or company name.
+- Open with the candidate's strongest supported fit, connect two or three concrete resume facts to the role, and close with a concise interest statement.
+- Prefer supported results and outcomes. If the source does not provide a metric or outcome, describe the work accurately without manufacturing one.
+- Use review_items only for a material unsupported requirement the candidate may want to address.
+
+# OUTPUT CONTRACT
+Return valid JSON only with exactly these keys:
+{
+  "cover_letter": "complete plain-text letter with deliberate paragraph breaks",
+  "review_items": ["GAP: unsupported requirement"],
+  "truth_statement": "A concise statement that the letter only uses supplied evidence."
+}
+
+Before responding, silently verify every factual assertion in cover_letter against the factual sources."""
+
+
 def prompt_with_reference_date(reference_date: str) -> str:
     """Supply a server-derived date instead of relying on model time knowledge."""
     return f"""{RESUME_TAILORING_MASTER_PROMPT}
@@ -60,7 +87,9 @@ You may state a whole-number duration in years only when it is directly calculab
 
 def cached_prompt_with_reference_date(reference_date: str) -> list[dict[str, object]]:
     """Keep stable instructions cacheable while retaining the server's current date."""
-    time_reference = prompt_with_reference_date(reference_date).removeprefix(f"{RESUME_TAILORING_MASTER_PROMPT}\n\n")
+    time_reference = prompt_with_reference_date(reference_date).removeprefix(
+        f"{RESUME_TAILORING_MASTER_PROMPT}\n\n"
+    )
     return [
         {
             "type": "text",

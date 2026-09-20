@@ -13,6 +13,10 @@ def test_development_identity_is_optional_for_byok_flows() -> None:
 
 
 def test_administrator_requires_the_configured_verified_email() -> None:
-    settings = Settings(environment="development", admin_email="jaredroberthooker@gmail.com")
-    identity = verified_identity(settings, None, "admin-user", "jaredroberthooker@gmail.com")
+    settings = Settings(
+        environment="development", admin_email="jaredroberthooker@gmail.com"
+    )
+    identity = verified_identity(
+        settings, None, "admin-user", "jaredroberthooker@gmail.com"
+    )
     assert is_configured_admin(settings, identity)

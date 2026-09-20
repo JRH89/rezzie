@@ -8,10 +8,11 @@ from anthropic import BadRequestError, InternalServerError
 from rezzie.providers.anthropic import (
     AnthropicProvider,
     InvalidTailoringResultError,
+    parse_cover_letter_payload,
     parse_tailoring_payload,
     strict_json_schema,
 )
-from rezzie.schemas import TailoringResult
+from rezzie.schemas import CoverLetterResult, TailoringResult
 
 
 def test_strict_json_schema_closes_every_object() -> None:
@@ -19,17 +20,36 @@ def test_strict_json_schema_closes_every_object() -> None:
 
     def object_schemas(value: object) -> list[dict[str, object]]:
         if isinstance(value, dict):
-            nested = [value, *(item for child in value.values() for item in object_schemas(child))]
+            nested = [
+                value,
+                *(item for child in value.values() for item in object_schemas(child)),
+            ]
             return nested
         if isinstance(value, list):
             return [item for child in value for item in object_schemas(child)]
         return []
 
-    assert all(item.get("additionalProperties") is False for item in object_schemas(schema) if item.get("type") == "object")
+    assert all(
+        item.get("additionalProperties") is False
+        for item in object_schemas(schema)
+        if item.get("type") == "object"
+    )
+
+
+def test_cover_letter_parser_extracts_json_and_discards_extra_fields() -> None:
+    result = parse_cover_letter_payload(
+        '{"cover_letter":"Dear Hiring Team,\\n\\nI delivered measurable results at Acme and would bring that grounded experience to this role. I welcome the opportunity to discuss how my work aligns with your team.\\n\\nSincerely,\\nTaylor",'
+        '"review_items":[],"truth_statement":"Grounded in supplied facts.","unused":"discard"}'
+    )
+
+    assert isinstance(result, CoverLetterResult)
+    assert result.truth_statement == "Grounded in supplied facts."
 
 
 @pytest.mark.asyncio
-async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_provider_uses_supported_messages_parameters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, object] = {}
     payload = {
         "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
@@ -52,7 +72,9 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    monkeypatch.setattr(AnthropicProvider, "_reference_date", staticmethod(lambda: "2026-09-06"))
+    monkeypatch.setattr(
+        AnthropicProvider, "_reference_date", staticmethod(lambda: "2026-09-06")
+    )
     result = await AnthropicProvider("claude-haiku-4-5", max_tokens=8192).tailor(
         api_key="test-api-key",
         resume_text="A" * 50,
@@ -73,7 +95,9 @@ async def test_provider_uses_supported_messages_parameters(monkeypatch: pytest.M
 
 
 @pytest.mark.asyncio
-async def test_sonnet_five_uses_configured_effort_without_schema_output(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_sonnet_five_uses_configured_effort_without_schema_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, object] = {}
     payload = {
         "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
@@ -85,14 +109,19 @@ async def test_sonnet_five_uses_configured_effort_without_schema_output(monkeypa
     class Messages:
         async def create(self, **kwargs: object) -> object:
             captured.update(kwargs)
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+            return SimpleNamespace(
+                stop_reason="end_turn",
+                content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+            )
 
     class Client:
         def __init__(self, *, api_key: str, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    await AnthropicProvider("claude-sonnet-5", max_tokens=12_288, effort="medium").tailor(
+    await AnthropicProvider(
+        "claude-sonnet-5", max_tokens=12_288, effort="medium"
+    ).tailor(
         api_key="test-api-key",
         resume_text="A" * 50,
         job_description="B" * 50,
@@ -109,7 +138,9 @@ def test_parser_extracts_json_from_prose_and_discards_extra_fields() -> None:
 {"tailored_resume":"A grounded resume result that is long enough to pass response validation safely.","matched_keywords":[],"review_items":[],"truth_statement":"Every claim is grounded.","unused_model_note":"discard me"}
 ```
 """
-    assert parse_tailoring_payload(payload).truth_statement == "Every claim is grounded."
+    assert (
+        parse_tailoring_payload(payload).truth_statement == "Every claim is grounded."
+    )
 
 
 def test_parser_reports_schema_field_names_without_response_content() -> None:
@@ -128,7 +159,10 @@ def test_parser_defaults_omitted_ui_metadata() -> None:
 
     assert result.matched_keywords == []
     assert result.review_items == []
-    assert result.truth_statement == "Review the tailored draft against your source resume before using it."
+    assert (
+        result.truth_statement
+        == "Review the tailored draft against your source resume before using it."
+    )
 
 
 def test_parser_defaults_null_ui_metadata() -> None:
@@ -140,7 +174,10 @@ def test_parser_defaults_null_ui_metadata() -> None:
     assert result.matched_keywords == []
     assert result.review_items == []
     assert result.changes == []
-    assert result.truth_statement == "Review the tailored draft against your source resume before using it."
+    assert (
+        result.truth_statement
+        == "Review the tailored draft against your source resume before using it."
+    )
 
 
 def test_parser_discards_invalid_ui_metadata_but_requires_the_resume() -> None:
@@ -153,11 +190,15 @@ def test_parser_discards_invalid_ui_metadata_but_requires_the_resume() -> None:
     assert result.review_items == []
 
     with pytest.raises(InvalidTailoringResultError):
-        parse_tailoring_payload('{"tailored_resume":"too short","matched_keywords":"Python, FastAPI"}')
+        parse_tailoring_payload(
+            '{"tailored_resume":"too short","matched_keywords":"Python, FastAPI"}'
+        )
 
 
 @pytest.mark.asyncio
-async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_provider_retries_an_invalid_model_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls = 0
     payload = {
         "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
@@ -171,21 +212,28 @@ async def test_provider_retries_an_invalid_model_result(monkeypatch: pytest.Monk
             nonlocal calls
             calls += 1
             text = "not valid JSON" if calls == 1 else json.dumps(payload)
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=text)])
+            return SimpleNamespace(
+                stop_reason="end_turn",
+                content=[SimpleNamespace(type="text", text=text)],
+            )
 
     class Client:
         def __init__(self, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(
+        api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50
+    )
 
     assert result.truth_statement == "Every claim is grounded."
     assert calls == 2
 
 
 @pytest.mark.asyncio
-async def test_provider_retries_an_oversized_tailored_resume(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_provider_retries_an_oversized_tailored_resume(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls = 0
     valid_payload = {
         "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
@@ -198,32 +246,52 @@ async def test_provider_retries_an_oversized_tailored_resume(monkeypatch: pytest
         async def create(self, **_: object) -> object:
             nonlocal calls
             calls += 1
-            payload = {**valid_payload, "tailored_resume": "A" * 12_001} if calls == 1 else valid_payload
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+            payload = (
+                {**valid_payload, "tailored_resume": "A" * 12_001}
+                if calls == 1
+                else valid_payload
+            )
+            return SimpleNamespace(
+                stop_reason="end_turn",
+                content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+            )
 
     class Client:
         def __init__(self, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(
+        api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50
+    )
 
     assert result.truth_statement == "Every claim is grounded."
     assert calls == 2
 
 
 @pytest.mark.asyncio
-async def test_provider_logs_only_safe_invalid_result_metadata(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+async def test_provider_logs_only_safe_invalid_result_metadata(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     class Messages:
         async def create(self, **_: object) -> object:
-            return SimpleNamespace(stop_reason="max_tokens", content=[SimpleNamespace(type="text", text='{"tailored_resume":"secret resume content"')])
+            return SimpleNamespace(
+                stop_reason="max_tokens",
+                content=[
+                    SimpleNamespace(
+                        type="text", text='{"tailored_resume":"secret resume content"'
+                    )
+                ],
+            )
 
     class Client:
         def __init__(self, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(
+        api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50
+    )
 
     assert "stop_reason=max_tokens" in caplog.text
     assert "diagnostic=malformed_json" in caplog.text
@@ -232,23 +300,41 @@ async def test_provider_logs_only_safe_invalid_result_metadata(monkeypatch: pyte
 
 
 @pytest.mark.asyncio
-async def test_provider_falls_back_when_structured_outputs_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_provider_falls_back_when_structured_outputs_are_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[dict[str, object]] = []
-    payload = {"tailored_resume": "A grounded resume result that is long enough to pass response validation safely.", "matched_keywords": [], "review_items": [], "truth_statement": "Every claim is grounded."}
+    payload = {
+        "tailored_resume": "A grounded resume result that is long enough to pass response validation safely.",
+        "matched_keywords": [],
+        "review_items": [],
+        "truth_statement": "Every claim is grounded.",
+    }
 
     class Messages:
         async def create(self, **kwargs: object) -> object:
             calls.append(kwargs)
             if "output_config" in kwargs:
-                raise BadRequestError("Unsupported output format", response=httpx.Response(400, request=httpx.Request("POST", "https://api.anthropic.com")), body=None)
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+                raise BadRequestError(
+                    "Unsupported output format",
+                    response=httpx.Response(
+                        400, request=httpx.Request("POST", "https://api.anthropic.com")
+                    ),
+                    body=None,
+                )
+            return SimpleNamespace(
+                stop_reason="end_turn",
+                content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+            )
 
     class Client:
         def __init__(self, *, api_key: str, **_: object) -> None:
             self.messages = Messages()
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
-    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(
+        api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50
+    )
     assert result.truth_statement == "Every claim is grounded."
     assert len(calls) == 2
     assert "output_config" in calls[0]
@@ -256,7 +342,9 @@ async def test_provider_falls_back_when_structured_outputs_are_rejected(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_provider_retries_a_transient_upstream_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_provider_retries_a_transient_upstream_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls = 0
     delays: list[float] = []
     payload = {
@@ -272,8 +360,15 @@ async def test_provider_retries_a_transient_upstream_failure(monkeypatch: pytest
             calls += 1
             if calls == 1:
                 request = httpx.Request("POST", "https://api.anthropic.com")
-                raise InternalServerError("Temporary overload", response=httpx.Response(529, request=request), body=None)
-            return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+                raise InternalServerError(
+                    "Temporary overload",
+                    response=httpx.Response(529, request=request),
+                    body=None,
+                )
+            return SimpleNamespace(
+                stop_reason="end_turn",
+                content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+            )
 
     class Client:
         def __init__(self, **_: object) -> None:
@@ -284,7 +379,9 @@ async def test_provider_retries_a_transient_upstream_failure(monkeypatch: pytest
 
     monkeypatch.setattr("rezzie.providers.anthropic.AsyncAnthropic", Client)
     monkeypatch.setattr("rezzie.providers.anthropic.asyncio.sleep", record_delay)
-    result = await AnthropicProvider().tailor(api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50)
+    result = await AnthropicProvider().tailor(
+        api_key="test-api-key", resume_text="A" * 50, job_description="B" * 50
+    )
 
     assert result.truth_statement == "Every claim is grounded."
     assert calls == 2
