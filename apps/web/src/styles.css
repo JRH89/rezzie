@@ -119,12 +119,12 @@ a { color: inherit; }
 .closing-section h2 { font-size: clamp(4rem, 7vw, 7rem); margin: 1.5rem 0 2.4rem; }
 .closing-section h2 em { color: #10201c; }
 .marketing-footer { background: #eadfd1; padding: clamp(2.5rem, 6vw, 5rem) clamp(1.25rem, 6vw, 6rem) 1.25rem; }
-.footer-main { display: grid; gap: 3rem; grid-template-columns: minmax(13rem, .8fr) minmax(0, 1.2fr); margin: 0 auto; max-width: 1320px; }
+.footer-main { display: grid; gap: 3rem; grid-template-columns: minmax(13rem, .8fr) minmax(0, 1.2fr); margin: 0 auto; max-width: 1320px; min-width: 0; }
 .footer-brand p { color: #685348; font-size: .88rem; line-height: 1.6; margin: 1.1rem 0 0; max-width: 18rem; }
 .footer-links { display: grid; gap: 1.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.footer-links section { display: grid; align-content: start; gap: .65rem; }
+.footer-links section { display: grid; align-content: start; gap: .65rem; min-width: 0; }
 .footer-links strong { color: #8e5b43; font-size: .66rem; letter-spacing: .12em; margin-bottom: .35rem; text-transform: uppercase; }
-.footer-links a { color: #4b3428; font-size: .82rem; text-decoration: none; width: fit-content; }.footer-links a:hover { color: #8e5138; text-decoration: underline; text-underline-offset: .2rem; }
+.footer-links a { color: #4b3428; font-size: .82rem; max-width: 100%; overflow-wrap: anywhere; text-decoration: none; width: fit-content; }.footer-links a:hover { color: #8e5138; text-decoration: underline; text-underline-offset: .2rem; }
 .footer-bottom { border-top: 1px solid #cfbba9; color: #806555; display: flex; font-size: .68rem; justify-content: space-between; margin: clamp(2rem, 5vw, 4rem) auto 0; max-width: 1320px; padding-top: 1rem; }.footer-bottom p { margin: 0; }
 
 /* Guided workspace */
@@ -444,6 +444,10 @@ textarea { line-height: 1.5; min-height: 230px; resize: vertical; }
   .grounded-keywords, .review-queue-heading { align-items: flex-start; flex-direction: column; }
   .toolbar-group + .toolbar-group { border-left: 1px solid #d9ded8; padding-left: .45rem; }
   .toolbar-group:last-child { margin-left: 0; }
+}
+
+@media (max-width: 420px) {
+  .footer-links { grid-template-columns: 1fr; }
 }
 
 /* Refined warm editorial palette */
