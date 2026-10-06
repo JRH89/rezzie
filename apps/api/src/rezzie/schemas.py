@@ -109,6 +109,16 @@ class CoverLetterResult(BaseModel):
     review_items: list[str] = Field(default_factory=list, max_length=12)
     truth_statement: str = "This letter only uses evidence from the supplied resume and authorized sources."
 
+    @field_validator("cover_letter")
+    @classmethod
+    def remove_em_dashes(cls, value: str) -> str:
+        """Keep generated letters consistent with Rezzie's plain-language style rule.
+
+        This is a final output guard, not a substitute for the provider prompt. It
+        also covers responses from future providers that implement LLMProvider.
+        """
+        return value.replace("\u2014", "-")
+
 
 class TailorRequest(GroundedGenerationRequest):
     resume_text: str = Field(min_length=50, max_length=100_000)

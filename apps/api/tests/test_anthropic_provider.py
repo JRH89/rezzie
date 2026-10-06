@@ -46,6 +46,16 @@ def test_cover_letter_parser_extracts_json_and_discards_extra_fields() -> None:
     assert result.truth_statement == "Grounded in supplied facts."
 
 
+def test_cover_letter_parser_replaces_em_dashes_at_the_output_boundary() -> None:
+    result = parse_cover_letter_payload(
+        '{"cover_letter":"Dear Hiring Team,\\n\\nI led the migration \\u2014 including validation and release work \\u2014 at Acme Corp. This grounded example is deliberately long enough to meet the response contract.\\n\\nSincerely,\\nTaylor",'
+        '"review_items":[]}'
+    )
+
+    assert "\u2014" not in result.cover_letter
+    assert " - " in result.cover_letter
+
+
 @pytest.mark.asyncio
 async def test_provider_uses_supported_messages_parameters(
     monkeypatch: pytest.MonkeyPatch,

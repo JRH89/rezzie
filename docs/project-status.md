@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Architecture/contracts | done | `docs/architecture.md`, API schemas |
 | Truth-preserving generation policy | done | Haiku 4.5 default with a 4,096-token ceiling, cached stable instructions, JSON-schema output, numeric-claim safety guard, server-date-based tenure handling, and source-summary preservation; job-description terminology is allowed |
-| Latest local verification | done | 2026-09-15: API Ruff and 86 API tests passed with test-safe host/origin settings; web ESLint, 23 web tests, and the web production build previously passed 2026-09-12. |
+| Latest local verification | done | 2026-10-06: API Ruff and 98 API tests passed with test-safe host/origin settings; web ESLint, 28 web tests, and the web production build passed. |
 | Web import/tailor UX | done | Guided experience/job/access/review flow with upload, URL import, persisted Career Records, source-summary preservation, tips, copy, and download |
 | API/security contract tests | done | `ALLOWED_HOSTS=localhost,127.0.0.1,testserver ALLOWED_ORIGINS=http://localhost:5173 uv run --directory apps/api pytest` — 86 passed 2026-09-15 |
 | Stripe checkout/webhook/credit ledger | done | Checkout returns authenticated users to the workspace; verified Stripe resource objects are decoded before processing, and webhook completion state permits retrying events that previously failed. `docs/stripe-setup.md`; requires account env values and production identity adapter. |
@@ -22,7 +22,7 @@
 | Master tailoring prompt | done | Production prompt synthesizes supplied summary/skills, experience, and projects frameworks |
 | Model-result diagnostics | done | Provider logs only model name, attempt, stop reason, content block types, text length, and contract field categories when Claude returns invalid JSON; no resume, job description, key, or model text is logged. |
 | Career Record MVP | done | Per-user private records, review-gated facts, manual additions, and confirmed-facts-only tailoring |
-| Cover letters and Trusted Sources | done | Truth-preserving standalone or paired cover-letter generation, one-credit letter billing, all-user owned GitHub/portfolio source connection, subscriber-included source use, and a one-credit non-subscriber source supplement; see `docs/trusted-sources.md` |
+| Cover letters and Trusted Sources | done | Truth-preserving standalone or paired cover-letter generation, one-credit letter billing, a structured evidence-first writing skill, an enforced no-em-dash output guard, all-user owned GitHub/portfolio source connection, subscriber-included source use, and a one-credit non-subscriber source supplement; see `docs/trusted-sources.md` |
 | Resume Library foundation | done | Authenticated users can explicitly save, list, select, version, and delete private normalized resume sources; free/paid source limits are enforced server-side |
 | Saved tailored-draft persistence | done | Users explicitly name and save a private edited draft; ownership and free/paid retention limits are enforced server-side. The workspace library lists drafts separately and lets users reopen or reuse one as the next tailoring source. |
 | Private source-file objects and artifact storage | planned | Current library persists normalized source text and drafts in SQLite; add private object storage when original file retention is needed |
