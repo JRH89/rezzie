@@ -71,6 +71,167 @@ class RepairingProvider:
         )
 
 
+class ByokProvider(RepairingProvider):
+    def __init__(self, *, failure: str | None = None) -> None:
+        super().__init__()
+        self.failure = failure
+        self.tailoring_key: str | None = None
+        self.tailoring_evidence = ""
+
+    async def tailor(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> TailoringResult:
+        self.tailoring_key = api_key
+        self.tailoring_evidence = evidence_text
+        if self.failure == "tailor":
+            raise RuntimeError("Provider unavailable")
+        return TailoringResult(tailored_resume=resume_text)
+
+    async def cover_letter(
+        self,
+        *,
+        api_key: str,
+        resume_text: str,
+        job_description: str,
+        evidence_text: str = "",
+    ) -> CoverLetterResult:
+        if self.failure == "cover_letter":
+            raise RuntimeError("Provider unavailable")
+        return await super().cover_letter(
+            api_key=api_key,
+            resume_text=resume_text,
+            job_description=job_description,
+            evidence_text=evidence_text,
+        )
+
+
+@pytest.fixture
+def byok_request() -> TailorRequest:
+    return TailorRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.BYOK,
+        api_key="test-api-key",
+    )
+
+
+@pytest.fixture
+def owned_source() -> ExternalSource:
+    # The API selects owned sources before passing them to TailoringService.
+    return ExternalSource(
+        id="source-a",
+        user_id="user-a",
+        label="Portfolio",
+        url="https://portfolio.example.com",
+        source_type="portfolio",
+        extracted_text="Publicly documented engineering work and delivery details.",
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user_id", [None, "user-a"])
+async def test_plain_byok_needs_no_credits_or_master_key(
+    tmp_path: object, byok_request: TailorRequest, user_id: str | None
+) -> None:
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    provider = ByokProvider()
+    service = TailoringService(provider, Settings(anthropic_api_key=None), repository)
+
+    result = await service.tailor(byok_request, user_id)
+
+    assert result.tailored_resume == byok_request.resume_text
+    assert provider.tailoring_key == byok_request.api_key
+    assert repository.balance("user-a") == ("none", 0, 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("include_cover_letter,expected_cost", [(False, 1), (True, 2)])
+async def test_byok_non_subscriber_only_pays_for_selected_add_ons(
+    tmp_path: object,
+    byok_request: TailorRequest,
+    owned_source: ExternalSource,
+    include_cover_letter: bool,
+    expected_cost: int,
+) -> None:
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    repository.grant_purchase_once("user-a", "byok-add-ons", 3)
+    provider = ByokProvider()
+    service = TailoringService(provider, Settings(anthropic_api_key=None), repository)
+    request = byok_request.model_copy(
+        update={
+            "external_source_ids": [owned_source.id],
+            "include_cover_letter": include_cover_letter,
+        }
+    )
+
+    result = await service.tailor(request, "user-a", [owned_source])
+
+    assert provider.tailoring_key == request.api_key
+    assert owned_source.extracted_text in provider.tailoring_evidence
+    assert (result.cover_letter is not None) == include_cover_letter
+    assert repository.balance("user-a") == ("none", 0, 3 - expected_cost)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("subscription_status", ["active", "trialing"])
+async def test_byok_subscriber_sources_need_no_credits(
+    tmp_path: object,
+    byok_request: TailorRequest,
+    owned_source: ExternalSource,
+    subscription_status: str,
+) -> None:
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    repository.save_customer("user-a", "customer-a")
+    repository.set_subscription("customer-a", subscription_status, credits=0)
+    service = TailoringService(
+        ByokProvider(), Settings(anthropic_api_key=None), repository
+    )
+
+    result = await service.tailor(byok_request, "user-a", [owned_source])
+
+    assert result.tailored_resume == byok_request.resume_text
+    assert repository.balance("user-a") == (subscription_status, 0, 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "failure,include_cover_letter", [("tailor", False), ("cover_letter", True)]
+)
+async def test_byok_provider_failure_refunds_all_add_on_credits(
+    tmp_path: object,
+    byok_request: TailorRequest,
+    owned_source: ExternalSource,
+    failure: str,
+    include_cover_letter: bool,
+) -> None:
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    repository.grant_purchase_once("user-a", "byok-add-ons", 2)
+    service = TailoringService(
+        ByokProvider(failure=failure), Settings(anthropic_api_key=None), repository
+    )
+    request = byok_request.model_copy(
+        update={"include_cover_letter": include_cover_letter}
+    )
+
+    with pytest.raises(RuntimeError, match="Provider unavailable"):
+        await service.tailor(request, "user-a", [owned_source])
+
+    assert repository.balance("user-a") == ("none", 0, 2)
+
+
 @pytest.mark.asyncio
 async def test_administrator_subscription_usage_does_not_consume_credits(
     tmp_path: object,

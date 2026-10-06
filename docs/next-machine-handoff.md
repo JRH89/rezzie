@@ -38,11 +38,11 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Resume/job import accepts text, Markdown, PDF, and DOCX. PDF uploads receive a session-local original preview and source page-count metadata, while exports use a best-effort page target; production upload scanning fails closed unless ClamAV is configured. Exact template-aware rewriting remains a separate private-object-storage milestone; see `docs/document-fidelity.md`.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
 - Firebase web auth supports Google popup sign-in, email/password signup/sign-in, password reset, session restore, and sign-out.
-- Trusted Sources are subscriber-only public GitHub/portfolio evidence. They require candidate ownership attestation, charge two credits for a source-backed tailoring run, use SSRF-safe bounded retrieval, and show source-backed changes with individual undo controls. Set `RATE_LIMIT_SALT` server-side; see `docs/trusted-sources.md`.
+- Authenticated users can connect public GitHub/portfolio Trusted Sources with ownership attestation and SSRF-safe retrieval. BYOK is supported with sources: resume tailoring has no base credit fee, a cover letter costs one credit, and using selected sources adds one credit for non-subscribers (included for active/trialing subscribers). The workspace displays required credits and missing inputs and refreshes balances after paid BYOK runs. Set `RATE_LIMIT_SALT` server-side; see `docs/trusted-sources.md`.
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified checks: 59 API tests, 12 web interaction tests, and 7 extension tests passed; Ruff, extension/web ESLint, and both production builds passed on 2026-09-07.
+- Latest verified API/web checks (2026-10-06): 106 API tests, 42 web tests, API Ruff, web ESLint, TypeScript, and the web production build passed. The extension was not changed or reverified in the BYOK eligibility fix; its previous verification was 7 tests, ESLint, and a production build on 2026-09-07.
 
 ### Not done / external dependencies
 

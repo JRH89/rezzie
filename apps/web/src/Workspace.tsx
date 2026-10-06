@@ -2,6 +2,7 @@ import {
   ChangeEvent,
   ClipboardEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -23,6 +24,7 @@ import {
   TrustedSource,
 } from "./api";
 import { resumeEditorHtml } from "./resumeFormatting";
+import { generationAccess } from "./generationAccess";
 
 type ImportMode = "paste" | "url" | "file";
 type CredentialMode = "byok" | "subscription";
@@ -616,6 +618,7 @@ export function Workspace({
   const [credentialMode, setCredentialMode] = useState<CredentialMode>(initialPreferences.credentialMode ?? "byok");
   const [apiKey, setApiKey] = useState("");
   const [balance, setBalance] = useState<CreditBalance>();
+  const [balanceFailed, setBalanceFailed] = useState(false);
   const [trustedSources, setTrustedSources] = useState<TrustedSource[]>([]);
   const [selectedTrustedSources, setSelectedTrustedSources] = useState<
     string[]
@@ -643,11 +646,20 @@ export function Workspace({
   const [draftSaved, setDraftSaved] = useState(false);
   const [resultTab, setResultTab] = useState<ResultTab>(initialSession.resultTab ?? "draft");
 
+  const refreshBalance = useCallback(async () => {
+    setBalanceFailed(false);
+    try {
+      setBalance(await api.balance());
+    } catch {
+      // A balance refresh must not turn a successful generation into an error.
+      // Discard the previous balance so another paid request cannot use it.
+      setBalance(undefined);
+      setBalanceFailed(true);
+    }
+  }, [api]);
+
   useEffect(() => {
-    void api
-      .balance()
-      .then(setBalance)
-      .catch(() => undefined);
+    void refreshBalance();
     void api
       .listCareerRecords()
       .then(setRecords)
@@ -677,7 +689,7 @@ export function Workspace({
         );
       })
       .catch(() => undefined);
-  }, [api, initialPreferences.selectedTrustedSources]);
+  }, [api, initialPreferences.selectedTrustedSources, refreshBalance]);
 
   useEffect(() => {
     saveWorkspacePreferences({
@@ -790,9 +802,28 @@ export function Workspace({
     : resume.trim().length >= minLength;
   const jobReady = job.trim().length >= minLength;
   const usesTrustedSources = selectedTrustedSources.length > 0;
-  const credentialsReady = usesTrustedSources
-    ? credentialMode === "subscription"
-    : credentialMode === "subscription" || apiKey.trim().length >= 10;
+  const accessOptions = {
+    credentialMode,
+    hasApiKey: apiKey.trim().length >= 10 && apiKey.trim().length <= 500,
+    balance,
+    balanceFailed,
+    usesTrustedSources,
+  };
+  const tailoringAccess = generationAccess({
+    ...accessOptions,
+    includesResume: true,
+    includesCoverLetter: includeCoverLetter,
+  });
+  const coverLetterAccess = generationAccess({
+    ...accessOptions,
+    includesResume: false,
+    includesCoverLetter: true,
+  });
+  const tailoringBlockedReason = !sourceReady
+    ? "Add your resume in Your experience to continue."
+    : !jobReady
+      ? "Add a job description in The job to continue."
+      : tailoringAccess.blockedReason;
 
   async function importResume(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -1146,7 +1177,7 @@ export function Workspace({
     const body = {
       job_description: job,
       credential_mode: credentialMode,
-      api_key: credentialMode === "byok" ? apiKey : undefined,
+      api_key: credentialMode === "byok" ? apiKey.trim() : undefined,
       external_source_ids: selectedTrustedSources,
       include_cover_letter: includeCoverLetter,
     };
@@ -1167,7 +1198,7 @@ export function Workspace({
       setDraftSaved(false);
       setResultTab("draft");
       setStep(4);
-      if (credentialMode === "subscription") setBalance(await api.balance());
+      if (tailoringAccess.credits > 0) await refreshBalance();
     } catch (reason) {
       setError(
         errorMessage(
@@ -1191,14 +1222,14 @@ export function Workspace({
             record_id: careerRecord.id,
             job_description: job,
             credential_mode: credentialMode,
-            api_key: credentialMode === "byok" ? apiKey : undefined,
+            api_key: credentialMode === "byok" ? apiKey.trim() : undefined,
             external_source_ids: selectedTrustedSources,
           })
         : await api.coverLetter({
             resume_text: resume,
             job_description: job,
             credential_mode: credentialMode,
-            api_key: credentialMode === "byok" ? apiKey : undefined,
+            api_key: credentialMode === "byok" ? apiKey.trim() : undefined,
             external_source_ids: selectedTrustedSources,
           });
       setCoverLetter(letter);
@@ -1206,7 +1237,7 @@ export function Workspace({
         current ? { ...current, cover_letter: letter } : current,
       );
       setResultTab("cover-letter");
-      if (credentialMode === "subscription") setBalance(await api.balance());
+      if (coverLetterAccess.credits > 0) await refreshBalance();
     } catch (reason) {
       setError(errorMessage(reason, "We could not create the cover letter. Your credit was not kept if the model failed."));
     } finally {
@@ -2122,8 +2153,8 @@ export function Workspace({
                   <span>
                     <strong>Use my Anthropic key</strong>
                     <small>
-                      No Rezzie credit needed. Your key is used once and never
-                      saved.
+                      Resume tailoring uses your key with no base credit charge.
+                      Your key is used for this request and never saved.
                     </small>
                   </span>
                 </label>
@@ -2143,7 +2174,9 @@ export function Workspace({
                     <strong>Use a Rezzie credit</strong>
                     <small>
                       {balance
-                        ? `${balance.subscription_remaining + balance.purchased_credits} available`
+                        ? balance.unlimited
+                          ? "Unlimited internal access"
+                          : `${balance.subscription_remaining + balance.purchased_credits} available`
                         : "Sign in and add credits to use the managed service."}
                     </small>
                   </span>
@@ -2212,10 +2245,24 @@ export function Workspace({
                 <span>
                   <strong>Also write a cover letter</strong>
                   <small>
-                    Adds one credit. Public GitHub or portfolio evidence is included for subscribers, or adds one source-enrichment credit for other users.
+                    Adds one credit, including when you use your own API key.
                   </small>
                 </span>
               </label>
+              <div className="generation-access">
+                <p aria-live="polite" className="hint" id="tailoring-access-message">
+                  {tailoringBlockedReason ?? (tailoringAccess.credits === 0
+                    ? "No Rezzie credits needed for this run."
+                    : `This run uses ${tailoringAccess.credits} Rezzie ${tailoringAccess.credits === 1 ? "credit" : "credits"}.`)}
+                  {usesTrustedSources && " Selected Trusted Sources are included for subscribers; other users pay one source credit per run."}
+                </p>
+                {tailoringAccess.credits > 0 && balanceFailed && (
+                  <button className="text-button" onClick={() => void refreshBalance()} type="button">Retry balance check</button>
+                )}
+                {tailoringAccess.credits > 0 && (
+                  <button className="text-button" onClick={() => onBilling()} type="button">Manage credits</button>
+                )}
+              </div>
               <div className="step-actions">
                 <button
                   className="back-link"
@@ -2226,7 +2273,8 @@ export function Workspace({
                 </button>
                 <button
                   className="button button-primary button-large"
-                  disabled={!credentialsReady || loading}
+                  aria-describedby="tailoring-access-message"
+                  disabled={Boolean(tailoringBlockedReason) || loading}
                   onClick={() => void tailor()}
                   type="button"
                 >
@@ -2463,8 +2511,10 @@ export function Workspace({
                     <div className="cover-letter-empty">
                       <p className="eyebrow">COVER LETTER</p>
                       <h2>Create a grounded letter for this job.</h2>
-                      <p>It uses this resume, job description, and any selected sources. One credit is charged only after a successful letter.</p>
-                      <button className="button button-primary" disabled={loading || !credentialsReady} onClick={() => void generateCoverLetter()} type="button">
+                      <p>It uses this resume, job description, and any selected sources. One credit is charged only after a successful letter. Selected sources add one credit for non-subscribers.</p>
+                      {coverLetterAccess.blockedReason && <p className="hint" id="cover-letter-access-message">{coverLetterAccess.blockedReason}</p>}
+                      {balanceFailed && <button className="text-button" onClick={() => void refreshBalance()} type="button">Retry balance check</button>}
+                      <button aria-describedby={coverLetterAccess.blockedReason ? "cover-letter-access-message" : undefined} className="button button-primary" disabled={loading || Boolean(coverLetterAccess.blockedReason)} onClick={() => void generateCoverLetter()} type="button">
                         {loading ? "Writing cover letter…" : "Write cover letter · 1 credit"}
                       </button>
                     </div>
