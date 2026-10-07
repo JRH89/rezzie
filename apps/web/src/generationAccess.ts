@@ -14,10 +14,10 @@ export function generationAccess(options: GenerationOptions) {
   const subscriber = ["active", "trialing"].includes(
     options.balance?.subscription_status ?? "",
   );
-  // Estimate the API's existing charge rules. The server remains authoritative
-  // and rechecks the balance before generation; BYOK is allowed with sources.
+  // BYOK is billed directly by Anthropic, so no Rezzie credits apply to any
+  // generation add-on or selected source. The server remains authoritative.
   const sourceCredits = options.usesTrustedSources && !subscriber ? 1 : 0;
-  const credits = options.balance?.unlimited
+  const credits = options.credentialMode === "byok" || options.balance?.unlimited
     ? 0
     : Number(options.credentialMode === "subscription" && options.includesResume) +
       Number(options.includesCoverLetter) +

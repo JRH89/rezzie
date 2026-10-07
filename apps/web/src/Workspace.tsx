@@ -2245,16 +2245,22 @@ export function Workspace({
                 <span>
                   <strong>Also write a cover letter</strong>
                   <small>
-                    Adds one credit, including when you use your own API key.
+                    {credentialMode === "byok"
+                      ? "No Rezzie credits. Anthropic bills your key directly."
+                      : "Adds one credit to this managed generation."}
                   </small>
                 </span>
               </label>
               <div className="generation-access">
                 <p aria-live="polite" className="hint" id="tailoring-access-message">
-                  {tailoringBlockedReason ?? (tailoringAccess.credits === 0
-                    ? "No Rezzie credits needed for this run."
-                    : `This run uses ${tailoringAccess.credits} Rezzie ${tailoringAccess.credits === 1 ? "credit" : "credits"}.`)}
-                  {usesTrustedSources && " Selected Trusted Sources are included for subscribers; other users pay one source credit per run."}
+                  {tailoringBlockedReason ?? (credentialMode === "byok"
+                    ? "Your Anthropic key covers this run; no Rezzie credits are used."
+                    : tailoringAccess.credits === 0
+                      ? "No Rezzie credits needed for this run."
+                      : `This run uses ${tailoringAccess.credits} Rezzie ${tailoringAccess.credits === 1 ? "credit" : "credits"}.`)}
+                  {usesTrustedSources && (credentialMode === "byok"
+                    ? " Selected Trusted Sources are covered by your key too."
+                    : " Selected Trusted Sources are included for subscribers; other users pay one source credit per run.")}
                 </p>
                 {tailoringAccess.credits > 0 && balanceFailed && (
                   <button className="text-button" onClick={() => void refreshBalance()} type="button">Retry balance check</button>
@@ -2511,11 +2517,13 @@ export function Workspace({
                     <div className="cover-letter-empty">
                       <p className="eyebrow">COVER LETTER</p>
                       <h2>Create a grounded letter for this job.</h2>
-                      <p>It uses this resume, job description, and any selected sources. One credit is charged only after a successful letter. Selected sources add one credit for non-subscribers.</p>
+                      <p>{credentialMode === "byok"
+                        ? "It uses this resume, job description, and any selected sources. Anthropic bills your key directly; Rezzie uses no credits for the letter or sources."
+                        : "It uses this resume, job description, and any selected sources. One credit is charged only after a successful letter. Selected sources add one credit for non-subscribers."}</p>
                       {coverLetterAccess.blockedReason && <p className="hint" id="cover-letter-access-message">{coverLetterAccess.blockedReason}</p>}
                       {balanceFailed && <button className="text-button" onClick={() => void refreshBalance()} type="button">Retry balance check</button>}
                       <button aria-describedby={coverLetterAccess.blockedReason ? "cover-letter-access-message" : undefined} className="button button-primary" disabled={loading || Boolean(coverLetterAccess.blockedReason)} onClick={() => void generateCoverLetter()} type="button">
-                        {loading ? "Writing cover letter…" : "Write cover letter · 1 credit"}
+                        {loading ? "Writing cover letter…" : credentialMode === "byok" ? "Write cover letter with my key" : "Write cover letter · 1 credit"}
                       </button>
                     </div>
                   )}

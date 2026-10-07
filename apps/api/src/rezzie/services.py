@@ -11,6 +11,7 @@ from .providers.base import LLMProvider
 from .schemas import (
     CoverLetterRequest,
     CoverLetterResult,
+    CredentialMode,
     ImportResponse,
     TailoringChange,
     TailoringResult,
@@ -201,19 +202,22 @@ class TailoringService:
     def _consume_generation_credits(
         self,
         *,
-        credential_mode: str,
+        credential_mode: CredentialMode,
         user_id: str | None,
         has_external_sources: bool,
         includes_resume_tailoring: bool,
         cover_letter_count: int,
         admin_override: bool,
     ) -> list[str]:
-        """Charge only successful managed work and the non-member source supplement."""
-        if admin_override:
+        """Charge Rezzie credits only for managed-model generation."""
+        if admin_override or credential_mode is CredentialMode.BYOK:
             return []
         subscriber = bool(user_id and self._billing.has_active_subscription(user_id))
         base_credits = (
-            1 if credential_mode == "subscription" and includes_resume_tailoring else 0
+            1
+            if credential_mode is CredentialMode.SUBSCRIPTION
+            and includes_resume_tailoring
+            else 0
         )
         source_supplement = 1 if has_external_sources and not subscriber else 0
         total = base_credits + cover_letter_count + source_supplement
@@ -245,7 +249,7 @@ class TailoringService:
         )
         external_sources = external_sources or []
         credit_sources = self._consume_generation_credits(
-            credential_mode=request.credential_mode.value,
+            credential_mode=request.credential_mode,
             user_id=user_id,
             has_external_sources=bool(external_sources),
             includes_resume_tailoring=True,
@@ -351,7 +355,7 @@ class TailoringService:
         )
         sources = external_sources or []
         credit_sources = self._consume_generation_credits(
-            credential_mode=request.credential_mode.value,
+            credential_mode=request.credential_mode,
             user_id=user_id,
             has_external_sources=bool(sources),
             includes_resume_tailoring=False,

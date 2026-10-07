@@ -152,18 +152,16 @@ async def test_plain_byok_needs_no_credits_or_master_key(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("include_cover_letter,expected_cost", [(False, 1), (True, 2)])
-async def test_byok_non_subscriber_only_pays_for_selected_add_ons(
+@pytest.mark.parametrize("include_cover_letter", [False, True])
+async def test_byok_non_subscriber_uses_sources_and_cover_letter_without_rezzie_credits(
     tmp_path: object,
     byok_request: TailorRequest,
     owned_source: ExternalSource,
     include_cover_letter: bool,
-    expected_cost: int,
 ) -> None:
     repository = BillingRepository(
         f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
     )
-    repository.grant_purchase_once("user-a", "byok-add-ons", 3)
     provider = ByokProvider()
     service = TailoringService(provider, Settings(anthropic_api_key=None), repository)
     request = byok_request.model_copy(
@@ -178,7 +176,7 @@ async def test_byok_non_subscriber_only_pays_for_selected_add_ons(
     assert provider.tailoring_key == request.api_key
     assert owned_source.extracted_text in provider.tailoring_evidence
     assert (result.cover_letter is not None) == include_cover_letter
-    assert repository.balance("user-a") == ("none", 0, 3 - expected_cost)
+    assert repository.balance("user-a") == ("none", 0, 0)
 
 
 @pytest.mark.asyncio
@@ -208,7 +206,7 @@ async def test_byok_subscriber_sources_need_no_credits(
 @pytest.mark.parametrize(
     "failure,include_cover_letter", [("tailor", False), ("cover_letter", True)]
 )
-async def test_byok_provider_failure_refunds_all_add_on_credits(
+async def test_byok_provider_failure_does_not_change_credit_balance(
     tmp_path: object,
     byok_request: TailorRequest,
     owned_source: ExternalSource,
@@ -230,6 +228,29 @@ async def test_byok_provider_failure_refunds_all_add_on_credits(
         await service.tailor(request, "user-a", [owned_source])
 
     assert repository.balance("user-a") == ("none", 0, 2)
+
+
+@pytest.mark.asyncio
+async def test_standalone_byok_cover_letter_with_sources_needs_no_rezzie_credits(
+    tmp_path: object, owned_source: ExternalSource
+) -> None:
+    provider = ByokProvider()
+    repository = BillingRepository(
+        f"sqlite:///{tmp_path}/billing.db", bootstrap_schema=True
+    )
+    service = TailoringService(provider, Settings(anthropic_api_key=None), repository)
+    request = CoverLetterRequest(
+        resume_text="Acme Corp\nIncreased conversion by 25% through focused delivery work.",
+        job_description="B" * 50,
+        credential_mode=CredentialMode.BYOK,
+        api_key="test-api-key",
+        external_source_ids=[owned_source.id],
+    )
+
+    result = await service.cover_letter(request, "user-a", [owned_source])
+
+    assert "25%" in result.cover_letter
+    assert repository.balance("user-a") == ("none", 0, 0)
 
 
 @pytest.mark.asyncio

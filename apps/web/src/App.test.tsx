@@ -48,17 +48,16 @@ describe("guided tailoring workspace", () => {
   });
 
   it.each([
-    { scenario: "permits a non-subscriber using a key and a source with one credit", status: "none", credits: 1, coverLetter: false, hasKey: true, disabled: false },
-    { scenario: "permits a non-subscriber using a key, a source, and a cover letter with two credits", status: "none", credits: 2, coverLetter: true, hasKey: true, disabled: false },
-    { scenario: "permits a subscriber using a key and a source without credits", status: "active", credits: 0, coverLetter: false, hasKey: true, disabled: false },
-    { scenario: "requires a key even when the source fee is covered", status: "none", credits: 1, coverLetter: false, hasKey: false, disabled: true },
-    { scenario: "requires a source credit from a non-subscriber using a key", status: "none", credits: 0, coverLetter: false, hasKey: true, disabled: true },
-    { scenario: "requires both the source and cover-letter credits from a non-subscriber using a key", status: "none", credits: 1, coverLetter: true, hasKey: true, disabled: true },
-    { scenario: "requires a cover-letter credit from a subscriber using a key", status: "active", credits: 0, coverLetter: true, hasKey: true, disabled: true },
-    { scenario: "permits a subscriber using a key, a source, and a cover letter with one credit", status: "active", credits: 1, coverLetter: true, hasKey: true, disabled: false },
-    { scenario: "includes source use for a trialing subscriber using a key without credits", status: "trialing", credits: 0, coverLetter: false, hasKey: true, disabled: false },
-    { scenario: "permits source and cover-letter use for an unlimited account using a key", status: "none", credits: 0, coverLetter: true, hasKey: true, disabled: false, unlimited: true },
-    { scenario: "counts monthly credits toward the source fee for a user using a key", status: "none", credits: 0, coverLetter: false, hasKey: true, disabled: false, remaining: 1 },
+    { scenario: "permits non-subscriber BYOK with sources and no credits", status: "none", credits: 0, coverLetter: false, hasKey: true, disabled: false },
+    { scenario: "permits non-subscriber BYOK with sources and a cover letter and no credits", status: "none", credits: 0, coverLetter: true, hasKey: true, disabled: false },
+    { scenario: "permits subscriber BYOK with sources and no credits", status: "active", credits: 0, coverLetter: false, hasKey: true, disabled: false },
+    { scenario: "requires a key even when BYOK generation has no Rezzie credit charge", status: "none", credits: 0, coverLetter: true, hasKey: false, disabled: true },
+    { scenario: "permits source use with no balance for a non-subscriber BYOK account", status: "none", credits: 0, coverLetter: false, hasKey: true, disabled: false },
+    { scenario: "permits a paired cover letter with no balance for a non-subscriber BYOK account", status: "none", credits: 0, coverLetter: true, hasKey: true, disabled: false },
+    { scenario: "permits subscriber BYOK cover letters without credits", status: "active", credits: 0, coverLetter: true, hasKey: true, disabled: false },
+    { scenario: "permits subscriber BYOK with a source and cover letter without credits", status: "active", credits: 0, coverLetter: true, hasKey: true, disabled: false },
+    { scenario: "permits trialing BYOK source use without credits", status: "trialing", credits: 0, coverLetter: false, hasKey: true, disabled: false },
+    { scenario: "permits source and cover-letter use with unlimited balance and BYOK", status: "none", credits: 0, coverLetter: true, hasKey: true, disabled: false, unlimited: true },
   ].map(testCase => ({ unlimited: false, remaining: 0, ...testCase })))("$scenario", async ({ status, credits, remaining, unlimited, coverLetter, hasKey, disabled }) => {
     const source: TrustedSource = { id: "source-1", label: "My public portfolio", url: "https://example.com/portfolio", source_type: "portfolio", fetched_at: "2026-10-06T00:00:00Z" };
     mockBootstrapRequests({ subscription_status: status, subscription_remaining: remaining, purchased_credits: credits, unlimited }, [source]);
@@ -81,9 +80,9 @@ describe("guided tailoring workspace", () => {
     expect(window.sessionStorage.getItem("rezzie.workspace-session.v1")).not.toContain("synthetic-test-key");
   });
 
-  it("submits a selected source with the user's key and refreshes charged credits", async () => {
+  it("submits a selected source with the user's key without requiring or refreshing Rezzie credits", async () => {
     const source: TrustedSource = { id: "source-1", label: "My public portfolio", url: "https://example.com/portfolio", source_type: "portfolio", fetched_at: "2026-10-06T00:00:00Z" };
-    mockBootstrapRequests({ subscription_status: "none", subscription_remaining: 0, purchased_credits: 1, unlimited: false }, [source]);
+    mockBootstrapRequests({ subscription_status: "none", subscription_remaining: 0, purchased_credits: 0, unlimited: false }, [source]);
     window.sessionStorage.setItem("rezzie.workspace-session.v1", JSON.stringify({ step: 3, resume: "a".repeat(50), job: "b".repeat(50) }));
     window.location.hash = "#workspace";
     render(<App />);
@@ -95,10 +94,10 @@ describe("guided tailoring workspace", () => {
     const requests = vi.mocked(fetch).mock.calls;
     const tailoringRequest = requests.find(([input]) => String(input).endsWith("/api/v1/tailor"));
     expect(JSON.parse(String(tailoringRequest?.[1]?.body ?? "{}"))).toMatchObject({ credential_mode: "byok", api_key: "synthetic-test-key", external_source_ids: [source.id] });
-    await waitFor(() => expect(requests.filter(([input]) => String(input).includes("/billing/me"))).toHaveLength(2));
+    await waitFor(() => expect(requests.filter(([input]) => String(input).includes("/billing/me"))).toHaveLength(1));
   });
 
-  it("retains a successful paid BYOK draft when refreshing credits fails and blocks another paid action", async () => {
+  it("retains a successful managed-credit draft when refreshing credits fails and blocks another paid action", async () => {
     const source: TrustedSource = { id: "source-1", label: "My public portfolio", url: "https://example.com/portfolio", source_type: "portfolio", fetched_at: "2026-10-06T00:00:00Z" };
     // The old balance could cover a sourced letter, but is stale after this paid run.
     mockBootstrapRequests({ subscription_status: "none", subscription_remaining: 0, purchased_credits: 2, unlimited: false }, [source]);
@@ -114,7 +113,7 @@ describe("guided tailoring workspace", () => {
     window.location.hash = "#workspace";
     render(<App />);
     await waitFor(() => expect(JSON.parse(window.localStorage.getItem("rezzie.workspace-preferences.v1") ?? "{}").selectedTrustedSources).toEqual([source.id]));
-    fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "synthetic-test-key" } });
+    fireEvent.click(screen.getByRole("radio", { name: /use a rezzie credit/i }));
     fireEvent.click(screen.getByRole("button", { name: /tailor my resume/i }));
 
     expect((await screen.findByLabelText("Tailored resume")).textContent).toContain("A grounded tailored resume");
@@ -283,9 +282,9 @@ describe("guided tailoring workspace", () => {
   });
 
   it.each([
-    { credits: 0, disabled: true },
+    { credits: 0, disabled: false },
     { credits: 1, disabled: false },
-  ])("offers a standalone BYOK cover letter with $credits credits available", async ({ credits, disabled }) => {
+  ])("offers a standalone BYOK cover letter with $credits Rezzie credits available", async ({ credits, disabled }) => {
     mockBootstrapRequests({ subscription_status: "none", subscription_remaining: 0, purchased_credits: credits, unlimited: false });
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Tailor my resume" }));
@@ -299,7 +298,7 @@ describe("guided tailoring workspace", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Cover letter" }));
     const coverLetterButton = screen.getByRole("button", { name: /write cover letter/i });
     expect((coverLetterButton as HTMLButtonElement).disabled).toBe(disabled);
-    expect(screen.getByText(/one credit is charged/i)).toBeTruthy();
+    expect(screen.getByText(/anthropic bills your key directly; rezzie uses no credits/i)).toBeTruthy();
   });
 
   it("shows visible progress while a tailoring request is in flight", async () => {

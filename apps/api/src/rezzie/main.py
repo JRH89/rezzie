@@ -705,7 +705,7 @@ async def create_cover_letter(
     x_rezzie_user_id: str | None = Header(default=None),
     x_rezzie_user_email: str | None = Header(default=None),
 ) -> CoverLetterResult:
-    """Generate one truth-preserving letter, charged as one Rezzie credit."""
+    """Generate a grounded letter; managed generation uses credits, BYOK does not."""
     identity = verified_identity(
         settings, authorization, x_rezzie_user_id, x_rezzie_user_email
     )
