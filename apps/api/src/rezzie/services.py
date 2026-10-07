@@ -30,6 +30,47 @@ SUMMARY_HEADINGS = {
     "OBJECTIVE",
 }
 _MAX_CHANGE_TEXT_LENGTH = 10_000
+_EXPERIENCE_HEADINGS = {
+    "EXPERIENCE",
+    "PROFESSIONAL EXPERIENCE",
+    "RELEVANT EXPERIENCE",
+    "SELECTED EXPERIENCE",
+    "WORK EXPERIENCE",
+    "WORK HISTORY",
+    "EMPLOYMENT",
+    "EMPLOYMENT HISTORY",
+    "CAREER HISTORY",
+    "PROFESSIONAL BACKGROUND",
+}
+_SKILL_HEADINGS = {
+    "SKILLS",
+    "CORE SKILLS",
+    "TECHNICAL SKILLS",
+    "TECHNICAL PROFICIENCIES",
+}
+_ROLE_WORDS = {
+    "administrator",
+    "analyst",
+    "architect",
+    "consultant",
+    "coordinator",
+    "designer",
+    "developer",
+    "director",
+    "engineer",
+    "manager",
+    "nurse",
+    "scientist",
+    "specialist",
+    "teacher",
+    "technician",
+    "writer",
+}
+_CONTACT_PATTERN = re.compile(
+    r"(?:https?://|www\.|mailto:|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b|"
+    r"\+?\d[\d\s().-]{6,}\d)",
+    re.IGNORECASE,
+)
 _BULLET_PREFIXES = ("- ", "* ", "• ", "‣ ", "◦ ", "– ")
 
 
@@ -62,44 +103,135 @@ def normalize_bulleted_section_headings(resume_text: str) -> str:
     return "\n".join(normalized_lines)
 
 
-def _summary_bounds(lines: list[str]) -> tuple[int, int] | None:
+def _summary_heading_parts(line: str) -> tuple[bool, str, str]:
+    """Recognize standalone, inline, and table-cell summary labels."""
+    cells = line.split("|")
+    for index, raw_cell in enumerate(cells):
+        cell = raw_cell.strip().strip("*#_` ")
+        for prefix in _BULLET_PREFIXES:
+            if cell.startswith(prefix):
+                cell = cell.removeprefix(prefix).strip()
+                break
+        for heading in sorted(SUMMARY_HEADINGS, key=len, reverse=True):
+            if cell.upper() == heading:
+                inline = " | ".join(cells[index + 1 :]).strip()
+                before = " | ".join(cells[:index]).strip()
+                return True, before, inline
+            if not cell.upper().startswith(heading):
+                continue
+            suffix = cell[len(heading) :]
+            if not suffix or suffix[0] not in " \t:|-\u2013\u2014":
+                continue
+            inline = re.sub(r"^[\s:|\-\u2013\u2014]+", "", suffix).strip()
+            inline = " | ".join([inline, *cells[index + 1 :]]).strip(" |")
+            before = " | ".join(cells[:index]).strip()
+            return True, before, inline
+    return False, "", ""
+
+
+def _summary_section(lines: list[str]) -> tuple[int, int, str, str] | None:
     for index, line in enumerate(lines):
-        if _heading_name(line) not in SUMMARY_HEADINGS:
+        found, prefix, inline_summary = _summary_heading_parts(line)
+        if not found:
             continue
+        content = [inline_summary] if inline_summary else []
         end = index + 1
         while end < len(lines) and not _is_section_heading(lines[end]):
+            content.append(lines[end])
             end += 1
-        return index, end
+        return index, end, prefix, "\n".join(content).strip()
     return None
 
 
+def _looks_like_person_or_organization_label(line: str) -> bool:
+    """Avoid mistaking a name or company label for useful summary content."""
+    words = line.split()
+    if not 2 <= len(words) <= 4 or any(
+        word.casefold() in _ROLE_WORDS for word in words
+    ):
+        return False
+    return all(re.fullmatch(r"[A-Z][A-Za-z'\u2019-]*", word) for word in words)
+
+
+def _fallback_source_summary(source_resume: str) -> str:
+    """Use a verbatim resume fact when neither source nor model supplied a summary."""
+    section = ""
+    experience_fact = ""
+    experience_heading = ""
+    other_fact = ""
+    bullet_fact = ""
+    skill_fact = ""
+    for raw_line in source_resume.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if _is_section_heading(line):
+            section = _heading_name(line)
+            continue
+        found_summary, _, _ = _summary_heading_parts(line)
+        if found_summary or _CONTACT_PATTERN.search(line):
+            continue
+        is_bullet = any(line.startswith(prefix) for prefix in _BULLET_PREFIXES)
+        fact = line
+        if is_bullet:
+            for prefix in _BULLET_PREFIXES:
+                if fact.startswith(prefix):
+                    fact = fact.removeprefix(prefix).strip()
+                    break
+        if not fact or _looks_like_person_or_organization_label(fact):
+            continue
+        if section in _EXPERIENCE_HEADINGS:
+            if is_bullet:
+                experience_fact = fact
+                break
+            if not experience_heading:
+                experience_heading = fact
+        elif section not in _SKILL_HEADINGS:
+            if is_bullet and not bullet_fact:
+                bullet_fact = fact
+            if not other_fact and not is_bullet:
+                other_fact = fact
+        elif not skill_fact:
+            skill_fact = fact
+    return (
+        experience_fact or experience_heading or bullet_fact or other_fact or skill_fact
+    )
+
+
 def preserve_source_summary(source_resume: str, tailored_resume: str) -> str:
-    """Prevent an empty model-produced summary from discarding source content."""
+    """Guarantee a non-empty summary, preferring supplied summary text or facts."""
     source_lines = source_resume.splitlines()
-    source_bounds = _summary_bounds(source_lines)
-    if not source_bounds:
-        return tailored_resume
-    source_summary = "\n".join(
-        source_lines[source_bounds[0] + 1 : source_bounds[1]]
-    ).strip()
+    source_section = _summary_section(source_lines)
+    source_summary = source_section[3] if source_section else ""
     if not source_summary:
-        return tailored_resume
+        source_summary = _fallback_source_summary(source_resume)
 
     tailored_lines = tailored_resume.splitlines()
-    tailored_bounds = _summary_bounds(tailored_lines)
-    if tailored_bounds:
-        existing_summary = "\n".join(
-            tailored_lines[tailored_bounds[0] + 1 : tailored_bounds[1]]
-        ).strip()
+    tailored_section = _summary_section(tailored_lines)
+    if tailored_section:
+        existing_summary = tailored_section[3]
         if existing_summary:
             return tailored_resume
+        if not source_summary:
+            raise HTTPException(
+                status_code=422,
+                detail="Add factual experience to the resume so Rezzie can create a grounded summary.",
+            )
+        prefix = [tailored_section[2]] if tailored_section[2] else []
         replacement = [
-            *tailored_lines[: tailored_bounds[0] + 1],
+            *tailored_lines[: tailored_section[0]],
+            *prefix,
+            "SUMMARY",
             source_summary,
-            *tailored_lines[tailored_bounds[1] :],
+            *tailored_lines[tailored_section[1] :],
         ]
         return "\n".join(replacement).strip()
 
+    if not source_summary:
+        raise HTTPException(
+            status_code=422,
+            detail="Add factual experience to the resume so Rezzie can create a grounded summary.",
+        )
     insertion_index = next(
         (
             index
@@ -119,7 +251,7 @@ def preserve_source_summary(source_resume: str, tailored_resume: str) -> str:
 
 
 def finalize_tailored_resume(source_resume: str, tailored_resume: str) -> str:
-    """Normalize section labels before enforcing a non-empty source summary."""
+    """Normalize section labels before enforcing a non-empty grounded summary."""
     normalized_source = normalize_bulleted_section_headings(source_resume)
     normalized_draft = normalize_bulleted_section_headings(tailored_resume)
     return preserve_source_summary(normalized_source, normalized_draft)
@@ -312,7 +444,9 @@ class TailoringService:
                         sanitized = request.resume_text
                     result = result.model_copy(
                         update={
-                            "tailored_resume": sanitized,
+                            "tailored_resume": finalize_tailored_resume(
+                                request.resume_text, sanitized
+                            ),
                             "review_items": [
                                 *result.review_items,
                                 "VERIFY: Rezzie removed generated content that could not be grounded in the supplied resume.",

@@ -146,7 +146,10 @@ async def test_plain_byok_needs_no_credits_or_master_key(
 
     result = await service.tailor(byok_request, user_id)
 
-    assert result.tailored_resume == byok_request.resume_text
+    assert "SUMMARY\n" in result.tailored_resume
+    assert (
+        "Increased conversion by 25% through delivery work." in result.tailored_resume
+    )
     assert provider.tailoring_key == byok_request.api_key
     assert repository.balance("user-a") == ("none", 0, 0)
 
@@ -198,7 +201,10 @@ async def test_byok_subscriber_sources_need_no_credits(
 
     result = await service.tailor(byok_request, "user-a", [owned_source])
 
-    assert result.tailored_resume == byok_request.resume_text
+    assert "SUMMARY\n" in result.tailored_resume
+    assert (
+        "Increased conversion by 25% through delivery work." in result.tailored_resume
+    )
     assert repository.balance("user-a") == (subscription_status, 0, 0)
 
 
@@ -388,6 +394,7 @@ async def test_truth_guard_returns_sanitized_draft_after_a_failed_repair(
     result = await service.tailor(request)
 
     assert "40%" not in result.tailored_resume
+    assert "SUMMARY\n" in result.tailored_resume
     assert any(item.startswith("VERIFY:") for item in result.review_items)
 
 
@@ -410,6 +417,66 @@ def test_preserves_a_bulleted_source_summary_when_the_generated_summary_is_empty
 
     assert "Grounded product leader with platform delivery experience." in result
     assert "- SUMMARY" not in result
+
+
+def test_creates_a_summary_from_source_experience_when_both_summaries_are_missing() -> (
+    None
+):
+    source = (
+        "Taylor Example\nFull Stack Software Engineer\n\n"
+        "PROFESSIONAL EXPERIENCE\nAcme Corp | Software Engineer (2020-Present)\n"
+        "- Designed and deployed 10 production web applications."
+    )
+    generated = (
+        "Taylor Example\n\nSUMMARY\n\nPROFESSIONAL EXPERIENCE\n"
+        "Acme Corp | Software Engineer (2020-Present)"
+    )
+
+    result = finalize_tailored_resume(source, generated)
+
+    assert "SUMMARY\nDesigned and deployed 10 production web applications." in result
+
+
+def test_inserts_a_summary_when_model_omits_the_section() -> None:
+    source = (
+        "Taylor Example\n\nEXPERIENCE\nAcme Corp | Software Engineer\n"
+        "- Built accessible features for the customer portal."
+    )
+    generated = "Taylor Example\n\nEXPERIENCE\nAcme Corp | Software Engineer"
+
+    result = finalize_tailored_resume(source, generated)
+
+    assert "SUMMARY\nBuilt accessible features for the customer portal." in result
+    assert result.index("SUMMARY") < result.index("EXPERIENCE")
+
+
+def test_extracts_an_inline_docx_table_summary() -> None:
+    source = (
+        "Taylor Example | Full Stack Software Engineer | SUMMARY | "
+        "Builds reliable SaaS products and developer tools."
+    )
+    generated = "Taylor Example\n\nSUMMARY\n\nSKILLS\nTypeScript"
+
+    result = finalize_tailored_resume(source, generated)
+
+    assert "Builds reliable SaaS products and developer tools." in result
+
+
+def test_uses_source_skills_if_no_experience_summary_or_bullets_exist() -> None:
+    result = finalize_tailored_resume(
+        "SKILLS\nPython, TypeScript, and PostgreSQL",
+        "SUMMARY\n\nSKILLS\nPython, TypeScript, and PostgreSQL",
+    )
+
+    assert "SUMMARY\nPython, TypeScript, and PostgreSQL" in result
+
+
+def test_rejects_an_empty_summary_when_source_has_no_factual_content() -> None:
+    with pytest.raises(HTTPException, match="Add factual experience"):
+        preserve_source_summary(
+            "Taylor Example\n(555) 123-4567\n\nSKILLS",
+            "Taylor Example\n\nSUMMARY\n\nSKILLS",
+        )
 
 
 def test_does_not_overwrite_a_nonempty_generated_summary() -> None:

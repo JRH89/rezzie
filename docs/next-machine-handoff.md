@@ -33,7 +33,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 
 ### Implemented and locally verified
 
-- Claude provider defaults to `claude-haiku-4-5` with a 4,096-token cap. The stable master prompt uses Anthropic's ephemeral prompt cache; user resume, job-description, and external-source text remain request-specific and are never cached by Rezzie. Haiku uses JSON-schema output, while Sonnet 5 remains selectable by environment and uses prompt-enforced JSON with effort control. JSON parsing, fallback, request repair, numeric-claim fallback, server-date-based tenure handling, and source-summary preservation are tested.
+- Claude provider defaults to `claude-haiku-4-5` with a 4,096-token cap. The stable master prompt uses Anthropic's ephemeral prompt cache; user resume, job-description, and external-source text remain request-specific and are never cached by Rezzie. Haiku uses JSON-schema output, while Sonnet 5 remains selectable by environment and uses prompt-enforced JSON with effort control. JSON parsing, fallback, request repair, numeric-claim fallback, server-date-based tenure handling, and the non-empty summary invariant are tested. Empty/missing model summaries are filled only from a source summary or verbatim resume facts; requests with no usable source facts fail rather than return a blank summary.
 - Keyword tailoring is allowed. The prior named-claim hard failure was removed because it blocked legitimate JD wording.
 - Resume/job import accepts text, Markdown, PDF, and DOCX. PDF uploads receive a session-local original preview and source page-count metadata, while exports use a best-effort page target; production upload scanning fails closed unless ClamAV is configured. Exact template-aware rewriting remains a separate private-object-storage milestone; see `docs/document-fidelity.md`.
 - Result includes a rich in-browser editor and TXT, PDF, and editable DOCX exports.
@@ -42,7 +42,7 @@ The intended production target is the user's **Arch/Omarchy server** for API, Cl
 - Stripe checkout, webhook handling, credit ledger, and subscription credit renewal are implemented; external Stripe configuration and hosted smoke-test evidence must be kept current.
 - Public pricing and account CTAs exist.
 - Warm cream / espresso / taupe visual system is active.
-- Latest verified API/web checks (2026-10-06): 107 API tests, 41 web tests, API Ruff, web ESLint, TypeScript, and the web production build passed. BYOK tailoring, paired/standalone cover letters, and selected sources are unmetered by Rezzie; managed-credit tests remain covered. The extension was not changed or reverified; its previous verification was 7 tests, ESLint, and a production build on 2026-09-07.
+- Latest verified API/web checks (2026-10-06): 112 API tests, 41 web tests, API Ruff, web ESLint, TypeScript, and the web production build passed. BYOK tailoring, paired/standalone cover letters, and selected sources are unmetered by Rezzie; managed-credit tests remain covered. The extension was not changed or reverified; its previous verification was 7 tests, ESLint, and a production build on 2026-09-07.
 
 ### Not done / external dependencies
 
